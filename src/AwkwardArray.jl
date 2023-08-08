@@ -1,6 +1,16 @@
 module AwkwardArray
 
-abstract type Content <: AbstractArray{undef,1} end
+### Index ################################################################
+
+Index8 = AbstractArray{Int8,1}
+IndexU8 = AbstractArray{UInt8,1}
+Index32 = AbstractArray{Int32,1}
+IndexU32 = AbstractArray{UInt32,1}
+Index64 = AbstractArray{Int64,1}
+
+### Content ##############################################################
+
+abstract type Content <: AbstractArray{T where T<:Any,1} end
 
 function Base.iterate(x::Content)
     start = firstindex(x)
@@ -27,8 +37,8 @@ end
 
 ### PrimitiveArray #######################################################
 
-struct PrimitiveArray{T} <: Content
-    data::AbstractArray{T,1}
+struct PrimitiveArray{ARRAY<:AbstractArray{T,1} where {T<:Any}} <: Content
+    data::ARRAY
 end
 
 function is_valid(x::PrimitiveArray)
@@ -61,9 +71,9 @@ end
 
 ### ListOffsetArray ######################################################
 
-struct ListOffsetArray{T<:Union{Int32,UInt32,Int64}} <: Content
-    offsets::AbstractArray{T,1}
-    content::Content
+struct ListOffsetArray{INDEX<:Union{Index32,IndexU32,Index64},CONTENT<:Content} <: Content
+    offsets::INDEX
+    content::CONTENT
 end
 
 function is_valid(x::ListOffsetArray)
