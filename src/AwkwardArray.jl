@@ -67,8 +67,14 @@ struct ListOffsetArray{T<:Union{Int32,UInt32,Int64}} <: Content
 end
 
 function is_valid(x::ListOffsetArray)
+    if length(x.offsets) < 1
+        return false
+    end
+    if x.offsets[end] + firstindex(x.content) - 1 > lastindex(x.content)
+        return false
+    end
     for i in eachindex(x)
-        if x.offsets[i+1] < x.offsets[i]
+        if x.offsets[i] < 0 || x.offsets[i+1] < x.offsets[i]
             return false
         end
     end
