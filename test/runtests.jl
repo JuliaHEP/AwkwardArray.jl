@@ -39,4 +39,13 @@ using Test
         end
         @test tmp == 5
     end
+
+    begin
+        layout = AwkwardArray.ListOffsetArray(
+            [0, 3, 2, 5],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+        @test !AwkwardArray.is_valid(layout)
+    end
+
 end

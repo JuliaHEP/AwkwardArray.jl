@@ -63,7 +63,12 @@ struct ListOffsetArray{T<:Union{Int32,UInt32,Int64}} <: Content
 end
 
 function is_valid(x::ListOffsetArray)
-    true
+    for i = Base.firstindex(x):Base.lastindex(x)
+        if x.offsets[i+1] < x.offsets[i]
+            return false
+        end
+    end
+    return true
 end
 
 function Base.length(x::ListOffsetArray)
