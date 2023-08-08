@@ -10,7 +10,7 @@ Index64 = AbstractArray{Int64,1}
 
 ### Content ##############################################################
 
-abstract type Content <: AbstractArray{T where T<:Any,1} end
+abstract type Content <: AbstractArray{T where T,1} end
 
 function Base.iterate(layout::Content)
     start = firstindex(layout)
@@ -37,8 +37,12 @@ end
 
 ### PrimitiveArray #######################################################
 
-struct PrimitiveArray{ARRAY<:AbstractArray{T,1} where {T<:Any}} <: Content
+struct PrimitiveArray{T,ARRAY<:AbstractArray{T,1}} <: Content
     data::ARRAY
+end
+
+function PrimitiveArray{T}() where {T}
+    PrimitiveArray(Vector{T}([]))
 end
 
 function is_valid(layout::PrimitiveArray)
@@ -69,11 +73,22 @@ function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
     layout1.data == layout2.data
 end
 
+function push!(layout::PrimitiveArray{T}, x::T) where {T}
+    Base.push!(layout.data, x)
+end
+
 ### ListOffsetArray ######################################################
 
 struct ListOffsetArray{INDEX<:Union{Index32,IndexU32,Index64},CONTENT<:Content} <: Content
     offsets::INDEX
     content::CONTENT
+end
+
+function ListOffsetArray{
+    INDEX,
+    CONTENT,
+}() where {INDEX<:Union{Index32,IndexU32,Index64}} where {CONTENT<:Content}
+    AwkwardArray.ListOffsetArray(INDEX([0]), CONTENT())
 end
 
 function is_valid(layout::ListOffsetArray)
@@ -124,6 +139,11 @@ function Base.:(==)(layout1::ListOffsetArray, layout2::ListOffsetArray)
         end
         return true
     end
+end
+
+function end_list!(layout::ListOffsetArray)
+    Base.push!(layout.offsets, length(layout.content))
+    layout.content
 end
 
 end

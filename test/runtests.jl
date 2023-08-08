@@ -19,6 +19,22 @@ using Test
     end
 
     begin
+        layout = AwkwardArray.PrimitiveArray{Float64}()
+        @test length(layout) == 0
+        AwkwardArray.push!(layout, 1.1)
+        @test length(layout) == 1
+        AwkwardArray.push!(layout, 2.2)
+        @test length(layout) == 2
+        AwkwardArray.push!(layout, 3.3)
+        @test length(layout) == 3
+        AwkwardArray.push!(layout, 4.4)
+        @test length(layout) == 4
+        AwkwardArray.push!(layout, 5.5)
+        @test length(layout) == 5
+        @test layout == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5])
+    end
+
+    begin
         layout = AwkwardArray.ListOffsetArray(
             [0, 3, 3, 5],
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
@@ -62,6 +78,30 @@ using Test
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test !AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.ListOffsetArray{
+            AwkwardArray.Index64,
+            AwkwardArray.PrimitiveArray{Float64},
+        }()
+        sublayout = layout.content
+        @test length(layout) == 0
+        AwkwardArray.push!(sublayout, 1.1)
+        AwkwardArray.push!(sublayout, 2.2)
+        AwkwardArray.push!(sublayout, 3.3)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 1
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 2
+        AwkwardArray.push!(sublayout, 4.4)
+        AwkwardArray.push!(sublayout, 5.5)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 3
+        @test layout == AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 5],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
     end
 
 end
