@@ -2,5 +2,5 @@ using AwkwardArray
 using Test
 
 @testset "AwkwardArray.jl" begin
-    # Write your tests here.
+    @test 2 + 2 == 5
 end
