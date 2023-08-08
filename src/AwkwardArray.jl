@@ -12,27 +12,27 @@ Index64 = AbstractArray{Int64,1}
 
 abstract type Content <: AbstractArray{T where T<:Any,1} end
 
-function Base.iterate(x::Content)
-    start = firstindex(x)
-    stop = lastindex(x)
+function Base.iterate(layout::Content)
+    start = firstindex(layout)
+    stop = lastindex(layout)
     if stop >= start
-        x[start], start + 1
+        layout[start], start + 1
     else
         nothing
     end
 end
 
-function Base.iterate(x::Content, state)
-    stop = lastindex(x)
+function Base.iterate(layout::Content, state)
+    stop = lastindex(layout)
     if stop >= state
-        x[state], state + 1
+        layout[state], state + 1
     else
         nothing
     end
 end
 
-function Base.size(x::Content)
-    (length(x),)
+function Base.size(layout::Content)
+    (length(layout),)
 end
 
 ### PrimitiveArray #######################################################
@@ -41,32 +41,32 @@ struct PrimitiveArray{ARRAY<:AbstractArray{T,1} where {T<:Any}} <: Content
     data::ARRAY
 end
 
-function is_valid(x::PrimitiveArray)
+function is_valid(layout::PrimitiveArray)
     true
 end
 
-function Base.length(x::PrimitiveArray)
-    length(x.data)
+function Base.length(layout::PrimitiveArray)
+    length(layout.data)
 end
 
-function Base.firstindex(x::PrimitiveArray)
-    firstindex(x.data)
+function Base.firstindex(layout::PrimitiveArray)
+    firstindex(layout.data)
 end
 
-function Base.lastindex(x::PrimitiveArray)
-    lastindex(x.data)
+function Base.lastindex(layout::PrimitiveArray)
+    lastindex(layout.data)
 end
 
-function Base.getindex(x::PrimitiveArray, i::Int)
-    x.data[i]
+function Base.getindex(layout::PrimitiveArray, i::Int)
+    layout.data[i]
 end
 
-function Base.getindex(x::PrimitiveArray, r::UnitRange{Int})
-    PrimitiveArray(x.data[r])
+function Base.getindex(layout::PrimitiveArray, r::UnitRange{Int})
+    PrimitiveArray(layout.data[r])
 end
 
-function Base.:(==)(x::PrimitiveArray, y::PrimitiveArray)
-    x.data == y.data
+function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
+    layout1.data == layout2.data
 end
 
 ### ListOffsetArray ######################################################
@@ -76,49 +76,49 @@ struct ListOffsetArray{INDEX<:Union{Index32,IndexU32,Index64},CONTENT<:Content} 
     content::CONTENT
 end
 
-function is_valid(x::ListOffsetArray)
-    if length(x.offsets) < 1
+function is_valid(layout::ListOffsetArray)
+    if length(layout.offsets) < 1
         return false
     end
-    if x.offsets[end] + firstindex(x.content) - 1 > lastindex(x.content)
+    if layout.offsets[end] + firstindex(layout.content) - 1 > lastindex(layout.content)
         return false
     end
-    for i in eachindex(x)
-        if x.offsets[i] < 0 || x.offsets[i+1] < x.offsets[i]
+    for i in eachindex(layout)
+        if layout.offsets[i] < 0 || layout.offsets[i+1] < layout.offsets[i]
             return false
         end
     end
     return true
 end
 
-function Base.length(x::ListOffsetArray)
-    length(x.offsets) - 1
+function Base.length(layout::ListOffsetArray)
+    length(layout.offsets) - 1
 end
 
-function Base.firstindex(x::ListOffsetArray)
-    firstindex(x.offsets)
+function Base.firstindex(layout::ListOffsetArray)
+    firstindex(layout.offsets)
 end
 
-function Base.lastindex(x::ListOffsetArray)
-    lastindex(x.offsets) - 1
+function Base.lastindex(layout::ListOffsetArray)
+    lastindex(layout.offsets) - 1
 end
 
-function Base.getindex(x::ListOffsetArray, i::Int)
-    start = x.offsets[i] + firstindex(x.content)
-    stop = x.offsets[i+1] + firstindex(x.content) - 1
-    x.content[start:stop]
+function Base.getindex(layout::ListOffsetArray, i::Int)
+    start = layout.offsets[i] + firstindex(layout.content)
+    stop = layout.offsets[i+1] + firstindex(layout.content) - 1
+    layout.content[start:stop]
 end
 
-function Base.getindex(x::ListOffsetArray, r::UnitRange{Int})
-    ListOffsetArray(x.offsets[(r.start):(r.stop+1)], x.content)
+function Base.getindex(layout::ListOffsetArray, r::UnitRange{Int})
+    ListOffsetArray(layout.offsets[(r.start):(r.stop+1)], layout.content)
 end
 
-function Base.:(==)(x::ListOffsetArray, y::ListOffsetArray)
-    if length(x) != length(y)
+function Base.:(==)(layout1::ListOffsetArray, layout2::ListOffsetArray)
+    if length(layout1) != length(layout2)
         return false
     else
-        for (xi, yi) in zip(x, y)
-            if xi != yi
+        for (x, y) in zip(layout1, layout2)
+            if x != y
                 return false
             end
         end
