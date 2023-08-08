@@ -1,6 +1,6 @@
 module AwkwardArray
 
-abstract type Content end
+abstract type Content <: AbstractArray{undef,1} end
 
 function Base.iterate(x::Content)
     start = firstindex(x)
@@ -21,6 +21,10 @@ function Base.iterate(x::Content, state)
     end
 end
 
+function Base.size(x::Content)
+    (length(x),)
+end
+
 ### PrimitiveArray #######################################################
 
 struct PrimitiveArray{T} <: Content
@@ -32,15 +36,15 @@ function is_valid(x::PrimitiveArray)
 end
 
 function Base.length(x::PrimitiveArray)
-    Base.length(x.data)
+    length(x.data)
 end
 
 function Base.firstindex(x::PrimitiveArray)
-    Base.firstindex(x.data)
+    firstindex(x.data)
 end
 
 function Base.lastindex(x::PrimitiveArray)
-    Base.lastindex(x.data)
+    lastindex(x.data)
 end
 
 function Base.getindex(x::PrimitiveArray, i::Int)
@@ -48,7 +52,7 @@ function Base.getindex(x::PrimitiveArray, i::Int)
 end
 
 function Base.getindex(x::PrimitiveArray, r::UnitRange{Int})
-    PrimitiveArray(x.data[(r.start):(r.stop)])
+    PrimitiveArray(x.data[r])
 end
 
 function Base.:(==)(x::PrimitiveArray, y::PrimitiveArray)
@@ -63,7 +67,7 @@ struct ListOffsetArray{T<:Union{Int32,UInt32,Int64}} <: Content
 end
 
 function is_valid(x::ListOffsetArray)
-    for i = Base.firstindex(x):Base.lastindex(x)
+    for i in eachindex(x)
         if x.offsets[i+1] < x.offsets[i]
             return false
         end
@@ -72,20 +76,20 @@ function is_valid(x::ListOffsetArray)
 end
 
 function Base.length(x::ListOffsetArray)
-    Base.length(x.offsets) - 1
+    length(x.offsets) - 1
 end
 
 function Base.firstindex(x::ListOffsetArray)
-    Base.firstindex(x.offsets)
+    firstindex(x.offsets)
 end
 
 function Base.lastindex(x::ListOffsetArray)
-    Base.lastindex(x.offsets) - 1
+    lastindex(x.offsets) - 1
 end
 
 function Base.getindex(x::ListOffsetArray, i::Int)
-    start = x.offsets[i] + Base.firstindex(x.content)
-    stop = x.offsets[i+1] + Base.firstindex(x.content) - 1
+    start = x.offsets[i] + firstindex(x.content)
+    stop = x.offsets[i+1] + firstindex(x.content) - 1
     x.content[start:stop]
 end
 
