@@ -7,6 +7,7 @@ IndexU8 = AbstractArray{UInt8,1}
 Index32 = AbstractArray{Int32,1}
 IndexU32 = AbstractArray{UInt32,1}
 Index64 = AbstractArray{Int64,1}
+IndexBig = Union{Index32,IndexU32,Index64}
 
 ### Content ##############################################################
 
@@ -79,15 +80,12 @@ end
 
 ### ListOffsetArray ######################################################
 
-struct ListOffsetArray{INDEX<:Union{Index32,IndexU32,Index64},CONTENT<:Content} <: Content
+struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content} <: Content
     offsets::INDEX
     content::CONTENT
 end
 
-function ListOffsetArray{
-    INDEX,
-    CONTENT,
-}() where {INDEX<:Union{Index32,IndexU32,Index64}} where {CONTENT<:Content}
+function ListOffsetArray{INDEX,CONTENT}() where {INDEX<:IndexBig} where {CONTENT<:Content}
     AwkwardArray.ListOffsetArray(INDEX([0]), CONTENT())
 end
 
