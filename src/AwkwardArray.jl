@@ -76,6 +76,7 @@ end
 
 function push!(layout::PrimitiveArray{T}, x::T) where {T}
     Base.push!(layout.data, x)
+    layout
 end
 
 ### ListOffsetArray ######################################################
@@ -141,7 +142,7 @@ end
 
 function end_list!(layout::ListOffsetArray)
     Base.push!(layout.offsets, length(layout.content))
-    layout.content
+    layout
 end
 
 end
