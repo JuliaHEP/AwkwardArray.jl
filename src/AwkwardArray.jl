@@ -32,9 +32,7 @@ function Base.iterate(layout::Content, state)
     end
 end
 
-function Base.size(layout::Content)
-    (length(layout),)
-end
+Base.size(layout::Content) = (length(layout),)
 
 ### PrimitiveArray #######################################################
 
@@ -42,25 +40,12 @@ struct PrimitiveArray{T,ARRAY<:AbstractArray{T,1}} <: Content
     data::ARRAY
 end
 
-function PrimitiveArray{T}() where {T}
-    PrimitiveArray(Vector{T}([]))
-end
+PrimitiveArray{T}() where {T} = PrimitiveArray(Vector{T}([]))
 
-function is_valid(layout::PrimitiveArray)
-    true
-end
-
-function Base.length(layout::PrimitiveArray)
-    length(layout.data)
-end
-
-function Base.firstindex(layout::PrimitiveArray)
-    firstindex(layout.data)
-end
-
-function Base.lastindex(layout::PrimitiveArray)
-    lastindex(layout.data)
-end
+is_valid(layout::PrimitiveArray) = true
+Base.length(layout::PrimitiveArray) = length(layout.data)
+Base.firstindex(layout::PrimitiveArray) = firstindex(layout.data)
+Base.lastindex(layout::PrimitiveArray) = lastindex(layout.data)
 
 function Base.getindex(layout::PrimitiveArray, i::Int)
     layout.data[i]
@@ -86,9 +71,8 @@ struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content} <: Content
     content::CONTENT
 end
 
-function ListOffsetArray{INDEX,CONTENT}() where {INDEX<:IndexBig} where {CONTENT<:Content}
+ListOffsetArray{INDEX,CONTENT}() where {INDEX<:IndexBig} where {CONTENT<:Content} =
     AwkwardArray.ListOffsetArray(INDEX([0]), CONTENT())
-end
 
 function is_valid(layout::ListOffsetArray)
     if length(layout.offsets) < 1
@@ -105,17 +89,9 @@ function is_valid(layout::ListOffsetArray)
     return true
 end
 
-function Base.length(layout::ListOffsetArray)
-    length(layout.offsets) - 1
-end
-
-function Base.firstindex(layout::ListOffsetArray)
-    firstindex(layout.offsets)
-end
-
-function Base.lastindex(layout::ListOffsetArray)
-    lastindex(layout.offsets) - 1
-end
+Base.length(layout::ListOffsetArray) = length(layout.offsets) - 1
+Base.firstindex(layout::ListOffsetArray) = firstindex(layout.offsets)
+Base.lastindex(layout::ListOffsetArray) = lastindex(layout.offsets) - 1
 
 function Base.getindex(layout::ListOffsetArray, i::Int)
     start = layout.offsets[i] + firstindex(layout.content)
