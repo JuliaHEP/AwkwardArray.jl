@@ -40,15 +40,17 @@ Base.size(layout::Content) = (length(layout),)
 
 ### PrimitiveArray #######################################################
 
-struct PrimitiveArray{T,BUF<:AbstractVector{T}} <: Content
-    data::BUF
+struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM}} <: Content
+    data::BUFFER
     something::Int64
-    PrimitiveArray(data::BUF, something::Int64 = 123) where {T,BUF<:AbstractVector{T}} =
-        new{T,BUF}(data, something)
+    PrimitiveArray(
+        data::BUFFER,
+        something::Int64 = 123,
+    ) where {ITEM,BUFFER<:AbstractVector{ITEM}} = new{ITEM,BUFFER}(data, something)
 end
 
-PrimitiveArray{T}(something::Int64 = 123) where {T} =
-    PrimitiveArray(Vector{T}([]), something)
+PrimitiveArray{ITEM}(something::Int64 = 123) where {ITEM} =
+    PrimitiveArray(Vector{ITEM}([]), something)
 
 is_valid(layout::PrimitiveArray) = true
 Base.length(layout::PrimitiveArray) = length(layout.data)
@@ -67,20 +69,29 @@ function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
     layout1.data == layout2.data
 end
 
-function push!(layout::PrimitiveArray{T}, x::T) where {T}
+function push!(layout::PrimitiveArray{ITEM}, x::ITEM) where {ITEM}
     Base.push!(layout.data, x)
     layout
 end
 
 ### ListOffsetArray ######################################################
 
-struct ListOffsetArray{IND<:IndexBig,CON<:Content} <: Content
-    offsets::IND
-    content::CON
+struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content} <: Content
+    offsets::INDEX
+    content::CONTENT
+    something::Int64
+    ListOffsetArray(
+        offsets::INDEX,
+        content::CONTENT,
+        something::Int64 = 123,
+    ) where {INDEX<:IndexBig,CONTENT<:Content} =
+        new{INDEX,CONTENT}(offsets, content, something)
 end
 
-ListOffsetArray{IND,CON}() where {IND<:IndexBig} where {CON<:Content} =
-    AwkwardArray.ListOffsetArray(IND([0]), CON())
+ListOffsetArray{INDEX,CONTENT}(
+    something::Int64 = 123,
+) where {INDEX<:IndexBig} where {CONTENT<:Content} =
+    AwkwardArray.ListOffsetArray(INDEX([0]), CONTENT(), something)
 
 function is_valid(layout::ListOffsetArray)
     if length(layout.offsets) < 1
