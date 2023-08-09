@@ -64,6 +64,62 @@ function push!(layout::PrimitiveArray{T}, x::T) where {T}
     layout
 end
 
+### PrimitiveMultiArray ##################################################
+
+struct PrimitiveMultiArray{T,ARRAY<:AbstractArray{T,1}} <: Content
+    data::ARRAY
+    shape_strides::Vector{Tuple{Int64,Int64}}
+end
+
+PrimitiveMultiArray{T}(shape_strides::Vector{Tuple{Int64,Int64}}) where {T} =
+    PrimitiveMultiArray(Vector{T}([]), shape_strides)
+
+is_valid(layout::PrimitiveMultiArray) =
+    length(layout.shape_strides) >= 2 &&
+    layout.shape_strides[1][1] >= 0 &&
+    layout.shape_strides[1][2] >= 0 &&
+    layout.shape_strides[1][1] * layout.shape_strides[1][2] <= length(layout.data)
+# TODO: recurse into each lower number of dimensions.
+
+Base.length(layout::PrimitiveMultiArray) = layout.shape_strides[1][1]
+Base.firstindex(layout::PrimitiveMultiArray) = 1
+Base.lastindex(layout::PrimitiveMultiArray) = length(layout)
+
+function Base.getindex(layout::PrimitiveMultiArray, i::Int)
+    start = (i - 1) * layout.shape_strides[1][2] + firstindex(layout.data)
+    stop = i * layout.shape_strides[1][2] + firstindex(layout.data)
+    if length(layout.shape_strides) == 2
+        if layout.shape_strides[2][2] > 0
+            PrimitiveArray(layout.data[start:layout.shape_strides[2][2]:stop])
+        else
+            PrimitiveArray(layout.data[stop:layout.shape_strides[2][2]:start])
+        end
+    else
+        PrimitiveMultiArray(layout.data[start:stop], layout.shape_strides[2:end])
+    end
+end
+
+function Base.getindex(layout::PrimitiveMultiArray, r::UnitRange{Int})
+    start = (r.start - 1) * layout.shape_strides[1][2] + firstindex(layout.data)
+    stop = (r.stop - 1) * layout.shape_strides[1][2] + firstindex(layout.data)
+
+
+# This is getting nasty.
+
+
+
+    PrimitiveMultiArray(layout.data[r])
+end
+
+# function Base.:(==)(layout1::PrimitiveMultiArray, layout2::PrimitiveMultiArray)
+#     layout1.data == layout2.data
+# end
+
+# function push!(layout::PrimitiveMultiArray{T}, x::T) where {T}
+#     Base.push!(layout.data, x)
+#     layout
+# end
+
 ### ListOffsetArray ######################################################
 
 struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content} <: Content
