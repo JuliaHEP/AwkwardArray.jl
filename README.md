@@ -17,7 +17,9 @@ Example:
 julia> using AwkwardArray
 [ Info: Precompiling AwkwardArray [7d259134-7f60-4bf1-aa00-7452e11bde56]
 
-julia> layout = AwkwardArray.ListOffsetArray{AwkwardArray.Index64, AwkwardArray.PrimitiveArray{Float64}}()
+julia> layout = AwkwardArray.ListOffsetArray{
+           AwkwardArray.Index64, AwkwardArray.PrimitiveArray{Float64}
+       }()
 0-element AwkwardArray.ListOffsetArray{Vector{Int64}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}}}
 
 julia> sublayout = layout.content
