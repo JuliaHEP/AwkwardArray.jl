@@ -1,19 +1,21 @@
-using JSON
+# using JSON
 
 module AwkwardArray
 
 ### Index ################################################################
 
-Index8 = AbstractArray{Int8,1}
-IndexU8 = AbstractArray{UInt8,1}
-Index32 = AbstractArray{Int32,1}
-IndexU32 = AbstractArray{UInt32,1}
-Index64 = AbstractArray{Int64,1}
+Index8 = AbstractVector{Int8}
+IndexU8 = AbstractVector{UInt8}
+Index32 = AbstractVector{Int32}
+IndexU32 = AbstractVector{UInt32}
+Index64 = AbstractVector{Int64}
 IndexBig = Union{Index32,IndexU32,Index64}
 
 ### Content ##############################################################
 
-abstract type Content <: AbstractArray{T where T,1} end
+@enum StandardParameters __array__ __list__ __record__ __categorical__ __sorted_map__ __doc__
+
+abstract type Content <: AbstractVector{T where T} end
 
 function Base.iterate(layout::Content)
     start = firstindex(layout)
@@ -38,11 +40,15 @@ Base.size(layout::Content) = (length(layout),)
 
 ### PrimitiveArray #######################################################
 
-struct PrimitiveArray{T,ARRAY<:AbstractArray{T,1}} <: Content
-    data::ARRAY
+struct PrimitiveArray{T,BUF<:AbstractVector{T}} <: Content
+    data::BUF
+    something::Int64
+    PrimitiveArray(data::BUF, something::Int64 = 123) where {T,BUF<:AbstractVector{T}} =
+        new{T,BUF}(data, something)
 end
 
-PrimitiveArray{T}() where {T} = PrimitiveArray(Vector{T}([]))
+PrimitiveArray{T}(something::Int64 = 123) where {T} =
+    PrimitiveArray(Vector{T}([]), something)
 
 is_valid(layout::PrimitiveArray) = true
 Base.length(layout::PrimitiveArray) = length(layout.data)
@@ -68,13 +74,13 @@ end
 
 ### ListOffsetArray ######################################################
 
-struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content} <: Content
-    offsets::INDEX
-    content::CONTENT
+struct ListOffsetArray{IND<:IndexBig,CON<:Content} <: Content
+    offsets::IND
+    content::CON
 end
 
-ListOffsetArray{INDEX,CONTENT}() where {INDEX<:IndexBig} where {CONTENT<:Content} =
-    AwkwardArray.ListOffsetArray(INDEX([0]), CONTENT())
+ListOffsetArray{IND,CON}() where {IND<:IndexBig} where {CON<:Content} =
+    AwkwardArray.ListOffsetArray(IND([0]), CON())
 
 function is_valid(layout::ListOffsetArray)
     if length(layout.offsets) < 1
