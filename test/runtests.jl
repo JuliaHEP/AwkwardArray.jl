@@ -188,4 +188,52 @@ using Test
         @test layout[6] == [0xf0, 0x9f, 0x92, 0xb0]
     end
 
+    ### ListOffsetArray with other parameters ################################
+
+    begin
+        layout = AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 8],
+            AwkwardArray.PrimitiveArray(
+                [
+                    0x68,
+                    0x65,
+                    0x79,
+                    0x74,
+                    0x68,
+                    0x65,
+                    0x72,
+                    0x65,
+                ],
+            ),
+            parameters = AwkwardArray.Parameters("__doc__" => "nice list"),
+        )
+
+        @test AwkwardArray.get_parameter(layout, "__doc__") == "nice list"
+        @test !AwkwardArray.has_parameter(layout, "__list__")
+    end
+
+    begin
+        layout = AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 8],
+            AwkwardArray.PrimitiveArray(
+                [
+                    0x68,
+                    0x65,
+                    0x79,
+                    0x74,
+                    0x68,
+                    0x65,
+                    0x72,
+                    0x65,
+                ],
+                behavior = :char,
+            ),
+            parameters = AwkwardArray.Parameters("__doc__" => "nice string"),
+            behavior = :string,
+        )
+
+        @test AwkwardArray.get_parameter(layout, "__doc__") == "nice string"
+        @test !AwkwardArray.has_parameter(layout, "__list__")
+    end
+
 end

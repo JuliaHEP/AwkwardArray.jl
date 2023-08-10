@@ -61,9 +61,29 @@ get_parameter(parameters::Parameters, key::String) =
         nothing
     end
 
+Base.length(parameters::Parameters) =
+    length(parameters.string_valued) + length(parameters.any_valued)
+
+Base.show(io::IO, parameters::Parameters) = print(
+    io,
+    "Parameters(" * join(
+        [
+            "$(repr(pair[1])) => $(repr(pair[2]))" for
+            pair in merge(parameters.any_valued, parameters.string_valued)
+        ],
+        ", ",
+    ) * ")",
+)
+
 ### Content ##############################################################
 
 abstract type Content{BEHAVIOR} <: AbstractVector{ITEM where ITEM} end
+
+has_parameter(content::CONTENT, key::String) where {CONTENT <: Content} =
+    has_parameter(content.parameters, key)
+
+get_parameter(content::CONTENT, key::String) where {CONTENT <: Content} =
+    get_parameter(content.parameters, key)
 
 function Base.iterate(layout::Content)
     start = firstindex(layout)
