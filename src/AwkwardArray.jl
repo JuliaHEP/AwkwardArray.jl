@@ -13,13 +13,13 @@ const IndexBig = Union{Index32,IndexU32,Index64}
 
 ### Content ##############################################################
 
-default = :Default
-char = :Char
-byte = :Byte
-string = :String
-bytestring = :ByteString
-categorical = :Categorical
-sorted_map = :SortedMap
+default = :default
+char = :char
+byte = :byte
+string = :string
+bytestring = :bytestring
+categorical = :categorical
+sorted_map = :sorted_map
 
 abstract type Content{BEHAVIOR} <: AbstractVector{ITEM where ITEM} end
 
@@ -50,14 +50,14 @@ struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} <: Content{BEH
     data::BUFFER
     something::Int64
     PrimitiveArray(
-        data::BUFFER,
+        data::BUFFER;
         something::Int64 = 123,
-        behavior::Symbol = :Default,
+        behavior::Symbol = :default,
     ) where {ITEM,BUFFER<:AbstractVector{ITEM}} = new{ITEM,BUFFER,behavior}(data, something)
 end
 
-PrimitiveArray{ITEM}(something::Int64 = 123, behavior::Symbol = :Default) where {ITEM} =
-    PrimitiveArray(Vector{ITEM}([]), something, behavior)
+PrimitiveArray{ITEM}(; something::Int64 = 123, behavior::Symbol = :default) where {ITEM} =
+    PrimitiveArray(Vector{ITEM}([]), something = something, behavior = behavior)
 
 is_valid(layout::PrimitiveArray) = true
 Base.length(layout::PrimitiveArray) = length(layout.data)
@@ -89,18 +89,22 @@ struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEH
     something::Int64
     ListOffsetArray(
         offsets::INDEX,
-        content::CONTENT,
+        content::CONTENT;
         something::Int64 = 123,
-        behavior::Symbol = :Default,
+        behavior::Symbol = :default,
     ) where {INDEX<:IndexBig,CONTENT<:Content} =
         new{INDEX,CONTENT,behavior}(offsets, content, something)
 end
 
-ListOffsetArray{INDEX,CONTENT}(
+ListOffsetArray{INDEX,CONTENT}(;
     something::Int64 = 123,
-    behavior::Symbol = :Default,
-) where {INDEX<:IndexBig} where {CONTENT<:Content} =
-    AwkwardArray.ListOffsetArray(INDEX([0]), CONTENT(), something, behavior)
+    behavior::Symbol = :default,
+) where {INDEX<:IndexBig} where {CONTENT<:Content} = AwkwardArray.ListOffsetArray(
+    INDEX([0]),
+    CONTENT(),
+    something = something,
+    behavior = behavior,
+)
 
 function is_valid(layout::ListOffsetArray)
     if length(layout.offsets) < 1
@@ -147,6 +151,29 @@ end
 function end_list!(layout::ListOffsetArray)
     Base.push!(layout.offsets, length(layout.content))
     layout
+end
+
+### ListOffsetArray with behavior = :string ##############################
+
+function Base.getindex(
+    layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
+    i::Int,
+) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
+    String(
+        getindex(
+            ListOffsetArray(layout.offsets, PrimitiveArray(layout.content.data)),
+            i,
+        ).data,
+    )
+end
+
+### ListOffsetArray with behavior = :bytestring ##########################
+
+function Base.getindex(
+    layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:byte},:bytestring},
+    i::Int,
+) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
+    getindex(ListOffsetArray(layout.offsets, PrimitiveArray(layout.content.data)), i).data
 end
 
 end
