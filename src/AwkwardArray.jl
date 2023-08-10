@@ -13,7 +13,9 @@ IndexBig = Union{Index32,IndexU32,Index64}
 
 ### Content ##############################################################
 
-@enum StandardParameters __array__ __list__ __record__ __categorical__ __sorted_map__ __doc__
+@enum ParameterType string bytestring char byte categorical sorted_map
+
+@enum ParameterString __list__ __record__ __doc__
 
 abstract type Content <: AbstractVector{T where T} end
 
