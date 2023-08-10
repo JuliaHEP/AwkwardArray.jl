@@ -11,7 +11,7 @@ const IndexU32 = AbstractVector{UInt32}
 const Index64 = AbstractVector{Int64}
 const IndexBig = Union{Index32,IndexU32,Index64}
 
-### Content ##############################################################
+### Parameters ###########################################################
 
 default = :default
 char = :char
@@ -20,6 +20,48 @@ string = :string
 bytestring = :bytestring
 categorical = :categorical
 sorted_map = :sorted_map
+
+struct Parameters
+    string_valued::Base.ImmutableDict{String,String}
+    any_valued::Base.ImmutableDict{String,Any}
+end
+
+Parameters() =
+    Parameters(Base.ImmutableDict{String,String}(), Base.ImmutableDict{String,Any}())
+
+function Parameters(pairs::Vararg{Pair{String,<:Any}})
+    out = Parameters()
+    for pair in pairs
+        out = with_parameter(out, pair)
+    end
+    out
+end
+
+with_parameter(parameters::Parameters, pair::Pair{String,String}) =
+    Parameters(Base.ImmutableDict(parameters.string_valued, pair), parameters.any_valued)
+
+with_parameter(parameters::Parameters, pair::Pair{String,<:Any}) =
+    Parameters(parameters.string_valued, Base.ImmutableDict(parameters.any_valued, pair))
+
+has_parameter(parameters::Parameters, key::String) =
+    if haskey(parameters.string_valued, key)
+        true
+    elseif haskey(parameters.any_valued, key)
+        true
+    else
+        false
+    end
+
+get_parameter(parameters::Parameters, key::String) =
+    if haskey(parameters.string_valued, key)
+        parameters.string_valued[key]
+    elseif haskey(parameters.any_valued, key)
+        parameters.any_valued[key]
+    else
+        nothing
+    end
+
+### Content ##############################################################
 
 abstract type Content{BEHAVIOR} <: AbstractVector{ITEM where ITEM} end
 
@@ -48,16 +90,20 @@ Base.size(layout::Content) = (length(layout),)
 
 struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} <: Content{BEHAVIOR}
     data::BUFFER
-    something::Int64
+    parameters::Parameters
     PrimitiveArray(
         data::BUFFER;
-        something::Int64 = 123,
+        parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
-    ) where {ITEM,BUFFER<:AbstractVector{ITEM}} = new{ITEM,BUFFER,behavior}(data, something)
+    ) where {ITEM,BUFFER<:AbstractVector{ITEM}} =
+        new{ITEM,BUFFER,behavior}(data, parameters)
 end
 
-PrimitiveArray{ITEM}(; something::Int64 = 123, behavior::Symbol = :default) where {ITEM} =
-    PrimitiveArray(Vector{ITEM}([]), something = something, behavior = behavior)
+PrimitiveArray{ITEM}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {ITEM} =
+    PrimitiveArray(Vector{ITEM}([]), parameters = parameters, behavior = behavior)
 
 is_valid(layout::PrimitiveArray) = true
 Base.length(layout::PrimitiveArray) = length(layout.data)
@@ -86,23 +132,23 @@ end
 struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEHAVIOR}
     offsets::INDEX
     content::CONTENT
-    something::Int64
+    parameters::Parameters
     ListOffsetArray(
         offsets::INDEX,
         content::CONTENT;
-        something::Int64 = 123,
+        parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
     ) where {INDEX<:IndexBig,CONTENT<:Content} =
-        new{INDEX,CONTENT,behavior}(offsets, content, something)
+        new{INDEX,CONTENT,behavior}(offsets, content, parameters)
 end
 
 ListOffsetArray{INDEX,CONTENT}(;
-    something::Int64 = 123,
+    parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
 ) where {INDEX<:IndexBig} where {CONTENT<:Content} = AwkwardArray.ListOffsetArray(
     INDEX([0]),
     CONTENT(),
-    something = something,
+    parameters = parameters,
     behavior = behavior,
 )
 
