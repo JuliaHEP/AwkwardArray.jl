@@ -13,11 +13,15 @@ const IndexBig = Union{Index32,IndexU32,Index64}
 
 ### Content ##############################################################
 
-@enum ParameterType string bytestring char byte categorical sorted_map
+default = :Default
+char = :Char
+byte = :Byte
+string = :String
+bytestring = :ByteString
+categorical = :Categorical
+sorted_map = :SortedMap
 
-@enum ParameterString __list__ __record__ __doc__
-
-abstract type Content <: AbstractVector{T where T} end
+abstract type Content{BEHAVIOR} <: AbstractVector{ITEM where ITEM} end
 
 function Base.iterate(layout::Content)
     start = firstindex(layout)
@@ -42,17 +46,18 @@ Base.size(layout::Content) = (length(layout),)
 
 ### PrimitiveArray #######################################################
 
-struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM}} <: Content
+struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} <: Content{BEHAVIOR}
     data::BUFFER
     something::Int64
     PrimitiveArray(
         data::BUFFER,
         something::Int64 = 123,
-    ) where {ITEM,BUFFER<:AbstractVector{ITEM}} = new{ITEM,BUFFER}(data, something)
+        behavior::Symbol = :Default,
+    ) where {ITEM,BUFFER<:AbstractVector{ITEM}} = new{ITEM,BUFFER,behavior}(data, something)
 end
 
-PrimitiveArray{ITEM}(something::Int64 = 123) where {ITEM} =
-    PrimitiveArray(Vector{ITEM}([]), something)
+PrimitiveArray{ITEM}(something::Int64 = 123, behavior::Symbol = :Default) where {ITEM} =
+    PrimitiveArray(Vector{ITEM}([]), something, behavior)
 
 is_valid(layout::PrimitiveArray) = true
 Base.length(layout::PrimitiveArray) = length(layout.data)
@@ -78,7 +83,7 @@ end
 
 ### ListOffsetArray ######################################################
 
-struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content} <: Content
+struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEHAVIOR}
     offsets::INDEX
     content::CONTENT
     something::Int64
@@ -86,14 +91,16 @@ struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content} <: Content
         offsets::INDEX,
         content::CONTENT,
         something::Int64 = 123,
+        behavior::Symbol = :Default,
     ) where {INDEX<:IndexBig,CONTENT<:Content} =
-        new{INDEX,CONTENT}(offsets, content, something)
+        new{INDEX,CONTENT,behavior}(offsets, content, something)
 end
 
 ListOffsetArray{INDEX,CONTENT}(
     something::Int64 = 123,
+    behavior::Symbol = :Default,
 ) where {INDEX<:IndexBig} where {CONTENT<:Content} =
-    AwkwardArray.ListOffsetArray(INDEX([0]), CONTENT(), something)
+    AwkwardArray.ListOffsetArray(INDEX([0]), CONTENT(), something, behavior)
 
 function is_valid(layout::ListOffsetArray)
     if length(layout.offsets) < 1
