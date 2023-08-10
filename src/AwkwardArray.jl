@@ -4,12 +4,12 @@ module AwkwardArray
 
 ### Index ################################################################
 
-Index8 = AbstractVector{Int8}
-IndexU8 = AbstractVector{UInt8}
-Index32 = AbstractVector{Int32}
-IndexU32 = AbstractVector{UInt32}
-Index64 = AbstractVector{Int64}
-IndexBig = Union{Index32,IndexU32,Index64}
+const Index8 = AbstractVector{Int8}
+const IndexU8 = AbstractVector{UInt8}
+const Index32 = AbstractVector{Int32}
+const IndexU32 = AbstractVector{UInt32}
+const Index64 = AbstractVector{Int64}
+const IndexBig = Union{Index32,IndexU32,Index64}
 
 ### Content ##############################################################
 
