@@ -229,6 +229,8 @@ using Test
         @test length(layout) == 5
         @test layout[3][:a] == 3
         @test layout[3][:b] == 3.3
+        @test layout[:a][3] == 3
+        @test layout[:b][3] == 3.3
 
         @test layout == layout
         @test layout[3] == layout[3]
@@ -255,12 +257,17 @@ using Test
         @test length(layout) == 3
         @test layout[3][:a] == 3
         @test layout[3][:b][1] == 4.4
+        @test layout[:a][3] == 3
+        @test layout[:b][3][1] == 4.4
 
         @test layout == layout
         @test layout[3] == layout[3]
         @test layout[1][:b] == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3])
         @test layout[2][:b] == AwkwardArray.PrimitiveArray([])
         @test layout[3][:b] == AwkwardArray.PrimitiveArray([4.4, 5.5])
+        @test layout[:b][1] == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3])
+        @test layout[:b][2] == AwkwardArray.PrimitiveArray([])
+        @test layout[:b][3] == AwkwardArray.PrimitiveArray([4.4, 5.5])
 
         tmp = 0.0
         for x in layout
@@ -270,6 +277,96 @@ using Test
             end
         end
         @test tmp == 16.5
+    end
+
+    begin
+        layout = AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray{Int64}(),
+                AwkwardArray.ListOffsetArray{
+                    AwkwardArray.Index64,
+                    AwkwardArray.PrimitiveArray{Float64},
+                }(),
+            )),
+        )
+        a_layout = layout.contents[:a]
+        b_layout = layout.contents[:b]
+        b_sublayout = b_layout.content
+
+        AwkwardArray.push!(a_layout, 1)
+        AwkwardArray.push!(b_sublayout, 1.1)
+        AwkwardArray.push!(b_sublayout, 2.2)
+        AwkwardArray.push!(b_sublayout, 3.3)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_record!(layout)
+
+        AwkwardArray.push!(a_layout, 2)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_record!(layout)
+
+        AwkwardArray.push!(a_layout, 3)
+        AwkwardArray.push!(b_sublayout, 4.4)
+        AwkwardArray.push!(b_sublayout, 5.5)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_record!(layout)
+
+        @test layout[:a] == AwkwardArray.PrimitiveArray([1, 2, 3])
+        @test layout[:b] == AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 5],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+
+        @test layout == layout
+
+        @test AwkwardArray.RecordArray(
+            NamedTuple{(:a,)}((
+                AwkwardArray.PrimitiveArray([1, 2, 3]),
+            )),
+        ) == AwkwardArray.RecordArray(
+            NamedTuple{(:a,)}((
+                AwkwardArray.PrimitiveArray([1, 2, 3]),
+            )),
+        )
+
+        @test layout == AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([1, 2, 3]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3, 3, 5],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                ),
+            )),
+        )
+
+        @test layout[1] == layout[1]
+        @test layout[2] == layout[2]
+        @test layout[3] == layout[3]
+
+        @test layout[3] == AwkwardArray.Record(
+            AwkwardArray.RecordArray(
+                NamedTuple{(:a, :b)}((
+                    AwkwardArray.PrimitiveArray([1, 2, 3]),
+                    AwkwardArray.ListOffsetArray(
+                        [0, 3, 3, 5],
+                        AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                    ),
+                )),
+            ),
+            3,
+        )
+
+        @test layout[3] == AwkwardArray.Record(
+            AwkwardArray.RecordArray(
+                NamedTuple{(:a, :b)}((
+                    AwkwardArray.PrimitiveArray([3]),
+                    AwkwardArray.ListOffsetArray(
+                        [0, 2],
+                        AwkwardArray.PrimitiveArray([4.4, 5.5]),
+                    ),
+                )),
+            ),
+            1,
+        )
     end
 
 end

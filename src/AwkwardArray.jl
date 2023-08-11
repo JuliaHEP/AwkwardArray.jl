@@ -244,6 +244,13 @@ Base.getindex(layout::ListOffsetArray, r::UnitRange{Int}) = ListOffsetArray(
     behavior = typeof(layout).parameters[end],
 )
 
+Base.getindex(layout::ListOffsetArray, f::Symbol) = ListOffsetArray(
+    layout.offsets,
+    layout.content[f],
+    parameters = layout.parameters,
+    behavior = typeof(layout).parameters[end],
+)
+
 function Base.:(==)(layout1::ListOffsetArray, layout2::ListOffsetArray)
     if length(layout1) != length(layout2)
         return false
@@ -287,10 +294,10 @@ end
 
 ### RecordArray ##########################################################
 
-struct RecordArray{CONTENTS<:NamedTuple,BEHAVIOR} <: Content{BEHAVIOR}
-    contents::CONTENTS
+mutable struct RecordArray{CONTENTS<:NamedTuple,BEHAVIOR} <: Content{BEHAVIOR}
+    const contents::CONTENTS
     length::Int64
-    parameters::Parameters
+    const parameters::Parameters
     RecordArray(
         contents::CONTENTS,
         length::Int64;
@@ -319,11 +326,13 @@ struct Record{ARRAY<:RecordArray}
     at::Int64
 end
 
+# FIXME: function copy
+
 function is_valid(layout::RecordArray)
-    if any(length(x) < layout.length for x in layout.contents)
-        return false
-    end
     for x in values(layout.contents)
+        if length(x) < layout.length
+            return false
+        end
         if !is_valid(x)
             return false
         end
@@ -346,34 +355,44 @@ Base.getindex(layout::RecordArray, r::UnitRange{Int}) =
         layout.parameters,
     )
 
+function Base.getindex(layout::RecordArray, f::Symbol)
+    content = layout.contents[f]
+    content[firstindex(content):firstindex(content) + length(layout) - 1]
+end
+
 Base.getindex(layout::Record, f::Symbol) = layout.array.contents[f][layout.at]
 
 function Base.:(==)(
     layout1::RecordArray{CONTENTS},
     layout2::RecordArray{CONTENTS},
-) where {CONTENTS<:Content}
+) where {CONTENTS<:NamedTuple}
     if length(layout1) != length(layout2)
         return false
-    else
-        for k in keys(layout1.contents)   # same keys because same CONTENTS type
-            if layout1.contents[k] != layout2.contents[k]   # compare whole arrays
-                return false
-            end
-        end
-        return true
     end
+    for k in keys(layout1.contents)   # same keys because same CONTENTS type
+        if layout1.contents[k] != layout2.contents[k]   # compare whole arrays
+            return false
+        end
+    end
+    return true
 end
 
 function Base.:(==)(
-    layout1::Record{RecordArray{CONTENTS}},
-    layout2::Record{RecordArray{CONTENTS}},
-) where {CONTENTS<:Content}
+    layout1::Record{ARRAY},
+    layout2::Record{ARRAY},
+) where {CONTENTS<:NamedTuple, ARRAY<:RecordArray{CONTENTS}}
     for k in keys(layout1.array.contents)   # same keys because same CONTENTS type
         if layout1[k] != layout2[k]   # compare record items
             return false
         end
     end
     return true
+end
+
+function end_record!(layout::RecordArray)
+    layout.length += 1
+    @assert all(length(x) >= layout.length for x in layout.contents)
+    layout
 end
 
 end
