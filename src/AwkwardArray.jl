@@ -1,17 +1,93 @@
+# using JSON
+
 module AwkwardArray
 
 ### Index ################################################################
 
-Index8 = AbstractArray{Int8,1}
-IndexU8 = AbstractArray{UInt8,1}
-Index32 = AbstractArray{Int32,1}
-IndexU32 = AbstractArray{UInt32,1}
-Index64 = AbstractArray{Int64,1}
-IndexBig = Union{Index32,IndexU32,Index64}
+const Index8 = AbstractVector{Int8}
+const IndexU8 = AbstractVector{UInt8}
+const Index32 = AbstractVector{Int32}
+const IndexU32 = AbstractVector{UInt32}
+const Index64 = AbstractVector{Int64}
+const IndexBig = Union{Index32,IndexU32,Index64}
+
+### Parameters ###########################################################
+
+default = :default
+char = :char
+byte = :byte
+string = :string
+bytestring = :bytestring
+categorical = :categorical
+sorted_map = :sorted_map
+
+struct Parameters
+    string_valued::Base.ImmutableDict{String,String}
+    any_valued::Base.ImmutableDict{String,Any}
+end
+
+Parameters() =
+    Parameters(Base.ImmutableDict{String,String}(), Base.ImmutableDict{String,Any}())
+
+function Parameters(pairs::Vararg{Pair{String,<:Any}})
+    out = Parameters()
+    for pair in pairs
+        out = with_parameter(out, pair)
+    end
+    out
+end
+
+with_parameter(parameters::Parameters, pair::Pair{String,String}) =
+    Parameters(Base.ImmutableDict(parameters.string_valued, pair), parameters.any_valued)
+
+with_parameter(parameters::Parameters, pair::Pair{String,<:Any}) =
+    Parameters(parameters.string_valued, Base.ImmutableDict(parameters.any_valued, pair))
+
+has_parameter(parameters::Parameters, key::String) =
+    if haskey(parameters.string_valued, key)
+        true
+    elseif haskey(parameters.any_valued, key)
+        true
+    else
+        false
+    end
+
+get_parameter(parameters::Parameters, key::String) =
+    if haskey(parameters.string_valued, key)
+        parameters.string_valued[key]
+    elseif haskey(parameters.any_valued, key)
+        parameters.any_valued[key]
+    else
+        nothing
+    end
+
+Base.length(parameters::Parameters) =
+    length(parameters.string_valued) + length(parameters.any_valued)
+
+Base.show(io::IO, parameters::Parameters) = print(
+    io,
+    "Parameters(" *
+    join(
+        [
+            "$(repr(pair[1])) => $(repr(pair[2]))" for
+            pair in merge(parameters.any_valued, parameters.string_valued)
+        ],
+        ", ",
+    ) *
+    ")",
+)
 
 ### Content ##############################################################
 
-abstract type Content <: AbstractArray{T where T,1} end
+struct Unset end
+
+abstract type Content{BEHAVIOR} <: AbstractVector{ITEM where ITEM} end
+
+has_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
+    has_parameter(content.parameters, key)
+
+get_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
+    get_parameter(content.parameters, key)
 
 function Base.iterate(layout::Content)
     start = firstindex(layout)
@@ -36,11 +112,40 @@ Base.size(layout::Content) = (length(layout),)
 
 ### PrimitiveArray #######################################################
 
-struct PrimitiveArray{T,ARRAY<:AbstractArray{T,1}} <: Content
-    data::ARRAY
+struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} <: Content{BEHAVIOR}
+    data::BUFFER
+    parameters::Parameters
+    PrimitiveArray(
+        data::BUFFER;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {ITEM,BUFFER<:AbstractVector{ITEM}} =
+        new{ITEM,BUFFER,behavior}(data, parameters)
 end
 
-PrimitiveArray{T}() where {T} = PrimitiveArray(Vector{T}([]))
+PrimitiveArray{ITEM}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {ITEM} =
+    PrimitiveArray(Vector{ITEM}([]), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::PrimitiveArray{ITEM,BUFFER,BEHAVIOR};
+    data::Union{Unset,BUFFER} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR}
+    if isa(data, Unset)
+        data = layout.data
+    end
+    if isa(parameters, Unset)
+        parameters = layout.parameters
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    PrimitiveArray(data, parameters = parameters, behavior = behavior)
+end
 
 is_valid(layout::PrimitiveArray) = true
 Base.length(layout::PrimitiveArray) = length(layout.data)
@@ -59,20 +164,57 @@ function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
     layout1.data == layout2.data
 end
 
-function push!(layout::PrimitiveArray{T}, x::T) where {T}
+function push!(layout::PrimitiveArray{ITEM}, x::ITEM) where {ITEM}
     Base.push!(layout.data, x)
     layout
 end
 
 ### ListOffsetArray ######################################################
 
-struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content} <: Content
+struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEHAVIOR}
     offsets::INDEX
     content::CONTENT
+    parameters::Parameters
+    ListOffsetArray(
+        offsets::INDEX,
+        content::CONTENT;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {INDEX<:IndexBig,CONTENT<:Content} =
+        new{INDEX,CONTENT,behavior}(offsets, content, parameters)
 end
 
-ListOffsetArray{INDEX,CONTENT}() where {INDEX<:IndexBig} where {CONTENT<:Content} =
-    AwkwardArray.ListOffsetArray(INDEX([0]), CONTENT())
+ListOffsetArray{INDEX,CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {INDEX<:IndexBig} where {CONTENT<:Content} = AwkwardArray.ListOffsetArray(
+    INDEX([0]),
+    CONTENT(),
+    parameters = parameters,
+    behavior = behavior,
+)
+
+function copy(
+    layout::ListOffsetArray{INDEX,CONTENT,BEHAVIOR};
+    offsets::Union{Unset,INDEX} = Unset(),
+    content::Union{Unset,CONTENT} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR}
+    if isa(offsets, Unset)
+        offsets = layout.offsets
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = layout.parameters
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    ListOffsetArray(offsets, content, parameters = parameters, behavior = behavior)
+end
 
 function is_valid(layout::ListOffsetArray)
     if length(layout.offsets) < 1
@@ -119,6 +261,29 @@ end
 function end_list!(layout::ListOffsetArray)
     Base.push!(layout.offsets, length(layout.content))
     layout
+end
+
+### ListOffsetArray with behavior = :string ##############################
+
+function Base.getindex(
+    layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
+    i::Int,
+) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
+    String(
+        getindex(
+            ListOffsetArray(layout.offsets, PrimitiveArray(layout.content.data)),
+            i,
+        ).data,
+    )
+end
+
+### ListOffsetArray with behavior = :bytestring ##########################
+
+function Base.getindex(
+    layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:byte},:bytestring},
+    i::Int,
+) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
+    getindex(ListOffsetArray(layout.offsets, PrimitiveArray(layout.content.data)), i).data
 end
 
 end
