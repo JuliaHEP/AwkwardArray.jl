@@ -66,23 +66,27 @@ Base.length(parameters::Parameters) =
 
 Base.show(io::IO, parameters::Parameters) = print(
     io,
-    "Parameters(" * join(
+    "Parameters(" *
+    join(
         [
             "$(repr(pair[1])) => $(repr(pair[2]))" for
             pair in merge(parameters.any_valued, parameters.string_valued)
         ],
         ", ",
-    ) * ")",
+    ) *
+    ")",
 )
 
 ### Content ##############################################################
 
+struct Unset end
+
 abstract type Content{BEHAVIOR} <: AbstractVector{ITEM where ITEM} end
 
-has_parameter(content::CONTENT, key::String) where {CONTENT <: Content} =
+has_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
     has_parameter(content.parameters, key)
 
-get_parameter(content::CONTENT, key::String) where {CONTENT <: Content} =
+get_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
     get_parameter(content.parameters, key)
 
 function Base.iterate(layout::Content)
@@ -124,6 +128,24 @@ PrimitiveArray{ITEM}(;
     behavior::Symbol = :default,
 ) where {ITEM} =
     PrimitiveArray(Vector{ITEM}([]), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::PrimitiveArray{ITEM,BUFFER,BEHAVIOR};
+    data::Union{Unset,BUFFER} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR}
+    if isa(data, Unset)
+        data = layout.data
+    end
+    if isa(parameters, Unset)
+        parameters = layout.parameters
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    PrimitiveArray(data, parameters = parameters, behavior = behavior)
+end
 
 is_valid(layout::PrimitiveArray) = true
 Base.length(layout::PrimitiveArray) = length(layout.data)
@@ -171,6 +193,28 @@ ListOffsetArray{INDEX,CONTENT}(;
     parameters = parameters,
     behavior = behavior,
 )
+
+function copy(
+    layout::ListOffsetArray{INDEX,CONTENT,BEHAVIOR};
+    offsets::Union{Unset,INDEX} = Unset(),
+    content::Union{Unset,CONTENT} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR}
+    if isa(offsets, Unset)
+        offsets = layout.offsets
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = layout.parameters
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    ListOffsetArray(offsets, content, parameters = parameters, behavior = behavior)
+end
 
 function is_valid(layout::ListOffsetArray)
     if length(layout.offsets) < 1

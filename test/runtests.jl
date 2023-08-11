@@ -193,18 +193,7 @@ using Test
     begin
         layout = AwkwardArray.ListOffsetArray(
             [0, 3, 3, 8],
-            AwkwardArray.PrimitiveArray(
-                [
-                    0x68,
-                    0x65,
-                    0x79,
-                    0x74,
-                    0x68,
-                    0x65,
-                    0x72,
-                    0x65,
-                ],
-            ),
+            AwkwardArray.PrimitiveArray([0x68, 0x65, 0x79, 0x74, 0x68, 0x65, 0x72, 0x65],),
             parameters = AwkwardArray.Parameters("__doc__" => "nice list"),
         )
 
@@ -216,16 +205,7 @@ using Test
         layout = AwkwardArray.ListOffsetArray(
             [0, 3, 3, 8],
             AwkwardArray.PrimitiveArray(
-                [
-                    0x68,
-                    0x65,
-                    0x79,
-                    0x74,
-                    0x68,
-                    0x65,
-                    0x72,
-                    0x65,
-                ],
+                [0x68, 0x65, 0x79, 0x74, 0x68, 0x65, 0x72, 0x65],
                 behavior = :char,
             ),
             parameters = AwkwardArray.Parameters("__doc__" => "nice string"),
