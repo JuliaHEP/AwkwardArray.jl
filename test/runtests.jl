@@ -216,4 +216,60 @@ using Test
         @test !AwkwardArray.has_parameter(layout, "__list__")
     end
 
+    ### RecordArray ##########################################################
+
+    begin
+        layout = AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            )),
+        )
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 5
+        @test layout[3][:a] == 3
+        @test layout[3][:b] == 3.3
+
+        @test layout == layout
+        @test layout[3] == layout[3]
+
+        tmp = 0.0
+        for x in layout
+            @test x[:b] < 6
+            tmp += x[:b]
+        end
+        @test tmp == 16.5
+    end
+
+    begin
+        layout = AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([1, 2, 3]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3, 3, 5],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                ),
+            )),
+        )
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 3
+        @test layout[3][:a] == 3
+        @test layout[3][:b][1] == 4.4
+
+        @test layout == layout
+        @test layout[3] == layout[3]
+        @test layout[1][:b] == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3])
+        @test layout[2][:b] == AwkwardArray.PrimitiveArray([])
+        @test layout[3][:b] == AwkwardArray.PrimitiveArray([4.4, 5.5])
+
+        tmp = 0.0
+        for x in layout
+            for y in x[:b]
+                @test y < 6
+                tmp += y
+            end
+        end
+        @test tmp == 16.5
+    end
+
 end

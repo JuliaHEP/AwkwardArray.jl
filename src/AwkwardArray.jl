@@ -152,13 +152,13 @@ Base.length(layout::PrimitiveArray) = length(layout.data)
 Base.firstindex(layout::PrimitiveArray) = firstindex(layout.data)
 Base.lastindex(layout::PrimitiveArray) = lastindex(layout.data)
 
-function Base.getindex(layout::PrimitiveArray, i::Int)
-    layout.data[i]
-end
+Base.getindex(layout::PrimitiveArray, i::Int) = layout.data[i]
 
-function Base.getindex(layout::PrimitiveArray, r::UnitRange{Int})
-    PrimitiveArray(layout.data[r])
-end
+Base.getindex(layout::PrimitiveArray, r::UnitRange{Int}) = PrimitiveArray(
+    layout.data[r],
+    parameters = layout.parameters,
+    behavior = typeof(layout).parameters[end],
+)
 
 function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
     layout1.data == layout2.data
@@ -187,12 +187,8 @@ end
 ListOffsetArray{INDEX,CONTENT}(;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {INDEX<:IndexBig} where {CONTENT<:Content} = AwkwardArray.ListOffsetArray(
-    INDEX([0]),
-    CONTENT(),
-    parameters = parameters,
-    behavior = behavior,
-)
+) where {INDEX<:IndexBig} where {CONTENT<:Content} =
+    ListOffsetArray(INDEX([0]), CONTENT(), parameters = parameters, behavior = behavior)
 
 function copy(
     layout::ListOffsetArray{INDEX,CONTENT,BEHAVIOR};
@@ -228,7 +224,7 @@ function is_valid(layout::ListOffsetArray)
             return false
         end
     end
-    return true
+    return is_valid(layout.content)
 end
 
 Base.length(layout::ListOffsetArray) = length(layout.offsets) - 1
@@ -241,9 +237,12 @@ function Base.getindex(layout::ListOffsetArray, i::Int)
     layout.content[start:stop]
 end
 
-function Base.getindex(layout::ListOffsetArray, r::UnitRange{Int})
-    ListOffsetArray(layout.offsets[(r.start):(r.stop+1)], layout.content)
-end
+Base.getindex(layout::ListOffsetArray, r::UnitRange{Int}) = ListOffsetArray(
+    layout.offsets[(r.start):(r.stop+1)],
+    layout.content,
+    parameters = layout.parameters,
+    behavior = typeof(layout).parameters[end],
+)
 
 function Base.:(==)(layout1::ListOffsetArray, layout2::ListOffsetArray)
     if length(layout1) != length(layout2)
@@ -284,6 +283,97 @@ function Base.getindex(
     i::Int,
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
     getindex(ListOffsetArray(layout.offsets, PrimitiveArray(layout.content.data)), i).data
+end
+
+### RecordArray ##########################################################
+
+struct RecordArray{CONTENTS<:NamedTuple,BEHAVIOR} <: Content{BEHAVIOR}
+    contents::CONTENTS
+    length::Int64
+    parameters::Parameters
+    RecordArray(
+        contents::CONTENTS,
+        length::Int64;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {CONTENTS<:NamedTuple} = new{CONTENTS,behavior}(contents, length, parameters)
+end
+
+RecordArray(
+    contents::CONTENTS;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENTS<:NamedTuple} = RecordArray(
+    contents,
+    minimum(if length(contents) == 0
+        0
+    else
+        [length(x) for x in contents]
+    end),
+    parameters = parameters,
+    behavior = behavior,
+)
+
+struct Record{ARRAY<:RecordArray}
+    array::ARRAY
+    at::Int64
+end
+
+function is_valid(layout::RecordArray)
+    if any(length(x) < layout.length for x in layout.contents)
+        return false
+    end
+    for x in values(layout.contents)
+        if !is_valid(x)
+            return false
+        end
+    end
+    return true
+end
+
+Base.length(layout::RecordArray) = layout.length
+Base.firstindex(layout::RecordArray) = 1
+Base.lastindex(layout::RecordArray) = layout.length
+
+Base.getindex(layout::RecordArray, i::Int) = Record(layout, i)
+
+Base.getindex(layout::RecordArray, r::UnitRange{Int}) =
+    RecordArray{typeof(layout).parameters[end]}(
+        NamedTuple{keys(layout.contents)}(
+            Pair(k, v[r]) for (k, v) in pairs(layout.contents)
+        ),
+        min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
+        layout.parameters,
+    )
+
+Base.getindex(layout::Record, f::Symbol) = layout.array.contents[f][layout.at]
+
+function Base.:(==)(
+    layout1::RecordArray{CONTENTS},
+    layout2::RecordArray{CONTENTS},
+) where {CONTENTS<:Content}
+    if length(layout1) != length(layout2)
+        return false
+    else
+        for k in keys(layout1.contents)   # same keys because same CONTENTS type
+            if layout1.contents[k] != layout2.contents[k]   # compare whole arrays
+                return false
+            end
+        end
+        return true
+    end
+end
+
+function Base.:(==)(
+    layout1::Record{RecordArray{CONTENTS}},
+    layout2::Record{RecordArray{CONTENTS}},
+) where {CONTENTS<:Content}
+    for k in keys(layout1.array.contents)   # same keys because same CONTENTS type
+        if layout1[k] != layout2[k]   # compare record items
+            return false
+        end
+    end
+    return true
 end
 
 end
