@@ -365,4 +365,28 @@ using Test
         )
     end
 
+    begin
+        layout_2 = AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([1, 2]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3, 3],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+                ),
+            )),
+        )
+
+        layout_3 = AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([1, 2, 3]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3, 3, 5],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                ),
+            )),
+        )
+
+        @test layout_2 == AwkwardArray.copy(layout_3, length = 2)
+    end
+
 end

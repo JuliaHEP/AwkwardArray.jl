@@ -350,7 +350,27 @@ struct Record{ARRAY<:RecordArray}
     at::Int64
 end
 
-# FIXME: function copy
+function copy(
+    layout::RecordArray{CONTENTS,BEHAVIOR};
+    contents::Union{Unset,CONTENTS} = Unset(),
+    length::Union{Unset,Int64} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {CONTENTS<:NamedTuple,BEHAVIOR}
+    if isa(contents, Unset)
+        contents = layout.contents
+    end
+    if isa(length, Unset)
+        length = layout.length
+    end
+    if isa(parameters, Unset)
+        parameters = layout.parameters
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    RecordArray(contents, length, parameters = parameters, behavior = behavior)
+end
 
 function is_valid(layout::RecordArray)
     for x in values(layout.contents)
@@ -397,7 +417,7 @@ function Base.:(==)(
         return false
     end
     for k in keys(layout1.contents)   # same keys because same CONTENTS type
-        if layout1.contents[k] != layout2.contents[k]   # compare whole arrays
+        if layout1[k] != layout2[k]   # compare whole arrays
             return false
         end
     end
@@ -412,7 +432,7 @@ function Base.:(==)(
         return false
     end
     for k in keys(layout1.array.contents)   # same keys because same CONTENTS type
-        if layout1[k] != layout2[k]   # compare record items
+        if layout1[k] != layout2[k]         # compare record items
             return false
         end
     end
