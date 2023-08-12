@@ -319,13 +319,9 @@ using Test
         @test layout == layout
 
         @test AwkwardArray.RecordArray(
-            NamedTuple{(:a,)}((
-                AwkwardArray.PrimitiveArray([1, 2, 3]),
-            )),
+            NamedTuple{(:a,)}((AwkwardArray.PrimitiveArray([1, 2, 3]),)),
         ) == AwkwardArray.RecordArray(
-            NamedTuple{(:a,)}((
-                AwkwardArray.PrimitiveArray([1, 2, 3]),
-            )),
+            NamedTuple{(:a,)}((AwkwardArray.PrimitiveArray([1, 2, 3]),)),
         )
 
         @test layout == AwkwardArray.RecordArray(

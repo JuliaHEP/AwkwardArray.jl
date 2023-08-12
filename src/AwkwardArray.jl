@@ -61,8 +61,27 @@ get_parameter(parameters::Parameters, key::String) =
         nothing
     end
 
+function compatible(parameters1::Parameters, parameters2::Parameters)
+    if get(parameters1.string_valued, "__array__", "") !=
+       get(parameters2.string_valued, "__array__", "")
+        return false
+    end
+    if get(parameters1.string_valued, "__list__", "") !=
+       get(parameters2.string_valued, "__list__", "")
+        return false
+    end
+    if get(parameters1.string_valued, "__record__", "") !=
+       get(parameters2.string_valued, "__record__", "")
+        return false
+    end
+    return true
+end
+
 Base.length(parameters::Parameters) =
     length(parameters.string_valued) + length(parameters.any_valued)
+
+Base.keys(parameters::Parameters) =
+    union(keys(parameters.any_valued), keys(parameters.string_valued))
 
 Base.show(io::IO, parameters::Parameters) = print(
     io,
@@ -161,6 +180,9 @@ Base.getindex(layout::PrimitiveArray, r::UnitRange{Int}) = PrimitiveArray(
 )
 
 function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
+    if !compatible(layout1.parameters, layout2.parameters)
+        return false
+    end
     layout1.data == layout2.data
 end
 
@@ -254,14 +276,16 @@ Base.getindex(layout::ListOffsetArray, f::Symbol) = ListOffsetArray(
 function Base.:(==)(layout1::ListOffsetArray, layout2::ListOffsetArray)
     if length(layout1) != length(layout2)
         return false
-    else
-        for (x, y) in zip(layout1, layout2)
-            if x != y
-                return false
-            end
-        end
-        return true
     end
+    if !compatible(layout1.parameters, layout2.parameters)
+        return false
+    end
+    for (x, y) in zip(layout1, layout2)
+        if x != y
+            return false
+        end
+    end
+    return true
 end
 
 function end_list!(layout::ListOffsetArray)
@@ -357,7 +381,7 @@ Base.getindex(layout::RecordArray, r::UnitRange{Int}) =
 
 function Base.getindex(layout::RecordArray, f::Symbol)
     content = layout.contents[f]
-    content[firstindex(content):firstindex(content) + length(layout) - 1]
+    content[firstindex(content):firstindex(content)+length(layout)-1]
 end
 
 Base.getindex(layout::Record, f::Symbol) = layout.array.contents[f][layout.at]
@@ -367,6 +391,9 @@ function Base.:(==)(
     layout2::RecordArray{CONTENTS},
 ) where {CONTENTS<:NamedTuple}
     if length(layout1) != length(layout2)
+        return false
+    end
+    if !compatible(layout1.parameters, layout2.parameters)
         return false
     end
     for k in keys(layout1.contents)   # same keys because same CONTENTS type
@@ -380,7 +407,10 @@ end
 function Base.:(==)(
     layout1::Record{ARRAY},
     layout2::Record{ARRAY},
-) where {CONTENTS<:NamedTuple, ARRAY<:RecordArray{CONTENTS}}
+) where {CONTENTS<:NamedTuple,ARRAY<:RecordArray{CONTENTS}}
+    if !compatible(layout1.array.parameters, layout2.array.parameters)
+        return false
+    end
     for k in keys(layout1.array.contents)   # same keys because same CONTENTS type
         if layout1[k] != layout2[k]   # compare record items
             return false
