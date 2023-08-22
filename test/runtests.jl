@@ -846,4 +846,46 @@ using Test
         @test layout.index == [3, 4, 0, 0, 1, 2, 5]
     end
 
+    ### IndexedOptionArray ###################################################
+
+    begin
+        layout = AwkwardArray.IndexedOptionArray(
+            [4, 3, 3, -1, -1, 0],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+        @test length(layout) == 6
+        @test layout[1] == 5.5
+        @test layout[2] == 4.4
+        @test layout[3] == 4.4
+        @test layout[4] == nothing
+        @test layout[5] == nothing
+        @test layout[6] == 1.1
+        @test layout[2:3] == AwkwardArray.PrimitiveArray([4.4, 4.4])
+        tmp = 0.0
+        for x in layout
+            if x != nothing
+                @test x < 6
+                tmp += x
+            end
+        end
+        @test tmp == 15.4
+
+        AwkwardArray.push!(layout, 6.6)
+        @test length(layout) == 7
+        @test layout[7] == 6.6
+
+        AwkwardArray.push_null!(layout)
+        @test length(layout) == 8
+        @test layout[8] == nothing
+        AwkwardArray.push_null!(layout)
+        @test length(layout) == 9
+        @test layout[9] == nothing
+
+        AwkwardArray.push!(layout, 7.7)
+        @test length(layout) == 10
+        @test layout[10] == 7.7
+        @test layout.index == [4, 3, 3, -1, -1, 0, 5, -1, -1, 6]
+    end
+
+
 end

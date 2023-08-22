@@ -763,7 +763,7 @@ end
 
 function is_valid(layout::IndexedArray)
     for i in eachindex(layout.index)
-        if layout.index[i] >= length(layout.content)
+        if layout.index[i] < 0 || layout.index[i] >= length(layout.content)
             return false
         end
     end
@@ -809,5 +809,112 @@ function end_record!(
     Base.push!(layout.index, tmp)
     layout
 end
+
+### IndexedOptionArray ###################################################
+
+struct IndexedOptionArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEHAVIOR}
+    index::INDEX
+    content::CONTENT
+    parameters::Parameters
+    IndexedOptionArray(
+        index::INDEX,
+        content::CONTENT;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {INDEX<:IndexBig,CONTENT<:Content} =
+        new{INDEX,CONTENT,behavior}(index, content, parameters)
+end
+
+IndexedOptionArray{INDEX,CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {INDEX<:IndexBig} where {CONTENT<:Content} =
+    IndexedOptionArray(INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::IndexedOptionArray{INDEX1,CONTENT1,BEHAVIOR};
+    index::Union{Unset,INDEX2} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(index, Unset)
+        index = layout.index
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    IndexedOptionArray(index, content, parameters = parameters, behavior = behavior)
+end
+
+function is_valid(layout::IndexedOptionArray)
+    for i in eachindex(layout.index)
+        if layout.index[i] >= length(layout.content)
+            return false
+        end
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::IndexedOptionArray) = length(layout.index)
+Base.firstindex(layout::IndexedOptionArray) = firstindex(layout.index)
+Base.lastindex(layout::IndexedOptionArray) = lastindex(layout.index)
+
+function Base.getindex(layout::IndexedOptionArray, i::Int)
+    if layout.index[i] < 0
+        nothing
+    else
+        layout.content[layout.index[i]+firstindex(layout.content)]
+    end
+end
+
+Base.getindex(layout::IndexedOptionArray, r::UnitRange{Int}) =
+    copy(layout, index = layout.index[r.start:r.stop])
+
+Base.getindex(layout::IndexedOptionArray, f::Symbol) =
+    copy(layout, content = layout.content[f])
+
+function push!(
+    layout::IndexedOptionArray{INDEX,CONTENT},
+    x::ITEM,
+) where {INDEX<:IndexBig,ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    tmp = length(layout.content)
+    push!(layout.content, x)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function push_null!(layout::IndexedOptionArray)
+    Base.push!(layout.index, -1)
+    layout
+end
+
+function end_list!(
+    layout::IndexedOptionArray{INDEX,CONTENT},
+) where {INDEX<:IndexBig,CONTENT<:ListType}
+    tmp = length(layout.content)
+    end_list!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function end_record!(
+    layout::IndexedOptionArray{INDEX,CONTENT},
+) where {INDEX<:IndexBig,CONTENT<:RecordArray}
+    tmp = length(layout.content)
+    end_record!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+
+
+
 
 end
