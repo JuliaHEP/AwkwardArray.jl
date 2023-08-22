@@ -812,7 +812,9 @@ end
 
 ### IndexedOptionArray ###################################################
 
-struct IndexedOptionArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEHAVIOR}
+abstract type OptionType{BEHAVIOR} <: Content{BEHAVIOR} end
+
+struct IndexedOptionArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
     index::INDEX
     content::CONTENT
     parameters::Parameters
@@ -890,11 +892,6 @@ function push!(
     layout
 end
 
-function push_null!(layout::IndexedOptionArray)
-    Base.push!(layout.index, -1)
-    layout
-end
-
 function end_list!(
     layout::IndexedOptionArray{INDEX,CONTENT},
 ) where {INDEX<:IndexBig,CONTENT<:ListType}
@@ -910,6 +907,99 @@ function end_record!(
     tmp = length(layout.content)
     end_record!(layout.content)
     Base.push!(layout.index, tmp)
+    layout
+end
+
+function push_null!(layout::IndexedOptionArray)
+    Base.push!(layout.index, -1)
+    layout
+end
+
+### ByteMaskedArray ######################################################
+
+struct ByteMaskedArray{INDEX<:Index8,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
+    mask::INDEX
+    content::CONTENT
+    valid_when::Bool
+    parameters::Parameters
+    ByteMaskedArray(
+        mask::INDEX,
+        content::CONTENT,
+        valid_when::Bool;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {INDEX<:Index8,CONTENT<:Content} =
+        new{INDEX,CONTENT,behavior}(mask, content, valid_when, parameters)
+end
+
+ByteMaskedArray{INDEX,CONTENT}(;
+    valid_when::Bool = false,  # the NumPy MaskedArray convention
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {INDEX<:Index8} where {CONTENT<:Content} =
+    ByteMaskedArray(INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::ByteMaskedArray{INDEX1,CONTENT1,BEHAVIOR};
+    mask::Union{Unset,INDEX2} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {INDEX1<:Index8,INDEX2<:Index8,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(mask, Unset)
+        mask = layout.mask
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    ByteMaskedArray(mask, content, parameters = parameters, behavior = behavior)
+end
+
+function is_valid(layout::ByteMaskedArray)
+    if length(layout.mask) > length(layout.content)
+        return false
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::ByteMaskedArray) = length(layout.mask)
+Base.firstindex(layout::ByteMaskedArray) = firstindex(layout.mask)
+Base.lastindex(layout::ByteMaskedArray) = lastindex(layout.mask)
+
+function Base.getindex(layout::ByteMaskedArray, i::Int)
+    if (layout.mask[i] != 0) != layout.valid_when
+        nothing
+    else
+        adjustment = firstindex(layout.mask) - firstindex(layout.content)
+        layout.content[i - adjustment]
+    end
+end
+
+function Base.getindex(layout::ByteMaskedArray, r::UnitRange{Int})
+    adjustment = firstindex(layout.mask) - firstindex(layout.content)
+    copy(
+        layout,
+        mask = layout.mask[r.start:r.stop],
+        content = layout.content[(r.start - adjustment):(r.stop - adjustment)],
+    )
+end
+
+Base.getindex(layout::ByteMaskedArray, f::Symbol) = copy(
+    layout, content = layout.content[f]
+)
+
+function push!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+    x::ITEM,
+) where {INDEX<:Index8,ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    push!(layout.content, x)
+    Base.push!(layout.mask, layout.valid_when)
     layout
 end
 
