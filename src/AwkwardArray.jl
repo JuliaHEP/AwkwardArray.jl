@@ -436,6 +436,119 @@ function end_list!(layout::ListArray)
     Base.push!(layout.stops, length(layout.content))
 end
 
+### RegularArray #########################################################
+
+mutable struct RegularArray{CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
+    const content::CONTENT
+    size::Int64
+    length::Int64
+    const parameters::Parameters
+    RegularArray(
+        content::CONTENT,
+        size::Int;
+        zeros_length::Int = 0,
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {CONTENT<:Content} = new{CONTENT,behavior}(content, size, if size == 0
+        zeros_length
+    else
+        div(length(content), size)
+    end, parameters)
+end
+
+RegularArray{CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENT<:Content} = RegularArray(
+    CONTENT(),
+    0,
+    zeros_length = 0,
+    parameters = parameters,
+    behavior = behavior,
+)
+
+function copy(
+    layout::RegularArray{CONTENT,BEHAVIOR};
+    content::Union{Unset,CONTENT} = Unset(),
+    size::Union{Unset,Int} = Unset(),
+    zeros_length::Union{Unset,Int} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {CONTENT<:Content,BEHAVIOR}
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(size, Unset)
+        size = layout.size
+    end
+    if isa(zeros_length, Unset)
+        zeros_length = length(layout)
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    RegularArray(
+        content,
+        size,
+        zeros_length = zeros_length,
+        parameters = parameters,
+        behavior = behavior,
+    )
+end
+
+function is_valid(layout::RegularArray)
+    if layout.length < 0
+        return false
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::RegularArray) = layout.length
+Base.firstindex(layout::RegularArray) = 1
+Base.lastindex(layout::RegularArray) = length(layout)
+
+function Base.getindex(layout::RegularArray, i::Int)
+    start = (i - firstindex(layout)) * layout.size + firstindex(layout.content)
+    stop = (i + 1 - firstindex(layout)) * layout.size + firstindex(layout.content) - 1
+    layout.content[start:stop]
+end
+
+function Base.getindex(layout::RegularArray, r::UnitRange{Int})
+    start = (r.start - firstindex(layout)) * layout.size + firstindex(layout.content)
+    stop = (r.stop - 1 - firstindex(layout)) * layout.size + firstindex(layout.content) + 1
+    RegularArray(
+        layout.content[start:stop],
+        layout.size,
+        zeros_length = r.stop - r.start + 1,
+        parameters = parameters_of(layout),
+        behavior = typeof(layout).parameters[end],
+    )
+end
+
+Base.getindex(layout::RegularArray, f::Symbol) = RegularArray(
+    layout.content[f],
+    layout.size,
+    zeros_length = length(layout),
+    parameters = parameters_of(layout),
+    behavior = typeof(layout).parameters[end],
+)
+
+function end_list!(layout::RegularArray)
+    if layout.length == 0
+        layout.size = length(layout.content)
+        layout.length = 1
+    elseif length(layout.content) == (layout.length + 1) * layout.size
+        layout.length += 1
+    else
+        error(
+            "RegularArray list lengths changed: from $layout.size to $(div(length(layout.content), (layout.length + 1)))",
+        )
+    end
+end
+
 ### ListType with behavior = :string #####################################
 
 function Base.getindex(

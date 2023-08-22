@@ -207,6 +207,114 @@ using Test
         )
     end
 
+    ### RegularArray #########################################################
+
+    begin
+        layout = AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
+            3,
+        )
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 2
+        @test layout[1] == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3])
+        @test layout[2] == AwkwardArray.PrimitiveArray([4.4, 5.5, 6.6])
+        @test layout[end] == AwkwardArray.PrimitiveArray([4.4, 5.5, 6.6])
+    end
+
+    begin
+        layout = AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
+            2,
+        )
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 3
+        @test layout[1] == AwkwardArray.PrimitiveArray([1.1, 2.2])
+        @test layout[2] == AwkwardArray.PrimitiveArray([3.3, 4.4])
+        @test layout[3] == AwkwardArray.PrimitiveArray([5.5, 6.6])
+        @test layout[end] == AwkwardArray.PrimitiveArray([5.5, 6.6])
+        @test layout[1:3] == AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4]),
+            2,
+        )
+        @test layout[2:4] == AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray([3.3, 4.4, 5.5, 6.6]),
+            2,
+        )
+        @test layout[2:3] ==
+              AwkwardArray.RegularArray(AwkwardArray.PrimitiveArray([3.3, 4.4]), 2)
+    end
+
+    begin
+        layout = AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray{Float64}(),
+            0,
+            zeros_length = 5,
+        )
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 5
+        @test layout.size == 0
+    end
+
+    begin
+        layout = AwkwardArray.RegularArray{AwkwardArray.PrimitiveArray{Float64}}()
+        sublayout = layout.content
+        @test length(layout) == 0
+        AwkwardArray.push!(sublayout, 1.1)
+        AwkwardArray.push!(sublayout, 2.2)
+        AwkwardArray.push!(sublayout, 3.3)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 1
+        @test layout.size == 3
+        AwkwardArray.push!(sublayout, 4.4)
+        AwkwardArray.push!(sublayout, 5.5)
+        AwkwardArray.push!(sublayout, 6.6)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 2
+        @test layout == AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
+            3,
+        )
+    end
+
+    begin
+        layout = AwkwardArray.RegularArray{AwkwardArray.PrimitiveArray{Float64}}()
+        sublayout = layout.content
+        @test length(layout) == 0
+        AwkwardArray.push!(sublayout, 1.1)
+        AwkwardArray.push!(sublayout, 2.2)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 1
+        @test layout.size == 2
+        AwkwardArray.push!(sublayout, 3.3)
+        AwkwardArray.push!(sublayout, 4.4)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 2
+        AwkwardArray.push!(sublayout, 5.5)
+        AwkwardArray.push!(sublayout, 6.6)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 3
+        @test layout == AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
+            2,
+        )
+    end
+
+    begin
+        layout = AwkwardArray.RegularArray{AwkwardArray.PrimitiveArray{Float64}}()
+        sublayout = layout.content
+        AwkwardArray.end_list!(layout)
+        AwkwardArray.end_list!(layout)
+        AwkwardArray.end_list!(layout)
+        AwkwardArray.end_list!(layout)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 5
+        @test layout == AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray{Float64}(),
+            0,
+            zeros_length = 5,
+        )
+    end
+
     ### ListType with behavior = :string #####################################
 
     begin
