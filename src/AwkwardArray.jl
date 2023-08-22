@@ -193,7 +193,9 @@ end
 
 ### ListOffsetArray ######################################################
 
-struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEHAVIOR}
+abstract type ListType{BEHAVIOR} <: Content{BEHAVIOR} end
+
+struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
     offsets::INDEX
     content::CONTENT
     parameters::Parameters
@@ -273,7 +275,7 @@ Base.getindex(layout::ListOffsetArray, f::Symbol) = ListOffsetArray(
     behavior = typeof(layout).parameters[end],
 )
 
-function Base.:(==)(layout1::ListOffsetArray, layout2::ListOffsetArray)
+function Base.:(==)(layout1::ListType, layout2::ListType)
     if length(layout1) != length(layout2)
         return false
     end
@@ -293,7 +295,111 @@ function end_list!(layout::ListOffsetArray)
     layout
 end
 
-### ListOffsetArray with behavior = :string ##############################
+### ListArray ############################################################
+
+struct ListArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
+    starts::INDEX
+    stops::INDEX
+    content::CONTENT
+    parameters::Parameters
+    ListArray(
+        starts::INDEX,
+        stops::INDEX,
+        content::CONTENT;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {INDEX<:IndexBig,CONTENT<:Content} =
+        new{INDEX,CONTENT,behavior}(starts, stops, content, parameters)
+end
+
+ListArray{INDEX,CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {INDEX<:IndexBig} where {CONTENT<:Content} =
+    ListArray(INDEX([]), INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::ListArray{INDEX,CONTENT,BEHAVIOR};
+    starts::Union{Unset,INDEX} = Unset(),
+    stops::Union{Unset,INDEX} = Unset(),
+    content::Union{Unset,CONTENT} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR}
+    if isa(starts, Unset)
+        starts = layout.starts
+    end
+    if isa(stops, Unset)
+        stops = layout.starts
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = layout.parameters
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    ListArray(starts, stops, content, parameters = parameters, behavior = behavior)
+end
+
+function is_valid(layout::ListArray)
+    if length(layout.starts) < length(layout.stops)
+        return false
+    end
+    for i in eachindex(layout)
+        start = layout.starts[i]
+        stop = layout.stops[i]
+        if start != stop
+            if start < 0 || start > stop || stop > length(layout.content)
+                return false
+            end
+        end
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::ListArray) = length(layout.starts)
+Base.firstindex(layout::ListArray) = firstindex(layout.starts)
+Base.lastindex(layout::ListArray) = lastindex(layout.starts)
+
+function Base.getindex(layout::ListArray, i::Int)
+    adjustment = firstindex(layout.starts) - firstindex(layout.stops)
+    start = layout.starts[i] + firstindex(layout.content)
+    stop = layout.stops[i-adjustment] - layout.starts[i] + start - 1
+    layout.content[start:stop]
+end
+
+function Base.getindex(layout::ListArray, r::UnitRange{Int})
+    adjustment = firstindex(layout.starts) - firstindex(layout.stops)
+    ListArray(
+        layout.starts[r.start:r.stop],
+        layout.stops[(r.start-adjustment):(r.stop-adjustment)],
+        layout.content,
+        parameters = layout.parameters,
+        behavior = typeof(layout).parameters[end],
+    )
+end
+
+Base.getindex(layout::ListArray, f::Symbol) = ListArray(
+    layout.starts,
+    layout.stops,
+    layout.content[f],
+    parameters = layout.parameters,
+    behavior = typeof(layout).parameters[end],
+)
+
+function end_list!(layout::ListArray)
+    if isempty(layout.stops)
+        Base.push!(layout.starts, 0)
+    else
+        Base.push!(layout.starts, layout.stops[end])
+    end
+    Base.push!(layout.stops, length(layout.content))
+end
+
+### ListType with behavior = :string #####################################
 
 function Base.getindex(
     layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
@@ -307,13 +413,35 @@ function Base.getindex(
     )
 end
 
-### ListOffsetArray with behavior = :bytestring ##########################
+function Base.getindex(
+    layout::ListArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
+    i::Int,
+) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
+    String(
+        getindex(
+            ListArray(layout.starts, layout.stops, PrimitiveArray(layout.content.data)),
+            i,
+        ).data,
+    )
+end
+
+### ListType with behavior = :bytestring #################################
 
 function Base.getindex(
     layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:byte},:bytestring},
     i::Int,
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
     getindex(ListOffsetArray(layout.offsets, PrimitiveArray(layout.content.data)), i).data
+end
+
+function Base.getindex(
+    layout::ListArray{INDEX,PrimitiveArray{UInt8,BUFFER,:byte},:bytestring},
+    i::Int,
+) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
+    getindex(
+        ListArray(layout.starts, layout.stops, PrimitiveArray(layout.content.data)),
+        i,
+    ).data
 end
 
 ### RecordArray ##########################################################

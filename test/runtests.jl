@@ -108,7 +108,85 @@ using Test
         )
     end
 
-    ### ListOffsetArray with behavior = :string ##############################
+    ### ListArray ######################################################
+
+    begin
+        layout = AwkwardArray.ListArray(
+            [0, 3, 3],
+            [3, 3, 5],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 3
+        @test layout[1] == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3])
+        @test layout[end-1] == AwkwardArray.PrimitiveArray([])
+        @test layout[end] == AwkwardArray.PrimitiveArray([4.4, 5.5])
+        @test layout[1:2] == AwkwardArray.ListArray(
+            [0, 3],
+            [3, 3],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+        )
+        tmp = 0
+        for x in layout
+            @test length(x) <= 3
+            tmp += length(x)
+        end
+        @test tmp == 5
+    end
+
+    begin
+        layout = AwkwardArray.ListArray(
+            [0, 3, 2],
+            [3, 2, 5],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+        @test !AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.ListArray(
+            [0, 3, 3],
+            [3, 3, 6],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+        @test !AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.ListArray(
+            [-1, 3, 3],
+            [3, 3, 5],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+        @test !AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.ListArray{
+            AwkwardArray.Index64,
+            AwkwardArray.PrimitiveArray{Float64},
+        }()
+        sublayout = layout.content
+        @test length(layout) == 0
+        AwkwardArray.push!(sublayout, 1.1)
+        AwkwardArray.push!(sublayout, 2.2)
+        AwkwardArray.push!(sublayout, 3.3)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 1
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 2
+        AwkwardArray.push!(sublayout, 4.4)
+        AwkwardArray.push!(sublayout, 5.5)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 3
+        @test layout == AwkwardArray.ListArray(
+            [0, 3, 3],
+            [3, 3, 5],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+    end
+
+    ### ListType with behavior = :string #####################################
 
     begin
         layout = AwkwardArray.ListOffsetArray(
@@ -149,7 +227,47 @@ using Test
         @test Vector(layout) == ["hey", "there", "\$", "¢", "€", "💰"]
     end
 
-    ### ListOffsetArray with behavior = :bytestring ##########################
+    begin
+        layout = AwkwardArray.ListArray(
+            [0, 3, 8, 9, 11, 14],
+            [3, 8, 9, 11, 14, 18],
+            AwkwardArray.PrimitiveArray(
+                [
+                    0x68,
+                    0x65,
+                    0x79,
+                    0x74,
+                    0x68,
+                    0x65,
+                    0x72,
+                    0x65,
+                    0x24,
+                    0xc2,
+                    0xa2,
+                    0xe2,
+                    0x82,
+                    0xac,
+                    0xf0,
+                    0x9f,
+                    0x92,
+                    0xb0,
+                ],
+                behavior = :char,
+            ),
+            behavior = :string,
+        )
+
+        @test layout[1] == "hey"
+        @test layout[2] == "there"
+        @test layout[3] == "\$"
+        @test layout[4] == "¢"
+        @test layout[5] == "€"
+        @test layout[6] == "💰"
+
+        @test Vector(layout) == ["hey", "there", "\$", "¢", "€", "💰"]
+    end
+
+    ### ListType with behavior = :bytestring #################################
 
     begin
         layout = AwkwardArray.ListOffsetArray(
@@ -188,7 +306,45 @@ using Test
         @test layout[6] == [0xf0, 0x9f, 0x92, 0xb0]
     end
 
-    ### ListOffsetArray with other parameters ################################
+    begin
+        layout = AwkwardArray.ListArray(
+            [0, 3, 8, 9, 11, 14],
+            [3, 8, 9, 11, 14, 18],
+            AwkwardArray.PrimitiveArray(
+                [
+                    0x68,
+                    0x65,
+                    0x79,
+                    0x74,
+                    0x68,
+                    0x65,
+                    0x72,
+                    0x65,
+                    0x24,
+                    0xc2,
+                    0xa2,
+                    0xe2,
+                    0x82,
+                    0xac,
+                    0xf0,
+                    0x9f,
+                    0x92,
+                    0xb0,
+                ],
+                behavior = :byte,
+            ),
+            behavior = :bytestring,
+        )
+
+        @test layout[1] == [0x68, 0x65, 0x79]
+        @test layout[2] == [0x74, 0x68, 0x65, 0x72, 0x65]
+        @test layout[3] == [0x24]
+        @test layout[4] == [0xc2, 0xa2]
+        @test layout[5] == [0xe2, 0x82, 0xac]
+        @test layout[6] == [0xf0, 0x9f, 0x92, 0xb0]
+    end
+
+    ### ListType with other parameters #######################################
 
     begin
         layout = AwkwardArray.ListOffsetArray(
@@ -202,8 +358,36 @@ using Test
     end
 
     begin
+        layout = AwkwardArray.ListArray(
+            [0, 3, 3],
+            [3, 3, 8],
+            AwkwardArray.PrimitiveArray([0x68, 0x65, 0x79, 0x74, 0x68, 0x65, 0x72, 0x65],),
+            parameters = AwkwardArray.Parameters("__doc__" => "nice list"),
+        )
+
+        @test AwkwardArray.get_parameter(layout, "__doc__") == "nice list"
+        @test !AwkwardArray.has_parameter(layout, "__list__")
+    end
+
+    begin
         layout = AwkwardArray.ListOffsetArray(
             [0, 3, 3, 8],
+            AwkwardArray.PrimitiveArray(
+                [0x68, 0x65, 0x79, 0x74, 0x68, 0x65, 0x72, 0x65],
+                behavior = :char,
+            ),
+            parameters = AwkwardArray.Parameters("__doc__" => "nice string"),
+            behavior = :string,
+        )
+
+        @test AwkwardArray.get_parameter(layout, "__doc__") == "nice string"
+        @test !AwkwardArray.has_parameter(layout, "__list__")
+    end
+
+    begin
+        layout = AwkwardArray.ListArray(
+            [0, 3, 3],
+            [3, 3, 8],
             AwkwardArray.PrimitiveArray(
                 [0x68, 0x65, 0x79, 0x74, 0x68, 0x65, 0x72, 0x65],
                 behavior = :char,
