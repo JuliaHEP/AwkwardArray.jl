@@ -760,4 +760,90 @@ using Test
         @test layout_2 == AwkwardArray.copy(layout_3, length = 2)
     end
 
+    ### IndexedArray #########################################################
+
+    begin
+        layout = AwkwardArray.IndexedArray(
+            [4, 3, 3, 0],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+        @test length(layout) == 4
+        @test layout[1] == 5.5
+        @test layout[2] == 4.4
+        @test layout[3] == 4.4
+        @test layout[4] == 1.1
+        @test layout[2:4] == AwkwardArray.PrimitiveArray([4.4, 4.4, 1.1])
+        tmp = 0.0
+        for x in layout
+            @test x < 6
+            tmp += x
+        end
+        @test tmp == 15.4
+
+        AwkwardArray.push!(layout, 6.6)
+        @test length(layout) == 5
+        @test layout[5] == 6.6
+
+        AwkwardArray.push!(layout, 7.7)
+        @test length(layout) == 6
+        @test layout[6] == 7.7
+        @test layout.index == [4, 3, 3, 0, 5, 6]
+        @test layout == AwkwardArray.PrimitiveArray([5.5, 4.4, 4.4, 1.1, 6.6, 7.7])
+    end
+
+    begin
+        layout = AwkwardArray.IndexedArray(
+            [2, 0, 0, 1],
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3, 5],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            ),
+        )
+        @test length(layout) == 4
+        @test layout[1] == AwkwardArray.PrimitiveArray([4.4, 5.5])
+        @test layout[2] == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3])
+        @test layout[3] == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3])
+        @test layout[4] == AwkwardArray.PrimitiveArray([])
+
+        sublayout = layout.content.content
+        AwkwardArray.push!(sublayout, 6.6)
+        AwkwardArray.push!(sublayout, 7.7)
+        AwkwardArray.end_list!(layout)
+        @test length(layout) == 5
+        @test layout[5] == AwkwardArray.PrimitiveArray([6.6, 7.7])
+        @test layout.index == [2, 0, 0, 1, 3]
+    end
+
+    begin
+        layout = AwkwardArray.IndexedArray(
+            [3, 4, 0, 0, 1, 2],
+            AwkwardArray.RecordArray(
+                NamedTuple{(:a, :b)}((
+                    AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                )),
+            ),
+        )
+        @test length(layout) == 6
+        @test layout[1][:a] == 4
+        @test layout[1][:b] == 4.4
+        @test layout[end][:a] == 3
+        @test layout[end][:b] == 3.3
+        @test layout[:a][1] == 4
+        @test layout[:b][1] == 4.4
+        @test layout[:a][end] == 3
+        @test layout[:b][end] == 3.3
+
+        a_layout = layout.content.contents[:a]
+        b_layout = layout.content.contents[:b]
+
+        AwkwardArray.push!(a_layout, 6)
+        AwkwardArray.push!(b_layout, 6.6)
+        AwkwardArray.end_record!(layout)
+        @test length(layout) == 7
+        @test layout[end][:a] == 6
+        @test layout[end][:b] == 6.6
+        @test layout.index == [3, 4, 0, 0, 1, 2, 5]
+    end
+
 end
