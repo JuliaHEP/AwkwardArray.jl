@@ -151,11 +151,11 @@ PrimitiveArray{ITEM}(;
     PrimitiveArray(Vector{ITEM}([]), parameters = parameters, behavior = behavior)
 
 function copy(
-    layout::PrimitiveArray{ITEM,BUFFER,BEHAVIOR};
-    data::Union{Unset,BUFFER} = Unset(),
+    layout::PrimitiveArray{ITEM,BUFFER1,BEHAVIOR};
+    data::Union{Unset,BUFFER2} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR}
+) where {ITEM,BUFFER1<:AbstractVector{ITEM},BUFFER2<:AbstractVector,BEHAVIOR}
     if isa(data, Unset)
         data = layout.data
     end
@@ -175,16 +175,11 @@ Base.lastindex(layout::PrimitiveArray) = lastindex(layout.data)
 
 Base.getindex(layout::PrimitiveArray, i::Int) = layout.data[i]
 
-Base.getindex(layout::PrimitiveArray, r::UnitRange{Int}) = PrimitiveArray(
-    layout.data[r],
-    parameters = parameters_of(layout),
-    behavior = typeof(layout).parameters[end],
+Base.getindex(layout::PrimitiveArray, r::UnitRange{Int}) = copy(
+    layout, data = layout.data[r]
 )
 
 function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
-    if !compatible(parameters_of(layout1), parameters_of(layout2))
-        return false
-    end
     layout1.data == layout2.data
 end
 
@@ -252,12 +247,12 @@ ListOffsetArray{INDEX,CONTENT}(;
     ListOffsetArray(INDEX([0]), CONTENT(), parameters = parameters, behavior = behavior)
 
 function copy(
-    layout::ListOffsetArray{INDEX,CONTENT1,BEHAVIOR};
-    offsets::Union{Unset,INDEX} = Unset(),
+    layout::ListOffsetArray{INDEX1,CONTENT1,BEHAVIOR};
+    offsets::Union{Unset,INDEX2} = Unset(),
     content::Union{Unset,CONTENT2} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {INDEX<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
     if isa(offsets, Unset)
         offsets = layout.offsets
     end
@@ -298,18 +293,12 @@ function Base.getindex(layout::ListOffsetArray, i::Int)
     layout.content[start:stop]
 end
 
-Base.getindex(layout::ListOffsetArray, r::UnitRange{Int}) = ListOffsetArray(
-    layout.offsets[(r.start):(r.stop+1)],
-    layout.content,
-    parameters = parameters_of(layout),
-    behavior = typeof(layout).parameters[end],
+Base.getindex(layout::ListOffsetArray, r::UnitRange{Int}) = copy(
+    layout, offsets = layout.offsets[(r.start):(r.stop+1)]
 )
 
-Base.getindex(layout::ListOffsetArray, f::Symbol) = ListOffsetArray(
-    layout.offsets,
-    layout.content[f],
-    parameters = parameters_of(layout),
-    behavior = typeof(layout).parameters[end],
+Base.getindex(layout::ListOffsetArray, f::Symbol) = copy(
+    layout, content = layout.content[f]
 )
 
 function Base.:(==)(layout1::ListType, layout2::ListType)
@@ -356,13 +345,13 @@ ListArray{INDEX,CONTENT}(;
     ListArray(INDEX([]), INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
 
 function copy(
-    layout::ListArray{INDEX,CONTENT1,BEHAVIOR};
-    starts::Union{Unset,INDEX} = Unset(),
-    stops::Union{Unset,INDEX} = Unset(),
+    layout::ListArray{INDEX1,CONTENT1,BEHAVIOR};
+    starts::Union{Unset,INDEX2} = Unset(),
+    stops::Union{Unset,INDEX2} = Unset(),
     content::Union{Unset,CONTENT2} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {INDEX<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
     if isa(starts, Unset)
         starts = layout.starts
     end
@@ -410,21 +399,15 @@ end
 
 function Base.getindex(layout::ListArray, r::UnitRange{Int})
     adjustment = firstindex(layout.starts) - firstindex(layout.stops)
-    ListArray(
-        layout.starts[r.start:r.stop],
-        layout.stops[(r.start-adjustment):(r.stop-adjustment)],
-        layout.content,
-        parameters = parameters_of(layout),
-        behavior = typeof(layout).parameters[end],
+    copy(
+        layout,
+        starts = layout.starts[r.start:r.stop],
+        stops = layout.stops[(r.start-adjustment):(r.stop-adjustment)],
     )
 end
 
-Base.getindex(layout::ListArray, f::Symbol) = ListArray(
-    layout.starts,
-    layout.stops,
-    layout.content[f],
-    parameters = parameters_of(layout),
-    behavior = typeof(layout).parameters[end],
+Base.getindex(layout::ListArray, f::Symbol) = copy(
+    layout, content = layout.content[f]
 )
 
 function end_list!(layout::ListArray)
@@ -519,21 +502,13 @@ end
 function Base.getindex(layout::RegularArray, r::UnitRange{Int})
     start = (r.start - firstindex(layout)) * layout.size + firstindex(layout.content)
     stop = (r.stop - 1 - firstindex(layout)) * layout.size + firstindex(layout.content) + 1
-    RegularArray(
-        layout.content[start:stop],
-        layout.size,
-        zeros_length = r.stop - r.start + 1,
-        parameters = parameters_of(layout),
-        behavior = typeof(layout).parameters[end],
+    copy(
+        layout, content = layout.content[start:stop], zeros_length = r.stop - r.start + 1
     )
 end
 
-Base.getindex(layout::RegularArray, f::Symbol) = RegularArray(
-    layout.content[f],
-    layout.size,
-    zeros_length = length(layout),
-    parameters = parameters_of(layout),
-    behavior = typeof(layout).parameters[end],
+Base.getindex(layout::RegularArray, f::Symbol) = copy(
+    layout, content = layout.content[f]
 )
 
 function end_list!(layout::RegularArray)
@@ -643,6 +618,80 @@ function Base.getindex(
     ).data
 end
 
+### IndexedArray #########################################################
+
+struct IndexedArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEHAVIOR}
+    index::INDEX
+    content::CONTENT
+    parameters::Parameters
+    IndexedArray(
+        index::INDEX,
+        content::CONTENT;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {INDEX<:IndexBig,CONTENT<:Content} =
+        new{INDEX,CONTENT,behavior}(index, content, parameters)
+end
+
+IndexedArray{INDEX,CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {INDEX<:IndexBig} where {CONTENT<:Content} =
+    IndexedArray(INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::IndexedArray{INDEX1,CONTENT1,BEHAVIOR};
+    index::Union{Unset,INDEX2} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(index, Unset)
+        index = layout.index
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    IndexedArray(index, content, parameters = parameters, behavior = behavior)
+end
+
+function is_valid(layout::IndexedArray)
+    for i in eachindex(layout.index)
+        if layout.index[i] >= length(layout.content)
+            return false
+        end
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::IndexedArray) = length(layout.index)
+Base.firstindex(layout::IndexedArray) = firstindex(layout.index)
+Base.lastindex(layout::IndexedArray) = lastindex(layout.index)
+
+Base.getindex(layout::IndexedArray, i::Int) =
+    layout.content[layout.index[i] + firstindex(layout.content)]
+
+Base.getindex(layout::IndexedArray, r::UnitRange{Int}) = copy(
+    layout, index = layout.index[r.start:r.stop]
+)
+
+Base.getindex(layout::IndexedArray, f::Symbol) = copy(
+    layout, content = layout.content[f]
+)
+
+
+
+
+
+
+
+
 ### RecordArray ##########################################################
 
 mutable struct RecordArray{CONTENTS<:NamedTuple,BEHAVIOR} <: Content{BEHAVIOR}
@@ -717,14 +766,13 @@ Base.lastindex(layout::RecordArray) = layout.length
 
 Base.getindex(layout::RecordArray, i::Int) = Record(layout, i)
 
-Base.getindex(layout::RecordArray, r::UnitRange{Int}) =
-    RecordArray{typeof(layout).parameters[end]}(
-        NamedTuple{keys(layout.contents)}(
-            Pair(k, v[r]) for (k, v) in pairs(layout.contents)
-        ),
-        min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
-        parameters_of(layout),
-    )
+Base.getindex(layout::RecordArray, r::UnitRange{Int}) = copy(
+    layout,
+    contents = NamedTuple{keys(layout.contents)}(
+        Pair(k, v[r]) for (k, v) in pairs(layout.contents)
+    ),
+    length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
+)
 
 function Base.getindex(layout::RecordArray, f::Symbol)
     content = layout.contents[f]
