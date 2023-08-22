@@ -36,6 +36,27 @@ using Test
         @test layout == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5])
     end
 
+    ### EmptyArray ###########################################################
+
+    begin
+        layout = AwkwardArray.EmptyArray()
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 0
+        @test layout[100:99] == layout
+        tmp = 0.0
+        for x in layout
+            tmp += x
+        end
+        @test tmp == 0.0
+        @test layout == AwkwardArray.PrimitiveArray(Vector{Float64}())
+    end
+
+    begin
+        layout = AwkwardArray.EmptyArray()
+        @test length(layout) == 0
+        @test layout == AwkwardArray.EmptyArray()
+    end
+
     ### ListOffsetArray ######################################################
 
     begin

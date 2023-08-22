@@ -102,9 +102,9 @@ struct Unset end
 
 abstract type Content{BEHAVIOR} <: AbstractVector{ITEM where ITEM} end
 
+parameters_of(content::CONTENT) where {CONTENT<:Content} = content.parameters
 has_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
     has_parameter(content.parameters, key)
-
 get_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
     get_parameter(content.parameters, key)
 
@@ -131,7 +131,9 @@ Base.size(layout::Content) = (length(layout),)
 
 ### PrimitiveArray #######################################################
 
-struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} <: Content{BEHAVIOR}
+abstract type LeafType{BEHAVIOR} <: Content{BEHAVIOR} end
+
+struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} <: LeafType{BEHAVIOR}
     data::BUFFER
     parameters::Parameters
     PrimitiveArray(
@@ -158,7 +160,7 @@ function copy(
         data = layout.data
     end
     if isa(parameters, Unset)
-        parameters = layout.parameters
+        parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
         behavior = typeof(layout).parameters[end]
@@ -175,12 +177,12 @@ Base.getindex(layout::PrimitiveArray, i::Int) = layout.data[i]
 
 Base.getindex(layout::PrimitiveArray, r::UnitRange{Int}) = PrimitiveArray(
     layout.data[r],
-    parameters = layout.parameters,
+    parameters = parameters_of(layout),
     behavior = typeof(layout).parameters[end],
 )
 
 function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
-    if !compatible(layout1.parameters, layout2.parameters)
+    if !compatible(parameters_of(layout1), parameters_of(layout2))
         return false
     end
     layout1.data == layout2.data
@@ -190,6 +192,41 @@ function push!(layout::PrimitiveArray{ITEM}, x::ITEM) where {ITEM}
     Base.push!(layout.data, x)
     layout
 end
+
+### EmptyArray ###########################################################
+
+struct EmptyArray{BEHAVIOR} <: LeafType{BEHAVIOR}
+    EmptyArray(; behavior::Symbol = :default) = new{behavior}()
+end
+
+copy(behavior::Union{Unset,Symbol} = Unset()) = EmptyArray(behavior = behavior)
+
+parameters_of(content::EmptyArray) = Parameters()
+has_parameter(content::EmptyArray, key::String) where {CONTENT<:Content} = false
+get_parameter(content::EmptyArray, key::String) where {CONTENT<:Content} = nothing
+
+is_valid(layout::EmptyArray) = true
+Base.length(layout::EmptyArray) = 0
+Base.firstindex(layout::EmptyArray) = 1
+Base.lastindex(layout::EmptyArray) = 0
+
+Base.getindex(layout::EmptyArray, i::Int) = [][1]  # throw BoundsError
+
+function Base.getindex(layout::EmptyArray, r::UnitRange{Int})
+    if r.start < r.stop
+        [][1]  # throw BoundsError
+    else
+        layout
+    end
+end
+
+Base.:(==)(layout1::EmptyArray, layout2::Content) =
+    length(layout2) == 0 && length(parameters_of(layout2)) == 0
+
+Base.:(==)(layout1::Content, layout2::EmptyArray) =
+    length(layout1) == 0 && length(parameters_of(layout1)) == 0
+
+Base.:(==)(layout1::EmptyArray, layout2::EmptyArray) = true
 
 ### ListOffsetArray ######################################################
 
@@ -228,7 +265,7 @@ function copy(
         content = layout.content
     end
     if isa(parameters, Unset)
-        parameters = layout.parameters
+        parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
         behavior = typeof(layout).parameters[end]
@@ -264,14 +301,14 @@ end
 Base.getindex(layout::ListOffsetArray, r::UnitRange{Int}) = ListOffsetArray(
     layout.offsets[(r.start):(r.stop+1)],
     layout.content,
-    parameters = layout.parameters,
+    parameters = parameters_of(layout),
     behavior = typeof(layout).parameters[end],
 )
 
 Base.getindex(layout::ListOffsetArray, f::Symbol) = ListOffsetArray(
     layout.offsets,
     layout.content[f],
-    parameters = layout.parameters,
+    parameters = parameters_of(layout),
     behavior = typeof(layout).parameters[end],
 )
 
@@ -279,7 +316,7 @@ function Base.:(==)(layout1::ListType, layout2::ListType)
     if length(layout1) != length(layout2)
         return false
     end
-    if !compatible(layout1.parameters, layout2.parameters)
+    if !compatible(parameters_of(layout1), parameters_of(layout2))
         return false
     end
     for (x, y) in zip(layout1, layout2)
@@ -336,7 +373,7 @@ function copy(
         content = layout.content
     end
     if isa(parameters, Unset)
-        parameters = layout.parameters
+        parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
         behavior = typeof(layout).parameters[end]
@@ -377,7 +414,7 @@ function Base.getindex(layout::ListArray, r::UnitRange{Int})
         layout.starts[r.start:r.stop],
         layout.stops[(r.start-adjustment):(r.stop-adjustment)],
         layout.content,
-        parameters = layout.parameters,
+        parameters = parameters_of(layout),
         behavior = typeof(layout).parameters[end],
     )
 end
@@ -386,7 +423,7 @@ Base.getindex(layout::ListArray, f::Symbol) = ListArray(
     layout.starts,
     layout.stops,
     layout.content[f],
-    parameters = layout.parameters,
+    parameters = parameters_of(layout),
     behavior = typeof(layout).parameters[end],
 )
 
@@ -492,7 +529,7 @@ function copy(
         length = layout.length
     end
     if isa(parameters, Unset)
-        parameters = layout.parameters
+        parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
         behavior = typeof(layout).parameters[end]
@@ -524,7 +561,7 @@ Base.getindex(layout::RecordArray, r::UnitRange{Int}) =
             Pair(k, v[r]) for (k, v) in pairs(layout.contents)
         ),
         min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
-        layout.parameters,
+        parameters_of(layout),
     )
 
 function Base.getindex(layout::RecordArray, f::Symbol)
@@ -541,7 +578,7 @@ function Base.:(==)(
     if length(layout1) != length(layout2)
         return false
     end
-    if !compatible(layout1.parameters, layout2.parameters)
+    if !compatible(parameters_of(layout1), parameters_of(layout2))
         return false
     end
     for k in keys(layout1.contents)   # same keys because same CONTENTS type
@@ -556,7 +593,7 @@ function Base.:(==)(
     layout1::Record{ARRAY},
     layout2::Record{ARRAY},
 ) where {CONTENTS<:NamedTuple,ARRAY<:RecordArray{CONTENTS}}
-    if !compatible(layout1.array.parameters, layout2.array.parameters)
+    if !compatible(parameters_of(layout1.array), parameters_of(layout2.array))
         return false
     end
     for k in keys(layout1.array.contents)   # same keys because same CONTENTS type
