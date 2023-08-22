@@ -129,6 +129,18 @@ end
 
 Base.size(layout::Content) = (length(layout),)
 
+function Base.:(==)(layout1::Content, layout2::Content)
+    if length(layout1) != length(layout2)
+        return false
+    end
+    for (x, y) in zip(layout1, layout2)
+        if x != y
+            return false
+        end
+    end
+    return true
+end
+
 ### PrimitiveArray #######################################################
 
 abstract type LeafType{BEHAVIOR} <: Content{BEHAVIOR} end
@@ -178,7 +190,7 @@ Base.getindex(layout::PrimitiveArray, i::Int) = layout.data[i]
 Base.getindex(layout::PrimitiveArray, r::UnitRange{Int}) =
     copy(layout, data = layout.data[r])
 
-Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray) = layout1.data == layout2.data
+Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray) = layout1.data == layout2.data  # override for performance
 
 function push!(layout::PrimitiveArray{ITEM}, x::ITEM) where {ITEM}
     Base.push!(layout.data, x)
@@ -211,10 +223,6 @@ function Base.getindex(layout::EmptyArray, r::UnitRange{Int})
         layout
     end
 end
-
-Base.:(==)(layout1::EmptyArray, layout2::Content) = (length(layout2) == 0)
-Base.:(==)(layout1::Content, layout2::EmptyArray) = (length(layout1) == 0)
-Base.:(==)(layout1::EmptyArray, layout2::EmptyArray) = true
 
 ### ListOffsetArray ######################################################
 
@@ -291,18 +299,6 @@ Base.getindex(layout::ListOffsetArray, r::UnitRange{Int}) =
 
 Base.getindex(layout::ListOffsetArray, f::Symbol) =
     copy(layout, content = layout.content[f])
-
-function Base.:(==)(layout1::ListType, layout2::ListType)
-    if length(layout1) != length(layout2)
-        return false
-    end
-    for (x, y) in zip(layout1, layout2)
-        if x != y
-            return false
-        end
-    end
-    return true
-end
 
 function end_list!(layout::ListOffsetArray)
     Base.push!(layout.offsets, length(layout.content))
@@ -663,10 +659,6 @@ Base.getindex(layout::IndexedArray, r::UnitRange{Int}) =
     copy(layout, index = layout.index[r.start:r.stop])
 
 Base.getindex(layout::IndexedArray, f::Symbol) = copy(layout, content = layout.content[f])
-
-
-
-
 
 
 
