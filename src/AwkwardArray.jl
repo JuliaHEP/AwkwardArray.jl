@@ -252,12 +252,12 @@ ListOffsetArray{INDEX,CONTENT}(;
     ListOffsetArray(INDEX([0]), CONTENT(), parameters = parameters, behavior = behavior)
 
 function copy(
-    layout::ListOffsetArray{INDEX,CONTENT,BEHAVIOR};
+    layout::ListOffsetArray{INDEX,CONTENT1,BEHAVIOR};
     offsets::Union{Unset,INDEX} = Unset(),
-    content::Union{Unset,CONTENT} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR}
+) where {INDEX<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
     if isa(offsets, Unset)
         offsets = layout.offsets
     end
@@ -356,18 +356,18 @@ ListArray{INDEX,CONTENT}(;
     ListArray(INDEX([]), INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
 
 function copy(
-    layout::ListArray{INDEX,CONTENT,BEHAVIOR};
+    layout::ListArray{INDEX,CONTENT1,BEHAVIOR};
     starts::Union{Unset,INDEX} = Unset(),
     stops::Union{Unset,INDEX} = Unset(),
-    content::Union{Unset,CONTENT} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR}
+) where {INDEX<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
     if isa(starts, Unset)
         starts = layout.starts
     end
     if isa(stops, Unset)
-        stops = layout.starts
+        stops = layout.stops
     end
     if isa(content, Unset)
         content = layout.content
@@ -468,13 +468,13 @@ RegularArray{CONTENT}(;
 )
 
 function copy(
-    layout::RegularArray{CONTENT,BEHAVIOR};
-    content::Union{Unset,CONTENT} = Unset(),
+    layout::RegularArray{CONTENT1,BEHAVIOR};
+    content::Union{Unset,CONTENT2} = Unset(),
     size::Union{Unset,Int} = Unset(),
     zeros_length::Union{Unset,Int} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {CONTENT<:Content,BEHAVIOR}
+) where {CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
     if isa(content, Unset)
         content = layout.content
     end
@@ -557,7 +557,11 @@ function Base.getindex(
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
     String(
         getindex(
-            ListOffsetArray(layout.offsets, PrimitiveArray(layout.content.data)),
+            copy(
+                layout,
+                content = copy(layout.content, behavior = :default),
+                behavior = :default,
+            ),
             i,
         ).data,
     )
@@ -569,7 +573,27 @@ function Base.getindex(
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
     String(
         getindex(
-            ListArray(layout.starts, layout.stops, PrimitiveArray(layout.content.data)),
+            copy(
+                layout,
+                content = copy(layout.content, behavior = :default),
+                behavior = :default,
+            ),
+            i,
+        ).data,
+    )
+end
+
+function Base.getindex(
+    layout::RegularArray{PrimitiveArray{UInt8,BUFFER,:char},:string},
+    i::Int,
+) where {BUFFER<:AbstractVector{UInt8}}
+    String(
+        getindex(
+            copy(
+                layout,
+                content = copy(layout.content, behavior = :default),
+                behavior = :default,
+            ),
             i,
         ).data,
     )
@@ -581,7 +605,14 @@ function Base.getindex(
     layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:byte},:bytestring},
     i::Int,
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
-    getindex(ListOffsetArray(layout.offsets, PrimitiveArray(layout.content.data)), i).data
+    getindex(
+        copy(
+            layout,
+            content = copy(layout.content, behavior = :default),
+            behavior = :default,
+        ),
+        i,
+    ).data
 end
 
 function Base.getindex(
@@ -589,7 +620,25 @@ function Base.getindex(
     i::Int,
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
     getindex(
-        ListArray(layout.starts, layout.stops, PrimitiveArray(layout.content.data)),
+        copy(
+            layout,
+            content = copy(layout.content, behavior = :default),
+            behavior = :default,
+        ),
+        i,
+    ).data
+end
+
+function Base.getindex(
+    layout::RegularArray{PrimitiveArray{UInt8,BUFFER,:byte},:bytestring},
+    i::Int,
+) where {BUFFER<:AbstractVector{UInt8}}
+    getindex(
+        copy(
+            layout,
+            content = copy(layout.content, behavior = :default),
+            behavior = :default,
+        ),
         i,
     ).data
 end
@@ -629,12 +678,12 @@ struct Record{ARRAY<:RecordArray}
 end
 
 function copy(
-    layout::RecordArray{CONTENTS,BEHAVIOR};
-    contents::Union{Unset,CONTENTS} = Unset(),
+    layout::RecordArray{CONTENTS1,BEHAVIOR};
+    contents::Union{Unset,CONTENTS2} = Unset(),
     length::Union{Unset,Int64} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {CONTENTS<:NamedTuple,BEHAVIOR}
+) where {CONTENTS1<:NamedTuple,CONTENTS2<:NamedTuple,BEHAVIOR}
     if isa(contents, Unset)
         contents = layout.contents
     end

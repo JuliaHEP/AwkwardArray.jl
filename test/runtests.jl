@@ -396,6 +396,22 @@ using Test
         @test Vector(layout) == ["hey", "there", "\$", "¢", "€", "💰"]
     end
 
+    begin
+        layout = AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray(
+                [0x6f, 0x6e, 0x65, 0x74, 0x77, 0x6f],
+                behavior = :char,
+            ),
+            3,
+            behavior = :string,
+        )
+
+        @test layout[1] == "one"
+        @test layout[2] == "two"
+
+        @test Vector(layout) == ["one", "two"]
+    end
+
     ### ListType with behavior = :bytestring #################################
 
     begin
@@ -473,6 +489,22 @@ using Test
         @test layout[6] == [0xf0, 0x9f, 0x92, 0xb0]
     end
 
+    begin
+        layout = AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray(
+                [0x6f, 0x6e, 0x65, 0x74, 0x77, 0x6f],
+                behavior = :byte,
+            ),
+            3,
+            behavior = :bytestring,
+        )
+
+        @test layout[1] == [0x6f, 0x6e, 0x65]
+        @test layout[2] == [0x74, 0x77, 0x6f]
+
+        @test Vector(layout) == [[0x6f, 0x6e, 0x65], [0x74, 0x77, 0x6f]]
+    end
+
     ### ListType with other parameters #######################################
 
     begin
@@ -499,6 +531,17 @@ using Test
     end
 
     begin
+        layout = AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray([0x6f, 0x6e, 0x65, 0x74, 0x77, 0x6f]),
+            3,
+            parameters = AwkwardArray.Parameters("__doc__" => "nice list"),
+        )
+
+        @test AwkwardArray.get_parameter(layout, "__doc__") == "nice list"
+        @test !AwkwardArray.has_parameter(layout, "__list__")
+    end
+
+    begin
         layout = AwkwardArray.ListOffsetArray(
             [0, 3, 3, 8],
             AwkwardArray.PrimitiveArray(
@@ -526,6 +569,21 @@ using Test
         )
 
         @test AwkwardArray.get_parameter(layout, "__doc__") == "nice string"
+        @test !AwkwardArray.has_parameter(layout, "__list__")
+    end
+
+    begin
+        layout = AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray(
+                [0x6f, 0x6e, 0x65, 0x74, 0x77, 0x6f],
+                behavior = :char,
+            ),
+            3,
+            parameters = AwkwardArray.Parameters("__doc__" => "nice list"),
+            behavior = :string,
+        )
+
+        @test AwkwardArray.get_parameter(layout, "__doc__") == "nice list"
         @test !AwkwardArray.has_parameter(layout, "__list__")
     end
 
