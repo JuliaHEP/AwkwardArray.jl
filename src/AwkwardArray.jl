@@ -4,7 +4,7 @@ module AwkwardArray
 
 ### Index ################################################################
 
-const Index8 = AbstractVector{Int8}
+const Index8 = Union{AbstractVector{Int8},AbstractVector{Bool}}
 const IndexU8 = AbstractVector{UInt8}
 const Index32 = AbstractVector{Int32}
 const IndexU32 = AbstractVector{UInt32}
@@ -892,18 +892,14 @@ function push!(
     layout
 end
 
-function end_list!(
-    layout::IndexedOptionArray{INDEX,CONTENT},
-) where {INDEX<:IndexBig,CONTENT<:ListType}
+function end_list!(layout::IndexedOptionArray)
     tmp = length(layout.content)
     end_list!(layout.content)
     Base.push!(layout.index, tmp)
     layout
 end
 
-function end_record!(
-    layout::IndexedOptionArray{INDEX,CONTENT},
-) where {INDEX<:IndexBig,CONTENT<:RecordArray}
+function end_record!(layout::IndexedOptionArray)
     tmp = length(layout.content)
     end_record!(layout.content)
     Base.push!(layout.index, tmp)
@@ -924,8 +920,8 @@ struct ByteMaskedArray{INDEX<:Index8,CONTENT<:Content,BEHAVIOR} <: OptionType{BE
     parameters::Parameters
     ByteMaskedArray(
         mask::INDEX,
-        content::CONTENT,
-        valid_when::Bool;
+        content::CONTENT;
+        valid_when::Bool = false,  # the NumPy MaskedArray convention
         parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
     ) where {INDEX<:Index8,CONTENT<:Content} =
@@ -936,13 +932,19 @@ ByteMaskedArray{INDEX,CONTENT}(;
     valid_when::Bool = false,  # the NumPy MaskedArray convention
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {INDEX<:Index8} where {CONTENT<:Content} =
-    ByteMaskedArray(INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
+) where {INDEX<:Index8} where {CONTENT<:Content} = ByteMaskedArray(
+    INDEX([]),
+    CONTENT(),
+    valid_when = valid_when,
+    parameters = parameters,
+    behavior = behavior,
+)
 
 function copy(
     layout::ByteMaskedArray{INDEX1,CONTENT1,BEHAVIOR};
     mask::Union{Unset,INDEX2} = Unset(),
     content::Union{Unset,CONTENT2} = Unset(),
+    valid_when::Union{Unset,Bool} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
 ) where {INDEX1<:Index8,INDEX2<:Index8,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
@@ -952,13 +954,22 @@ function copy(
     if isa(content, Unset)
         content = layout.content
     end
+    if isa(valid_when, Unset)
+        valid_when = layout.valid_when
+    end
     if isa(parameters, Unset)
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
         behavior = typeof(layout).parameters[end]
     end
-    ByteMaskedArray(mask, content, parameters = parameters, behavior = behavior)
+    ByteMaskedArray(
+        mask,
+        content,
+        valid_when = valid_when,
+        parameters = parameters,
+        behavior = behavior,
+    )
 end
 
 function is_valid(layout::ByteMaskedArray)
@@ -977,7 +988,7 @@ function Base.getindex(layout::ByteMaskedArray, i::Int)
         nothing
     else
         adjustment = firstindex(layout.mask) - firstindex(layout.content)
-        layout.content[i - adjustment]
+        layout.content[i-adjustment]
     end
 end
 
@@ -986,13 +997,12 @@ function Base.getindex(layout::ByteMaskedArray, r::UnitRange{Int})
     copy(
         layout,
         mask = layout.mask[r.start:r.stop],
-        content = layout.content[(r.start - adjustment):(r.stop - adjustment)],
+        content = layout.content[(r.start-adjustment):(r.stop-adjustment)],
     )
 end
 
-Base.getindex(layout::ByteMaskedArray, f::Symbol) = copy(
-    layout, content = layout.content[f]
-)
+Base.getindex(layout::ByteMaskedArray, f::Symbol) =
+    copy(layout, content = layout.content[f])
 
 function push!(
     layout::ByteMaskedArray{INDEX,CONTENT},
@@ -1003,8 +1013,41 @@ function push!(
     layout
 end
 
+function end_list!(layout::ByteMaskedArray)
+    end_list!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
 
+function end_record!(layout::ByteMaskedArray)
+    end_record!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
 
+function push_null!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+) where {INDEX<:Index8,ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    push!(layout.content, ITEM(0))  # FIXME: how to get a value for any ITEM type?
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+) where {INDEX<:Index8,CONTENT<:ListType}
+    end_list!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+) where {INDEX<:Index8,CONTENT<:RecordArray}
+    end_record!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
 
 
 end
