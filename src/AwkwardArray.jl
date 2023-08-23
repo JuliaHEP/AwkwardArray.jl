@@ -870,7 +870,7 @@ Base.lastindex(layout::IndexedOptionArray) = lastindex(layout.index)
 
 function Base.getindex(layout::IndexedOptionArray, i::Int)
     if layout.index[i] < 0
-        nothing
+        missing
     else
         layout.content[layout.index[i]+firstindex(layout.content)]
     end
@@ -985,7 +985,7 @@ Base.lastindex(layout::ByteMaskedArray) = lastindex(layout.mask)
 
 function Base.getindex(layout::ByteMaskedArray, i::Int)
     if (layout.mask[i] != 0) != layout.valid_when
-        nothing
+        missing
     else
         adjustment = firstindex(layout.mask) - firstindex(layout.content)
         layout.content[i-adjustment]

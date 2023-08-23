@@ -861,13 +861,13 @@ using Test
         @test layout[1] == 5.5
         @test layout[2] == 4.4
         @test layout[3] == 4.4
-        @test layout[4] == nothing
-        @test layout[5] == nothing
+        @test ismissing(layout[4])
+        @test ismissing(layout[5])
         @test layout[6] == 1.1
         @test layout[2:3] == AwkwardArray.PrimitiveArray([4.4, 4.4])
         tmp = 0.0
         for x in layout
-            if x != nothing
+            if !ismissing(x)
                 @test x < 6
                 tmp += x
             end
@@ -880,10 +880,10 @@ using Test
 
         AwkwardArray.push_null!(layout)
         @test length(layout) == 8
-        @test layout[8] == nothing
+        @test ismissing(layout[8])
         AwkwardArray.push_null!(layout)
         @test length(layout) == 9
-        @test layout[9] == nothing
+        @test ismissing(layout[9])
 
         AwkwardArray.push!(layout, 7.7)
         @test length(layout) == 10
@@ -902,14 +902,14 @@ using Test
         @test AwkwardArray.is_valid(layout)
         @test length(layout) == 5
         @test layout[1] == 1.1
-        @test layout[2] == nothing
-        @test layout[3] == nothing
+        @test ismissing(layout[2])
+        @test ismissing(layout[3])
         @test layout[4] == 4.4
         @test layout[5] == 5.5
         @test layout[4:5] == AwkwardArray.PrimitiveArray([4.4, 5.5])
         tmp = 0.0
         for x in layout
-            if x != nothing
+            if !ismissing(x)
                 @test x < 6
                 tmp += x
             end
@@ -922,7 +922,7 @@ using Test
 
         AwkwardArray.push_null!(layout)
         @test length(layout) == 7
-        @test layout[7] == nothing
+        @test ismissing(layout[7])
     end
 
     begin
@@ -950,7 +950,7 @@ using Test
 
         AwkwardArray.push_null!(layout)
         @test length(layout) == 5
-        @test layout[5] == nothing
+        @test ismissing(layout[5])
     end
 
     begin
@@ -985,7 +985,7 @@ using Test
         AwkwardArray.push!(b_layout, 7.7)
         AwkwardArray.push_null!(layout)
         @test length(layout) == 7
-        @test layout[7] == nothing
+        @test ismissing(layout[7])
 
     end
 
