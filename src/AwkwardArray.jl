@@ -142,6 +142,9 @@ function Base.:(==)(layout1::Content, layout2::Content)
 end
 
 ### PrimitiveArray #######################################################
+#
+# Note: all Python NumpyArrays have to be converted to 1-dimensional
+#       (inner_shape == ()) with RegularArrays when converting to Julia.
 
 abstract type LeafType{BEHAVIOR} <: Content{BEHAVIOR} end
 
@@ -1049,24 +1052,90 @@ function push_null!(
     layout
 end
 
-# BitMaskedArray lsb_order = true is what both Apache Arrow and Julia BitVector want!
+### BitMaskedArray #######################################################
+#
+# Note: all Python BitMaskedArrays must be converted to lsb_order = true.
 
-# v = Vector{UInt8}([243, 246, 11])
-# bv = falses(sizeof(v) << 3)
-# unsafe_copyto!(reinterpret(Ptr{UInt8}, pointer(bv.chunks)), pointer(v), sizeof(v))
-#
-# is correct for
-#
-# >>> ak.from_arrow(
-# ...     pa.array([0.0, 1.1, None, None, 4.4, 5.5, 6.6, 7.7, None, 9.9,
-# ...               10, None, 12, 13, 14, 15, 16, 17, None, 19])
-# ... ).layout
-# <BitMaskedArray valid_when='true' lsb_order='true' len='20'>
-#     <mask><Index dtype='uint8' len='3'>[243 246  11]</Index></mask>
-#     <content><NumpyArray dtype='float64' len='20'>
-#         [ 0.   1.1  0.   0.   4.4  5.5  6.6  7.7  0.   9.9 10.   0.  12.  13.
-#          14.  15.  16.  17.   0.  19. ]
-#     </NumpyArray></content>
-# </BitMaskedArray>
+struct BitMaskedArray{CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
+    mask::BitVector
+    content::CONTENT
+    valid_when::Bool
+    length::Int64
+    parameters::Parameters
+    BitMaskedArray(
+        mask::BitVector,
+        content::CONTENT;
+        valid_when::Bool = false,  # NumPy MaskedArray's convention; note that Arrow's is true
+        length::Int64,
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {CONTENT<:Content} =
+        new{CONTENT,behavior}(mask, content, valid_when, length, parameters)
+end
+
+BitMaskedArray{CONTENT}(;
+    valid_when::Bool = false,  # NumPy MaskedArray's convention; note that Arrow's is true
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENT<:Content} = BitMaskedArray(
+    BitVector(),
+    CONTENT(),
+    valid_when = valid_when,
+    length = 0,
+    parameters = parameters,
+    behavior = behavior,
+)
+
+function copy(
+    layout::BitMaskedArray{CONTENT1,BEHAVIOR};
+    mask::Union{Unset,BitVector} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
+    valid_when::Union{Unset,Bool} = Unset(),
+    length::Union{Unset,Int64} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(mask, Unset)
+        mask = layout.mask
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(valid_when, Unset)
+        valid_when = layout.valid_when
+    end
+    if isa(length, Unset)
+        length = layout.length
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    BitMaskedArray(
+        mask,
+        content,
+        valid_when = valid_when,
+        length = length,
+        parameters = parameters,
+        behavior = behavior,
+    )
+end
+
+function is_valid(layout::BitMaskedArray)
+    if layout.length < 0 ||
+       layout.length > length(layout.content) ||
+       length(layout.mask) * 8 < layout.length
+        return false
+    end
+    return is_valid(layout.content)
+end
+
+
+
+
+
+
 
 end
