@@ -1049,5 +1049,24 @@ function push_null!(
     layout
 end
 
+# BitMaskedArray lsb_order = true is what both Apache Arrow and Julia BitVector want!
+
+# v = Vector{UInt8}([243, 246, 11])
+# bv = falses(sizeof(v) << 3)
+# unsafe_copyto!(reinterpret(Ptr{UInt8}, pointer(bv.chunks)), pointer(v), sizeof(v))
+#
+# is correct for
+#
+# >>> ak.from_arrow(
+# ...     pa.array([0.0, 1.1, None, None, 4.4, 5.5, 6.6, 7.7, None, 9.9,
+# ...               10, None, 12, 13, 14, 15, 16, 17, None, 19])
+# ... ).layout
+# <BitMaskedArray valid_when='true' lsb_order='true' len='20'>
+#     <mask><Index dtype='uint8' len='3'>[243 246  11]</Index></mask>
+#     <content><NumpyArray dtype='float64' len='20'>
+#         [ 0.   1.1  0.   0.   4.4  5.5  6.6  7.7  0.   9.9 10.   0.  12.  13.
+#          14.  15.  16.  17.   0.  19. ]
+#     </NumpyArray></content>
+# </BitMaskedArray>
 
 end
