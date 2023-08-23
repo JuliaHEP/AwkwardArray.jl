@@ -1031,7 +1031,7 @@ end
 function push_null!(
     layout::ByteMaskedArray{INDEX,CONTENT},
 ) where {INDEX<:Index8,ITEM,CONTENT<:PrimitiveArray{ITEM}}
-    push!(layout.content, ITEM(0))  # FIXME: how to get a value for any ITEM type?
+    push!(layout.content, zero(ITEM))
     Base.push!(layout.mask, !layout.valid_when)
     layout
 end
