@@ -1060,17 +1060,15 @@ struct BitMaskedArray{CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
     mask::BitVector
     content::CONTENT
     valid_when::Bool
-    length::Int64
     parameters::Parameters
     BitMaskedArray(
         mask::BitVector,
         content::CONTENT;
         valid_when::Bool = false,  # NumPy MaskedArray's convention; note that Arrow's is true
-        length::Int64,
         parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
     ) where {CONTENT<:Content} =
-        new{CONTENT,behavior}(mask, content, valid_when, length, parameters)
+        new{CONTENT,behavior}(mask, content, valid_when, parameters)
 end
 
 BitMaskedArray{CONTENT}(;
@@ -1081,7 +1079,6 @@ BitMaskedArray{CONTENT}(;
     BitVector(),
     CONTENT(),
     valid_when = valid_when,
-    length = 0,
     parameters = parameters,
     behavior = behavior,
 )
@@ -1091,7 +1088,6 @@ function copy(
     mask::Union{Unset,BitVector} = Unset(),
     content::Union{Unset,CONTENT2} = Unset(),
     valid_when::Union{Unset,Bool} = Unset(),
-    length::Union{Unset,Int64} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
 ) where {CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
@@ -1104,9 +1100,6 @@ function copy(
     if isa(valid_when, Unset)
         valid_when = layout.valid_when
     end
-    if isa(length, Unset)
-        length = layout.length
-    end
     if isa(parameters, Unset)
         parameters = parameters_of(layout)
     end
@@ -1117,25 +1110,90 @@ function copy(
         mask,
         content,
         valid_when = valid_when,
-        length = length,
         parameters = parameters,
         behavior = behavior,
     )
 end
 
 function is_valid(layout::BitMaskedArray)
-    if layout.length < 0 ||
-       layout.length > length(layout.content) ||
-       length(layout.mask) * 8 < layout.length
+    if length(layout.mask) > length(layout.content)
         return false
     end
     return is_valid(layout.content)
 end
 
+Base.length(layout::BitMaskedArray) = length(layout.mask)
+Base.firstindex(layout::BitMaskedArray) = firstindex(layout.mask)
+Base.lastindex(layout::BitMaskedArray) = lastindex(layout.mask)
 
-
-
-
-
-
+function Base.getindex(layout::BitMaskedArray, i::Int)
+    if (layout.mask[i] != 0) != layout.valid_when
+        missing
+    else
+        adjustment = firstindex(layout.mask) - firstindex(layout.content)
+        layout.content[i-adjustment]
+    end
 end
+
+function Base.getindex(layout::BitMaskedArray, r::UnitRange{Int})
+    adjustment = firstindex(layout.mask) - firstindex(layout.content)
+    copy(
+        layout,
+        mask = layout.mask[r.start:r.stop],
+        content = layout.content[(r.start-adjustment):(r.stop-adjustment)],
+    )
+end
+
+Base.getindex(layout::BitMaskedArray, f::Symbol) = copy(layout, content = layout.content[f])
+
+function push!(
+    layout::BitMaskedArray{CONTENT}, x::ITEM
+) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    push!(layout.content, x)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function end_list!(layout::BitMaskedArray)
+    end_list!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function end_record!(layout::BitMaskedArray)
+    end_record!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::BitMaskedArray{CONTENT},
+) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    push!(layout.content, zero(ITEM))
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::BitMaskedArray{CONTENT},
+) where {CONTENT<:ListType}
+    end_list!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::BitMaskedArray{CONTENT},
+) where {CONTENT<:RecordArray}
+    end_record!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+
+
+
+
+
+
+end  # module AwkwardArray
