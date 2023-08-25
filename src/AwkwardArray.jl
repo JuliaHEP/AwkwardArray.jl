@@ -4,12 +4,13 @@ module AwkwardArray
 
 ### Index ################################################################
 
-const Index8 = Union{AbstractVector{Int8},AbstractVector{Bool}}
+const Index8 = AbstractVector{Int8}
 const IndexU8 = AbstractVector{UInt8}
 const Index32 = AbstractVector{Int32}
 const IndexU32 = AbstractVector{UInt32}
 const Index64 = AbstractVector{Int64}
 const IndexBig = Union{Index32,IndexU32,Index64}
+const IndexBool = Union{Index8,AbstractVector{Bool}}
 
 ### Parameters ###########################################################
 
@@ -361,9 +362,10 @@ function is_valid(layout::ListArray)
     if length(layout.starts) < length(layout.stops)
         return false
     end
-    for i in eachindex(layout)
+    adjustment = firstindex(layout.starts) - firstindex(layout.stops)
+    for i in eachindex(layout.starts)
         start = layout.starts[i]
-        stop = layout.stops[i]
+        stop = layout.stops[i-adjustment]
         if start != stop
             if start < 0 || start > stop || stop > length(layout.content)
                 return false
@@ -1048,7 +1050,7 @@ end
 
 ### ByteMaskedArray ######################################################
 
-struct ByteMaskedArray{INDEX<:Index8,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
+struct ByteMaskedArray{INDEX<:IndexBool,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
     mask::INDEX
     content::CONTENT
     valid_when::Bool
@@ -1059,7 +1061,7 @@ struct ByteMaskedArray{INDEX<:Index8,CONTENT<:Content,BEHAVIOR} <: OptionType{BE
         valid_when::Bool = false,  # the NumPy MaskedArray convention
         parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
-    ) where {INDEX<:Index8,CONTENT<:Content} =
+    ) where {INDEX<:IndexBool,CONTENT<:Content} =
         new{INDEX,CONTENT,behavior}(mask, content, valid_when, parameters)
 end
 
@@ -1067,7 +1069,7 @@ ByteMaskedArray{INDEX,CONTENT}(;
     valid_when::Bool = false,  # the NumPy MaskedArray convention
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {INDEX<:Index8} where {CONTENT<:Content} = ByteMaskedArray(
+) where {INDEX<:IndexBool} where {CONTENT<:Content} = ByteMaskedArray(
     INDEX([]),
     CONTENT(),
     valid_when = valid_when,
@@ -1082,7 +1084,7 @@ function copy(
     valid_when::Union{Unset,Bool} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {INDEX1<:Index8,INDEX2<:Index8,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+) where {INDEX1<:IndexBool,INDEX2<:IndexBool,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
     if isa(mask, Unset)
         mask = layout.mask
     end
@@ -1142,7 +1144,7 @@ Base.getindex(layout::ByteMaskedArray, f::Symbol) =
 function push!(
     layout::ByteMaskedArray{INDEX,CONTENT},
     x::ITEM,
-) where {INDEX<:Index8,ITEM,CONTENT<:PrimitiveArray{ITEM}}
+) where {INDEX<:IndexBool,ITEM,CONTENT<:PrimitiveArray{ITEM}}
     push!(layout.content, x)
     Base.push!(layout.mask, layout.valid_when)
     layout
@@ -1168,7 +1170,7 @@ end
 
 function push_null!(
     layout::ByteMaskedArray{INDEX,CONTENT},
-) where {INDEX<:Index8,ITEM,CONTENT<:PrimitiveArray{ITEM}}
+) where {INDEX<:IndexBool,ITEM,CONTENT<:PrimitiveArray{ITEM}}
     push!(layout.content, zero(ITEM))
     Base.push!(layout.mask, !layout.valid_when)
     layout
@@ -1176,7 +1178,7 @@ end
 
 function push_null!(
     layout::ByteMaskedArray{INDEX,CONTENT},
-) where {INDEX<:Index8,CONTENT<:ListType}
+) where {INDEX<:IndexBool,CONTENT<:ListType}
     end_list!(layout.content)
     Base.push!(layout.mask, !layout.valid_when)
     layout
@@ -1184,7 +1186,7 @@ end
 
 function push_null!(
     layout::ByteMaskedArray{INDEX,CONTENT},
-) where {INDEX<:Index8,CONTENT<:RecordArray}
+) where {INDEX<:IndexBool,CONTENT<:RecordArray}
     end_record!(layout.content)
     Base.push!(layout.mask, !layout.valid_when)
     layout
@@ -1192,7 +1194,7 @@ end
 
 function push_null!(
     layout::ByteMaskedArray{INDEX,CONTENT},
-) where {INDEX<:Index8,CONTENT<:TupleArray}
+) where {INDEX<:IndexBool,CONTENT<:TupleArray}
     end_tuple!(layout.content)
     Base.push!(layout.mask, !layout.valid_when)
     layout
@@ -1420,11 +1422,181 @@ function end_tuple!(layout::UnmaskedArray)
     layout
 end
 
+### UnionArray ###########################################################
 
+struct UnionArray{TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple,BEHAVIOR} <:
+       Content{BEHAVIOR}
+    tags::TAGS
+    index::INDEX
+    contents::CONTENTS
+    parameters::Parameters
+    UnionArray(
+        tags::TAGS,
+        index::INDEX,
+        contents::CONTENTS;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} =
+        new{TAGS,INDEX,CONTENTS,behavior}(tags, index, contents, parameters)
+end
 
+UnionArray{TAGS,INDEX,CONTENTS}(
+    contents::CONTENTS;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} =
+    UnionArray(TAGS([]), INDEX([]), contents, parameters = parameters, behavior = behavior)
 
+struct Specialization{TAG<:Int64,ARRAY<:UnionArray,TAGGED<:Content}
+    array::ARRAY
+    tagged::TAGGED
+end
 
+function copy(
+    layout::UnionArray{TAGS1,INDEX1,CONTENTS1,BEHAVIOR};
+    tags::Union{Unset,TAGS2} = Unset(),
+    index::Union{Unset,INDEX2} = Unset(),
+    contents::Union{Unset,CONTENTS2} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {
+    TAGS1<:Index8,
+    TAGS2<:Index8,
+    INDEX1<:IndexBig,
+    INDEX2<:IndexBig,
+    CONTENTS1<:Content,
+    CONTENTS2<:Content,
+    BEHAVIOR,
+}
+    if isa(tags, Unset)
+        tags = layout.tags
+    end
+    if isa(index, Unset)
+        index = layout.index
+    end
+    if isa(contents, Unset)
+        contents = layout.contents
+    end
+    if isa(parameters, Unset)
+        parameters = layout.parameters
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    UnionArray(tags, index, contents, parameters = parameters, behavior = behavior)
+end
 
+function is_valid(layout::UnionArray)
+    if length(tags) > length(index)
+        return false
+    end
+    adjustment = firstindex(layout.tags) - firstindex(layout.index)
+    for i in eachindex(layout.tags)
+        tag = layout.tags[i]
+        index = layout.index[i-adjustment]
+        if tag < 0 || tag >= length(layout.contents)
+            return false
+        end
+        content = layout.contents[tag+firstindex(layout.contents)]
+        if index < 0 || index >= length(content)
+            return false
+        end
+    end
+    for x in layout.contents
+        if !is_valid(x)
+            return false
+        end
+    end
+    return true
+end
 
+Base.length(layout::UnionArray) = length(layout.tags)
+Base.firstindex(layout::UnionArray) = firstindex(layout.tags)
+Base.lastindex(layout::UnionArray) = lastindex(layout.tags)
+
+function Base.getindex(layout::UnionArray, i::Int)
+    adjustment = firstindex(layout.tags) - firstindex(layout.index)
+    tag = layout.tags[i]
+    index = layout.index[i-adjustment]
+    content = layout.contents[tag+firstindex(layout.contents)]
+    content[index+firstindex(content)]
+end
+
+function Base.getindex(layout::UnionArray, r::UnitRange{Int})
+    adjustment = firstindex(layout.tags) - firstindex(layout.index)
+    copy(
+        layout,
+        tags = layout.tags[r.start:r.stop],
+        index = layout.index[(r.start-adjustment):(r.stop-adjustment)],
+    )
+end
+
+Base.getindex(layout::UnionArray, f::Symbol) =
+    copy(layout, contents = Base.Tuple(x[f] for x in layout.contents))
+
+specialization(layout::UnionArray, tag::Int64) =
+    Specialization{tag}(layout, layout.contents[tag])
+
+function push!(
+    special::Specialization{TAG,ARRAY,TAGGED},
+    x::ITEM,
+) where {TAG<:Int64,ITEM,ARRAY<:UnionArray,TAGGED<:PrimitiveArray{ITEM}}
+    tmp = length(special.tagged)
+    push!(special.tagged, x)
+    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.index, tmp)
+    layout
+end
+
+function push!(
+    special::Specialization{TAG,ARRAY,TAGGED},
+    x::ITEM,
+) where {TAG<:Int64,ITEM,ARRAY<:UnionArray,TAGGED<:OptionType}
+    tmp = length(special.tagged)
+    push!(special.tagged, x)
+    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.index, tmp)
+    layout
+end
+
+function end_list!(
+    special::Specialization{TAG,ARRAY,TAGGED},
+) where {TAG<:Int64,ARRAY<:UnionArray,TAGGED<:Content}
+    tmp = length(special.tagged)
+    end_list!(special.tagged)
+    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.index, tmp)
+    layout
+end
+
+function end_record!(
+    special::Specialization{TAG,ARRAY,TAGGED},
+) where {TAG<:Int64,ARRAY<:UnionArray,TAGGED<:Content}
+    tmp = length(special.tagged)
+    end_record!(special.tagged)
+    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.index, tmp)
+    layout
+end
+
+function end_tuple!(
+    special::Specialization{TAG,ARRAY,TAGGED},
+) where {TAG<:Int64,ARRAY<:UnionArray,TAGGED<:Content}
+    tmp = length(special.tagged)
+    end_tuple!(special.tagged)
+    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.index, tmp)
+    layout
+end
+
+function push_null!(
+    special::Specialization{TAG,ARRAY,TAGGED},
+) where {TAG<:Int64,ARRAY<:UnionArray,TAGGED<:OptionType}
+    tmp = length(special.tagged)
+    push_null!(special.tagged)
+    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.index, tmp)
+    layout
+end
 
 end  # module AwkwardArray

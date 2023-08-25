@@ -1319,11 +1319,6 @@ using Test
 
     end
 
-
-
-
-
-
-
+    ### UnionArray ###########################################################
 
 end   # @testset "AwkwardArray.jl"
