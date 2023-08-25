@@ -760,6 +760,160 @@ using Test
         @test layout_2 == AwkwardArray.copy(layout_3, length = 2)
     end
 
+    ### TupleArray ##########################################################
+
+    begin
+        layout = AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        ),)
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 5
+        @test layout[3][1] == 3
+        @test layout[3][2] == 3.3
+        @test AwkwardArray.slot(layout, 1)[3] == 3
+        @test AwkwardArray.slot(layout, 2)[3] == 3.3
+        @test layout == layout
+        @test layout[3] == layout[3]
+
+        tmp = 0.0
+        for x in layout
+            @test x[2] < 6
+            tmp += x[2]
+        end
+        @test tmp == 16.5
+    end
+
+    begin
+        layout = AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([1, 2, 3]),
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3, 5],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            ),
+        ),)
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 3
+        @test layout[3][1] == 3
+        @test layout[3][2][1] == 4.4
+        @test AwkwardArray.slot(layout, 1)[3] == 3
+        @test AwkwardArray.slot(layout, 2)[3][1] == 4.4
+
+        @test layout == layout
+        @test layout[3] == layout[3]
+        @test layout[1][2] == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3])
+        @test layout[2][2] == AwkwardArray.PrimitiveArray([])
+        @test layout[3][2] == AwkwardArray.PrimitiveArray([4.4, 5.5])
+        @test AwkwardArray.slot(layout, 2)[1] ==
+              AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3])
+        @test AwkwardArray.slot(layout, 2)[2] == AwkwardArray.PrimitiveArray([])
+        @test AwkwardArray.slot(layout, 2)[3] == AwkwardArray.PrimitiveArray([4.4, 5.5])
+
+        tmp = 0.0
+        for x in layout
+            for y in x[2]
+                @test y < 6
+                tmp += y
+            end
+        end
+        @test tmp == 16.5
+    end
+
+    begin
+        layout = AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray{Int64}(),
+            AwkwardArray.ListOffsetArray{
+                AwkwardArray.Index64,
+                AwkwardArray.PrimitiveArray{Float64},
+            }(),
+        ),)
+        a_layout = layout.contents[1]
+        b_layout = layout.contents[2]
+        b_sublayout = b_layout.content
+
+        AwkwardArray.push!(a_layout, 1)
+        AwkwardArray.push!(b_sublayout, 1.1)
+        AwkwardArray.push!(b_sublayout, 2.2)
+        AwkwardArray.push!(b_sublayout, 3.3)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_tuple!(layout)
+
+        AwkwardArray.push!(a_layout, 2)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_tuple!(layout)
+
+        AwkwardArray.push!(a_layout, 3)
+        AwkwardArray.push!(b_sublayout, 4.4)
+        AwkwardArray.push!(b_sublayout, 5.5)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_tuple!(layout)
+
+        @test AwkwardArray.slot(layout, 1) == AwkwardArray.PrimitiveArray([1, 2, 3])
+        @test AwkwardArray.slot(layout, 2) == AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 5],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+
+        @test layout == layout
+
+        @test AwkwardArray.TupleArray((AwkwardArray.PrimitiveArray([1, 2, 3]),),) ==
+              AwkwardArray.TupleArray((AwkwardArray.PrimitiveArray([1, 2, 3]),),)
+
+        @test layout == AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([1, 2, 3]),
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3, 5],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            ),
+        ),)
+
+        @test layout[1] == layout[1]
+        @test layout[2] == layout[2]
+        @test layout[3] == layout[3]
+
+        @test layout[3] == AwkwardArray.Tuple(
+            AwkwardArray.TupleArray((
+                AwkwardArray.PrimitiveArray([1, 2, 3]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3, 3, 5],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                ),
+            ),),
+            3,
+        )
+
+        @test layout[3] == AwkwardArray.Tuple(
+            AwkwardArray.TupleArray((
+                AwkwardArray.PrimitiveArray([3]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 2],
+                    AwkwardArray.PrimitiveArray([4.4, 5.5]),
+                ),
+            ),),
+            1,
+        )
+    end
+
+    begin
+        layout_2 = AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([1, 2]),
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+            ),
+        ),)
+
+        layout_3 = AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([1, 2, 3]),
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3, 5],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            ),
+        ),)
+
+        @test layout_2 == AwkwardArray.copy(layout_3, length = 2)
+    end
+
     ### IndexedArray #########################################################
 
     begin

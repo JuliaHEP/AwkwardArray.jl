@@ -209,8 +209,8 @@ end
 copy(behavior::Union{Unset,Symbol} = Unset()) = EmptyArray(behavior = behavior)
 
 parameters_of(content::EmptyArray) = Parameters()
-has_parameter(content::EmptyArray, key::String) where {CONTENT<:Content} = false
-get_parameter(content::EmptyArray, key::String) where {CONTENT<:Content} = nothing
+has_parameter(content::EmptyArray, key::String) = false
+get_parameter(content::EmptyArray, key::String) = nothing
 
 is_valid(layout::EmptyArray) = true
 Base.length(layout::EmptyArray) = 0
@@ -716,6 +716,126 @@ function Base.:(==)(
 end
 
 function end_record!(layout::RecordArray)
+    layout.length += 1
+    @assert all(length(x) >= layout.length for x in layout.contents)
+    layout
+end
+
+### TupleArray ###########################################################
+
+mutable struct TupleArray{CONTENTS<:Base.Tuple,BEHAVIOR} <: Content{BEHAVIOR}
+    const contents::CONTENTS
+    length::Int64
+    const parameters::Parameters
+    TupleArray(
+        contents::CONTENTS,
+        length::Int64;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {CONTENTS<:Base.Tuple} = new{CONTENTS,behavior}(contents, length, parameters)
+end
+
+TupleArray(
+    contents::CONTENTS;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENTS<:Base.Tuple} = TupleArray(
+    contents,
+    minimum(if length(contents) == 0
+        0
+    else
+        [length(x) for x in contents]
+    end),
+    parameters = parameters,
+    behavior = behavior,
+)
+
+struct Tuple{ARRAY<:TupleArray}
+    array::ARRAY
+    at::Int64
+end
+
+function copy(
+    layout::TupleArray{CONTENTS1,BEHAVIOR};
+    contents::Union{Unset,CONTENTS2} = Unset(),
+    length::Union{Unset,Int64} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {CONTENTS1<:Base.Tuple,CONTENTS2<:Base.Tuple,BEHAVIOR}
+    if isa(contents, Unset)
+        contents = layout.contents
+    end
+    if isa(length, Unset)
+        length = layout.length
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    TupleArray(contents, length, parameters = parameters, behavior = behavior)
+end
+
+function is_valid(layout::TupleArray)
+    for x in layout.contents
+        if length(x) < layout.length
+            return false
+        end
+        if !is_valid(x)
+            return false
+        end
+    end
+    return true
+end
+
+Base.length(layout::TupleArray) = layout.length
+Base.firstindex(layout::TupleArray) = 1
+Base.lastindex(layout::TupleArray) = layout.length
+
+Base.getindex(layout::TupleArray, i::Int) = Tuple(layout, i)
+
+Base.getindex(layout::TupleArray, r::UnitRange{Int}) = copy(
+    layout,
+    contents = Base.Tuple(x[r] for x in layout.contents),
+    length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
+)
+
+function slot(layout::TupleArray, f::Int)
+    content = layout.contents[f]
+    content[firstindex(content):firstindex(content)+length(layout)-1]
+end
+
+Base.getindex(layout::Tuple, f::Int64) = layout.array.contents[f][layout.at]
+
+function Base.:(==)(
+    layout1::TupleArray{CONTENTS},
+    layout2::TupleArray{CONTENTS},
+) where {CONTENTS<:Base.Tuple}
+    if length(layout1) != length(layout2)
+        return false
+    end
+    for i in eachindex(layout1.contents)         # same indexes because same CONTENTS type
+        if slot(layout1, i) != slot(layout2, i)  # compare whole arrays
+            return false
+        end
+    end
+    return true
+end
+
+function Base.:(==)(
+    layout1::Tuple{ARRAY},
+    layout2::Tuple{ARRAY},
+) where {CONTENTS<:Base.Tuple,ARRAY<:TupleArray{CONTENTS}}
+    for i in eachindex(layout1.array.contents)   # same indexes because same CONTENTS type
+        if layout1[i] != layout2[i]              # compare tuple items
+            return false
+        end
+    end
+    return true
+end
+
+function end_tuple!(layout::TupleArray)
     layout.length += 1
     @assert all(length(x) >= layout.length for x in layout.contents)
     layout
