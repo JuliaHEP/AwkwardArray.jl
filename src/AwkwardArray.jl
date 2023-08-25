@@ -1147,7 +1147,8 @@ end
 Base.getindex(layout::BitMaskedArray, f::Symbol) = copy(layout, content = layout.content[f])
 
 function push!(
-    layout::BitMaskedArray{CONTENT}, x::ITEM
+    layout::BitMaskedArray{CONTENT},
+    x::ITEM,
 ) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
     push!(layout.content, x)
     Base.push!(layout.mask, layout.valid_when)
@@ -1174,17 +1175,13 @@ function push_null!(
     layout
 end
 
-function push_null!(
-    layout::BitMaskedArray{CONTENT},
-) where {CONTENT<:ListType}
+function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:ListType}
     end_list!(layout.content)
     Base.push!(layout.mask, !layout.valid_when)
     layout
 end
 
-function push_null!(
-    layout::BitMaskedArray{CONTENT},
-) where {CONTENT<:RecordArray}
+function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:RecordArray}
     end_record!(layout.content)
     Base.push!(layout.mask, !layout.valid_when)
     layout
