@@ -1187,6 +1187,77 @@ function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:RecordArray
     layout
 end
 
+### UnmaskedArray ########################################################
+
+struct UnmaskedArray{CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
+    content::CONTENT
+    parameters::Parameters
+    UnmaskedArray(
+        content::CONTENT;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {CONTENT<:Content} = new{CONTENT,behavior}(content, parameters)
+end
+
+UnmaskedArray{CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENT<:Content} =
+    UnmaskedArray(CONTENT(), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::UnmaskedArray{CONTENT1,BEHAVIOR};
+    content::Union{Unset,CONTENT2} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    UnmaskedArray(content, parameters = parameters, behavior = behavior)
+end
+
+is_valid(layout::UnmaskedArray) = is_valid(layout.content)
+
+Base.length(layout::UnmaskedArray) = length(layout.content)
+Base.firstindex(layout::UnmaskedArray) = firstindex(layout.content)
+Base.lastindex(layout::UnmaskedArray) = lastindex(layout.content)
+
+# It would have been nice to get this to say that the return type is
+# Union{Missing, return_types(getindex, (typeof(layout.content), typeof(i)))[1]}
+# but Julia is smart enough to see through "if false missing else ...".
+Base.getindex(layout::UnmaskedArray, i::Int) = layout.content[i]
+
+Base.getindex(layout::UnmaskedArray, r::UnitRange{Int}) =
+    copy(layout, content = layout.content[r.start:r.stop])
+
+Base.getindex(layout::UnmaskedArray, f::Symbol) = copy(layout, content = layout.content[f])
+
+function push!(
+    layout::UnmaskedArray{CONTENT},
+    x::ITEM,
+) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    push!(layout.content, x)
+    layout
+end
+
+function end_list!(layout::UnmaskedArray)
+    end_list!(layout.content)
+    layout
+end
+
+function end_record!(layout::UnmaskedArray)
+    end_record!(layout.content)
+    layout
+end
+
+
 
 
 

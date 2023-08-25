@@ -1089,6 +1089,87 @@ using Test
 
     end
 
+    ### UnmaskedArray ########################################################
+
+    begin
+        layout = AwkwardArray.UnmaskedArray(
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 5
+        @test layout[1] == 1.1
+        @test layout[2] == 2.2
+        @test layout[3] == 3.3
+        @test layout[4] == 4.4
+        @test layout[5] == 5.5
+        @test layout[4:5] == AwkwardArray.PrimitiveArray([4.4, 5.5])
+        tmp = 0.0
+        for x in layout
+            if !ismissing(x)
+                @test x < 6
+                tmp += x
+            end
+        end
+        @test tmp == 16.5
+
+        AwkwardArray.push!(layout, 6.6)
+        @test length(layout) == 6
+        @test layout[6] == 6.6
+    end
+
+    begin
+        layout = AwkwardArray.UnmaskedArray(
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3, 5],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            ),
+        )
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 3
+
+        sublayout = layout.content.content
+
+        AwkwardArray.push!(sublayout, 6.6)
+        AwkwardArray.push!(sublayout, 7.7)
+        AwkwardArray.push!(sublayout, 8.8)
+        AwkwardArray.push!(sublayout, 9.9)
+        AwkwardArray.end_list!(layout)
+
+        @test length(layout) == 4
+        @test layout[4] == AwkwardArray.PrimitiveArray([6.6, 7.7, 8.8, 9.9])
+    end
+
+    begin
+        layout = AwkwardArray.UnmaskedArray(
+            AwkwardArray.RecordArray(
+                NamedTuple{(:a, :b)}((
+                    AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                )),
+            ),
+        )
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 5
+
+        a_layout = layout.content.contents[:a]
+        b_layout = layout.content.contents[:b]
+
+        AwkwardArray.push!(a_layout, 6)
+        AwkwardArray.push!(b_layout, 6.6)
+        AwkwardArray.end_record!(layout)
+        @test length(layout) == 6
+        @test layout[6][:a] == 6
+        @test layout[6][:b] == 6.6
+        @test layout[:a][6] == 6
+        @test layout[:b][6] == 6.6
+
+    end
+
+
+
+
+
+
 
 
 end   # @testset "AwkwardArray.jl"
