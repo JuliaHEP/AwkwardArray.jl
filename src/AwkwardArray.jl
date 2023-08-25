@@ -924,11 +924,16 @@ function end_list!(
     layout
 end
 
-function end_record!(
-    layout::IndexedArray{INDEX,CONTENT},
-) where {INDEX<:IndexBig,CONTENT<:RecordArray}
+function end_record!(layout::IndexedArray)
     tmp = length(layout.content)
     end_record!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function end_tuple!(layout::IndexedArray)
+    tmp = length(layout.content)
+    end_tuple!(layout.content)
     Base.push!(layout.index, tmp)
     layout
 end
@@ -1025,6 +1030,13 @@ end
 function end_record!(layout::IndexedOptionArray)
     tmp = length(layout.content)
     end_record!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function end_tuple!(layout::IndexedOptionArray)
+    tmp = length(layout.content)
+    end_tuple!(layout.content)
     Base.push!(layout.index, tmp)
     layout
 end
@@ -1148,6 +1160,12 @@ function end_record!(layout::ByteMaskedArray)
     layout
 end
 
+function end_tuple!(layout::ByteMaskedArray)
+    end_tuple!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
 function push_null!(
     layout::ByteMaskedArray{INDEX,CONTENT},
 ) where {INDEX<:Index8,ITEM,CONTENT<:PrimitiveArray{ITEM}}
@@ -1168,6 +1186,14 @@ function push_null!(
     layout::ByteMaskedArray{INDEX,CONTENT},
 ) where {INDEX<:Index8,CONTENT<:RecordArray}
     end_record!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+) where {INDEX<:Index8,CONTENT<:TupleArray}
+    end_tuple!(layout.content)
     Base.push!(layout.mask, !layout.valid_when)
     layout
 end
@@ -1287,6 +1313,12 @@ function end_record!(layout::BitMaskedArray)
     layout
 end
 
+function end_tuple!(layout::BitMaskedArray)
+    end_tuple!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
 function push_null!(
     layout::BitMaskedArray{CONTENT},
 ) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
@@ -1303,6 +1335,12 @@ end
 
 function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:RecordArray}
     end_record!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:TupleArray}
+    end_tuple!(layout.content)
     Base.push!(layout.mask, !layout.valid_when)
     layout
 end
@@ -1374,6 +1412,11 @@ end
 
 function end_record!(layout::UnmaskedArray)
     end_record!(layout.content)
+    layout
+end
+
+function end_tuple!(layout::UnmaskedArray)
+    end_tuple!(layout.content)
     layout
 end
 
