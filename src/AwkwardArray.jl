@@ -10,6 +10,7 @@ const Index32 = AbstractVector{Int32}
 const IndexU32 = AbstractVector{UInt32}
 const Index64 = AbstractVector{Int64}
 const IndexBig = Union{Index32,IndexU32,Index64}
+const IndexBool = Union{Index8,AbstractVector{Bool}}
 
 ### Parameters ###########################################################
 
@@ -102,9 +103,9 @@ struct Unset end
 
 abstract type Content{BEHAVIOR} <: AbstractVector{ITEM where ITEM} end
 
+parameters_of(content::CONTENT) where {CONTENT<:Content} = content.parameters
 has_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
     has_parameter(content.parameters, key)
-
 get_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
     get_parameter(content.parameters, key)
 
@@ -129,9 +130,26 @@ end
 
 Base.size(layout::Content) = (length(layout),)
 
-### PrimitiveArray #######################################################
+function Base.:(==)(layout1::Content, layout2::Content)
+    if length(layout1) != length(layout2)
+        return false
+    end
+    for (x, y) in zip(layout1, layout2)
+        if x != y
+            return false
+        end
+    end
+    return true
+end
 
-struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} <: Content{BEHAVIOR}
+### PrimitiveArray #######################################################
+#
+# Note: all Python NumpyArrays have to be converted to 1-dimensional
+#       (inner_shape == ()) with RegularArrays when converting to Julia.
+
+abstract type LeafType{BEHAVIOR} <: Content{BEHAVIOR} end
+
+struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} <: LeafType{BEHAVIOR}
     data::BUFFER
     parameters::Parameters
     PrimitiveArray(
@@ -149,16 +167,16 @@ PrimitiveArray{ITEM}(;
     PrimitiveArray(Vector{ITEM}([]), parameters = parameters, behavior = behavior)
 
 function copy(
-    layout::PrimitiveArray{ITEM,BUFFER,BEHAVIOR};
-    data::Union{Unset,BUFFER} = Unset(),
+    layout::PrimitiveArray{ITEM,BUFFER1,BEHAVIOR};
+    data::Union{Unset,BUFFER2} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR}
+) where {ITEM,BUFFER1<:AbstractVector{ITEM},BUFFER2<:AbstractVector,BEHAVIOR}
     if isa(data, Unset)
         data = layout.data
     end
     if isa(parameters, Unset)
-        parameters = layout.parameters
+        parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
         behavior = typeof(layout).parameters[end]
@@ -173,27 +191,48 @@ Base.lastindex(layout::PrimitiveArray) = lastindex(layout.data)
 
 Base.getindex(layout::PrimitiveArray, i::Int) = layout.data[i]
 
-Base.getindex(layout::PrimitiveArray, r::UnitRange{Int}) = PrimitiveArray(
-    layout.data[r],
-    parameters = layout.parameters,
-    behavior = typeof(layout).parameters[end],
-)
+Base.getindex(layout::PrimitiveArray, r::UnitRange{Int}) =
+    copy(layout, data = layout.data[r])
 
-function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
-    if !compatible(layout1.parameters, layout2.parameters)
-        return false
-    end
-    layout1.data == layout2.data
-end
+Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray) = layout1.data == layout2.data  # override for performance
 
 function push!(layout::PrimitiveArray{ITEM}, x::ITEM) where {ITEM}
     Base.push!(layout.data, x)
     layout
 end
 
+### EmptyArray ###########################################################
+
+struct EmptyArray{BEHAVIOR} <: LeafType{BEHAVIOR}
+    EmptyArray(; behavior::Symbol = :default) = new{behavior}()
+end
+
+copy(behavior::Union{Unset,Symbol} = Unset()) = EmptyArray(behavior = behavior)
+
+parameters_of(content::EmptyArray) = Parameters()
+has_parameter(content::EmptyArray, key::String) = false
+get_parameter(content::EmptyArray, key::String) = nothing
+
+is_valid(layout::EmptyArray) = true
+Base.length(layout::EmptyArray) = 0
+Base.firstindex(layout::EmptyArray) = 1
+Base.lastindex(layout::EmptyArray) = 0
+
+Base.getindex(layout::EmptyArray, i::Int) = [][1]  # throw BoundsError
+
+function Base.getindex(layout::EmptyArray, r::UnitRange{Int})
+    if r.start < r.stop
+        [][1]  # throw BoundsError
+    else
+        layout
+    end
+end
+
 ### ListOffsetArray ######################################################
 
-struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEHAVIOR}
+abstract type ListType{BEHAVIOR} <: Content{BEHAVIOR} end
+
+struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
     offsets::INDEX
     content::CONTENT
     parameters::Parameters
@@ -213,12 +252,12 @@ ListOffsetArray{INDEX,CONTENT}(;
     ListOffsetArray(INDEX([0]), CONTENT(), parameters = parameters, behavior = behavior)
 
 function copy(
-    layout::ListOffsetArray{INDEX,CONTENT,BEHAVIOR};
-    offsets::Union{Unset,INDEX} = Unset(),
-    content::Union{Unset,CONTENT} = Unset(),
+    layout::ListOffsetArray{INDEX1,CONTENT1,BEHAVIOR};
+    offsets::Union{Unset,INDEX2} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR}
+) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
     if isa(offsets, Unset)
         offsets = layout.offsets
     end
@@ -226,7 +265,7 @@ function copy(
         content = layout.content
     end
     if isa(parameters, Unset)
-        parameters = layout.parameters
+        parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
         behavior = typeof(layout).parameters[end]
@@ -259,41 +298,216 @@ function Base.getindex(layout::ListOffsetArray, i::Int)
     layout.content[start:stop]
 end
 
-Base.getindex(layout::ListOffsetArray, r::UnitRange{Int}) = ListOffsetArray(
-    layout.offsets[(r.start):(r.stop+1)],
-    layout.content,
-    parameters = layout.parameters,
-    behavior = typeof(layout).parameters[end],
-)
+Base.getindex(layout::ListOffsetArray, r::UnitRange{Int}) =
+    copy(layout, offsets = layout.offsets[(r.start):(r.stop+1)])
 
-Base.getindex(layout::ListOffsetArray, f::Symbol) = ListOffsetArray(
-    layout.offsets,
-    layout.content[f],
-    parameters = layout.parameters,
-    behavior = typeof(layout).parameters[end],
-)
-
-function Base.:(==)(layout1::ListOffsetArray, layout2::ListOffsetArray)
-    if length(layout1) != length(layout2)
-        return false
-    end
-    if !compatible(layout1.parameters, layout2.parameters)
-        return false
-    end
-    for (x, y) in zip(layout1, layout2)
-        if x != y
-            return false
-        end
-    end
-    return true
-end
+Base.getindex(layout::ListOffsetArray, f::Symbol) =
+    copy(layout, content = layout.content[f])
 
 function end_list!(layout::ListOffsetArray)
     Base.push!(layout.offsets, length(layout.content))
     layout
 end
 
-### ListOffsetArray with behavior = :string ##############################
+### ListArray ############################################################
+
+struct ListArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
+    starts::INDEX
+    stops::INDEX
+    content::CONTENT
+    parameters::Parameters
+    ListArray(
+        starts::INDEX,
+        stops::INDEX,
+        content::CONTENT;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {INDEX<:IndexBig,CONTENT<:Content} =
+        new{INDEX,CONTENT,behavior}(starts, stops, content, parameters)
+end
+
+ListArray{INDEX,CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {INDEX<:IndexBig} where {CONTENT<:Content} =
+    ListArray(INDEX([]), INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::ListArray{INDEX1,CONTENT1,BEHAVIOR};
+    starts::Union{Unset,INDEX2} = Unset(),
+    stops::Union{Unset,INDEX2} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(starts, Unset)
+        starts = layout.starts
+    end
+    if isa(stops, Unset)
+        stops = layout.stops
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    ListArray(starts, stops, content, parameters = parameters, behavior = behavior)
+end
+
+function is_valid(layout::ListArray)
+    if length(layout.starts) < length(layout.stops)
+        return false
+    end
+    adjustment = firstindex(layout.starts) - firstindex(layout.stops)
+    for i in eachindex(layout.starts)
+        start = layout.starts[i]
+        stop = layout.stops[i-adjustment]
+        if start != stop
+            if start < 0 || start > stop || stop > length(layout.content)
+                return false
+            end
+        end
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::ListArray) = length(layout.starts)
+Base.firstindex(layout::ListArray) = firstindex(layout.starts)
+Base.lastindex(layout::ListArray) = lastindex(layout.starts)
+
+function Base.getindex(layout::ListArray, i::Int)
+    adjustment = firstindex(layout.starts) - firstindex(layout.stops)
+    start = layout.starts[i] + firstindex(layout.content)
+    stop = layout.stops[i-adjustment] - layout.starts[i] + start - 1
+    layout.content[start:stop]
+end
+
+function Base.getindex(layout::ListArray, r::UnitRange{Int})
+    adjustment = firstindex(layout.starts) - firstindex(layout.stops)
+    copy(
+        layout,
+        starts = layout.starts[r.start:r.stop],
+        stops = layout.stops[(r.start-adjustment):(r.stop-adjustment)],
+    )
+end
+
+Base.getindex(layout::ListArray, f::Symbol) = copy(layout, content = layout.content[f])
+
+function end_list!(layout::ListArray)
+    if isempty(layout.stops)
+        Base.push!(layout.starts, 0)
+    else
+        Base.push!(layout.starts, layout.stops[end])
+    end
+    Base.push!(layout.stops, length(layout.content))
+end
+
+### RegularArray #########################################################
+
+mutable struct RegularArray{CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
+    const content::CONTENT
+    size::Int64
+    length::Int64
+    const parameters::Parameters
+    RegularArray(
+        content::CONTENT,
+        size::Int;
+        zeros_length::Int = 0,
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {CONTENT<:Content} = new{CONTENT,behavior}(content, size, if size == 0
+        zeros_length
+    else
+        div(length(content), size)
+    end, parameters)
+end
+
+RegularArray{CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENT<:Content} = RegularArray(
+    CONTENT(),
+    0,
+    zeros_length = 0,
+    parameters = parameters,
+    behavior = behavior,
+)
+
+function copy(
+    layout::RegularArray{CONTENT1,BEHAVIOR};
+    content::Union{Unset,CONTENT2} = Unset(),
+    size::Union{Unset,Int} = Unset(),
+    zeros_length::Union{Unset,Int} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(size, Unset)
+        size = layout.size
+    end
+    if isa(zeros_length, Unset)
+        zeros_length = length(layout)
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    RegularArray(
+        content,
+        size,
+        zeros_length = zeros_length,
+        parameters = parameters,
+        behavior = behavior,
+    )
+end
+
+function is_valid(layout::RegularArray)
+    if layout.length < 0
+        return false
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::RegularArray) = layout.length
+Base.firstindex(layout::RegularArray) = 1
+Base.lastindex(layout::RegularArray) = length(layout)
+
+function Base.getindex(layout::RegularArray, i::Int)
+    start = (i - firstindex(layout)) * layout.size + firstindex(layout.content)
+    stop = (i + 1 - firstindex(layout)) * layout.size + firstindex(layout.content) - 1
+    layout.content[start:stop]
+end
+
+function Base.getindex(layout::RegularArray, r::UnitRange{Int})
+    start = (r.start - firstindex(layout)) * layout.size + firstindex(layout.content)
+    stop = (r.stop - 1 - firstindex(layout)) * layout.size + firstindex(layout.content) + 1
+    copy(layout, content = layout.content[start:stop], zeros_length = r.stop - r.start + 1)
+end
+
+Base.getindex(layout::RegularArray, f::Symbol) = copy(layout, content = layout.content[f])
+
+function end_list!(layout::RegularArray)
+    if layout.length == 0
+        layout.size = length(layout.content)
+        layout.length = 1
+    elseif length(layout.content) == (layout.length + 1) * layout.size
+        layout.length += 1
+    else
+        error(
+            "RegularArray list lengths changed: from $layout.size to $(div(length(layout.content), (layout.length + 1)))",
+        )
+    end
+end
+
+### ListType with behavior = :string #####################################
 
 function Base.getindex(
     layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
@@ -301,19 +515,90 @@ function Base.getindex(
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
     String(
         getindex(
-            ListOffsetArray(layout.offsets, PrimitiveArray(layout.content.data)),
+            copy(
+                layout,
+                content = copy(layout.content, behavior = :default),
+                behavior = :default,
+            ),
             i,
         ).data,
     )
 end
 
-### ListOffsetArray with behavior = :bytestring ##########################
+function Base.getindex(
+    layout::ListArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
+    i::Int,
+) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
+    String(
+        getindex(
+            copy(
+                layout,
+                content = copy(layout.content, behavior = :default),
+                behavior = :default,
+            ),
+            i,
+        ).data,
+    )
+end
+
+function Base.getindex(
+    layout::RegularArray{PrimitiveArray{UInt8,BUFFER,:char},:string},
+    i::Int,
+) where {BUFFER<:AbstractVector{UInt8}}
+    String(
+        getindex(
+            copy(
+                layout,
+                content = copy(layout.content, behavior = :default),
+                behavior = :default,
+            ),
+            i,
+        ).data,
+    )
+end
+
+### ListType with behavior = :bytestring #################################
 
 function Base.getindex(
     layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:byte},:bytestring},
     i::Int,
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
-    getindex(ListOffsetArray(layout.offsets, PrimitiveArray(layout.content.data)), i).data
+    getindex(
+        copy(
+            layout,
+            content = copy(layout.content, behavior = :default),
+            behavior = :default,
+        ),
+        i,
+    ).data
+end
+
+function Base.getindex(
+    layout::ListArray{INDEX,PrimitiveArray{UInt8,BUFFER,:byte},:bytestring},
+    i::Int,
+) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
+    getindex(
+        copy(
+            layout,
+            content = copy(layout.content, behavior = :default),
+            behavior = :default,
+        ),
+        i,
+    ).data
+end
+
+function Base.getindex(
+    layout::RegularArray{PrimitiveArray{UInt8,BUFFER,:byte},:bytestring},
+    i::Int,
+) where {BUFFER<:AbstractVector{UInt8}}
+    getindex(
+        copy(
+            layout,
+            content = copy(layout.content, behavior = :default),
+            behavior = :default,
+        ),
+        i,
+    ).data
 end
 
 ### RecordArray ##########################################################
@@ -345,18 +630,29 @@ RecordArray(
     behavior = behavior,
 )
 
+RecordArray{CONTENTS}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENTS<:NamedTuple} = RecordArray(
+    NamedTuple{CONTENTS.parameters[1]}(
+        Base.Tuple(x() for x in CONTENTS.parameters[2].parameters),
+    ),
+    parameters = parameters,
+    behavior = behavior,
+)
+
 struct Record{ARRAY<:RecordArray}
     array::ARRAY
     at::Int64
 end
 
 function copy(
-    layout::RecordArray{CONTENTS,BEHAVIOR};
-    contents::Union{Unset,CONTENTS} = Unset(),
+    layout::RecordArray{CONTENTS1,BEHAVIOR};
+    contents::Union{Unset,CONTENTS2} = Unset(),
     length::Union{Unset,Int64} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {CONTENTS<:NamedTuple,BEHAVIOR}
+) where {CONTENTS1<:NamedTuple,CONTENTS2<:NamedTuple,BEHAVIOR}
     if isa(contents, Unset)
         contents = layout.contents
     end
@@ -364,7 +660,7 @@ function copy(
         length = layout.length
     end
     if isa(parameters, Unset)
-        parameters = layout.parameters
+        parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
         behavior = typeof(layout).parameters[end]
@@ -390,14 +686,13 @@ Base.lastindex(layout::RecordArray) = layout.length
 
 Base.getindex(layout::RecordArray, i::Int) = Record(layout, i)
 
-Base.getindex(layout::RecordArray, r::UnitRange{Int}) =
-    RecordArray{typeof(layout).parameters[end]}(
-        NamedTuple{keys(layout.contents)}(
-            Pair(k, v[r]) for (k, v) in pairs(layout.contents)
-        ),
-        min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
-        layout.parameters,
-    )
+Base.getindex(layout::RecordArray, r::UnitRange{Int}) = copy(
+    layout,
+    contents = NamedTuple{keys(layout.contents)}(
+        Pair(k, v[r]) for (k, v) in pairs(layout.contents)
+    ),
+    length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
+)
 
 function Base.getindex(layout::RecordArray, f::Symbol)
     content = layout.contents[f]
@@ -413,9 +708,6 @@ function Base.:(==)(
     if length(layout1) != length(layout2)
         return false
     end
-    if !compatible(layout1.parameters, layout2.parameters)
-        return false
-    end
     for k in keys(layout1.contents)   # same keys because same CONTENTS type
         if layout1[k] != layout2[k]   # compare whole arrays
             return false
@@ -428,9 +720,6 @@ function Base.:(==)(
     layout1::Record{ARRAY},
     layout2::Record{ARRAY},
 ) where {CONTENTS<:NamedTuple,ARRAY<:RecordArray{CONTENTS}}
-    if !compatible(layout1.array.parameters, layout2.array.parameters)
-        return false
-    end
     for k in keys(layout1.array.contents)   # same keys because same CONTENTS type
         if layout1[k] != layout2[k]         # compare record items
             return false
@@ -445,4 +734,901 @@ function end_record!(layout::RecordArray)
     layout
 end
 
+### TupleArray ###########################################################
+
+mutable struct TupleArray{CONTENTS<:Base.Tuple,BEHAVIOR} <: Content{BEHAVIOR}
+    const contents::CONTENTS
+    length::Int64
+    const parameters::Parameters
+    TupleArray(
+        contents::CONTENTS,
+        length::Int64;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {CONTENTS<:Base.Tuple} = new{CONTENTS,behavior}(contents, length, parameters)
 end
+
+TupleArray(
+    contents::CONTENTS;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENTS<:Base.Tuple} = TupleArray(
+    contents,
+    minimum(if length(contents) == 0
+        0
+    else
+        [length(x) for x in contents]
+    end),
+    parameters = parameters,
+    behavior = behavior,
+)
+
+TupleArray{CONTENTS}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENTS<:Base.Tuple} = TupleArray(
+    Base.Tuple(x() for x in CONTENTS.parameters),
+    parameters = parameters,
+    behavior = behavior,
+)
+
+struct Tuple{ARRAY<:TupleArray}
+    array::ARRAY
+    at::Int64
+end
+
+function copy(
+    layout::TupleArray{CONTENTS1,BEHAVIOR};
+    contents::Union{Unset,CONTENTS2} = Unset(),
+    length::Union{Unset,Int64} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {CONTENTS1<:Base.Tuple,CONTENTS2<:Base.Tuple,BEHAVIOR}
+    if isa(contents, Unset)
+        contents = layout.contents
+    end
+    if isa(length, Unset)
+        length = layout.length
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    TupleArray(contents, length, parameters = parameters, behavior = behavior)
+end
+
+function is_valid(layout::TupleArray)
+    for x in layout.contents
+        if length(x) < layout.length
+            return false
+        end
+        if !is_valid(x)
+            return false
+        end
+    end
+    return true
+end
+
+Base.length(layout::TupleArray) = layout.length
+Base.firstindex(layout::TupleArray) = 1
+Base.lastindex(layout::TupleArray) = layout.length
+
+Base.getindex(layout::TupleArray, i::Int) = Tuple(layout, i)
+
+Base.getindex(layout::TupleArray, r::UnitRange{Int}) = copy(
+    layout,
+    contents = Base.Tuple(x[r] for x in layout.contents),
+    length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
+)
+
+function slot(layout::TupleArray, f::Int)
+    content = layout.contents[f]
+    content[firstindex(content):firstindex(content)+length(layout)-1]
+end
+
+Base.getindex(layout::Tuple, f::Int64) = layout.array.contents[f][layout.at]
+
+function Base.:(==)(
+    layout1::TupleArray{CONTENTS},
+    layout2::TupleArray{CONTENTS},
+) where {CONTENTS<:Base.Tuple}
+    if length(layout1) != length(layout2)
+        return false
+    end
+    for i in eachindex(layout1.contents)         # same indexes because same CONTENTS type
+        if slot(layout1, i) != slot(layout2, i)  # compare whole arrays
+            return false
+        end
+    end
+    return true
+end
+
+function Base.:(==)(
+    layout1::Tuple{ARRAY},
+    layout2::Tuple{ARRAY},
+) where {CONTENTS<:Base.Tuple,ARRAY<:TupleArray{CONTENTS}}
+    for i in eachindex(layout1.array.contents)   # same indexes because same CONTENTS type
+        if layout1[i] != layout2[i]              # compare tuple items
+            return false
+        end
+    end
+    return true
+end
+
+function end_tuple!(layout::TupleArray)
+    layout.length += 1
+    @assert all(length(x) >= layout.length for x in layout.contents)
+    layout
+end
+
+### IndexedArray #########################################################
+
+struct IndexedArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEHAVIOR}
+    index::INDEX
+    content::CONTENT
+    parameters::Parameters
+    IndexedArray(
+        index::INDEX,
+        content::CONTENT;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {INDEX<:IndexBig,CONTENT<:Content} =
+        new{INDEX,CONTENT,behavior}(index, content, parameters)
+end
+
+IndexedArray{INDEX,CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {INDEX<:IndexBig} where {CONTENT<:Content} =
+    IndexedArray(INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::IndexedArray{INDEX1,CONTENT1,BEHAVIOR};
+    index::Union{Unset,INDEX2} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(index, Unset)
+        index = layout.index
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    IndexedArray(index, content, parameters = parameters, behavior = behavior)
+end
+
+function is_valid(layout::IndexedArray)
+    for i in eachindex(layout.index)
+        if layout.index[i] < 0 || layout.index[i] >= length(layout.content)
+            return false
+        end
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::IndexedArray) = length(layout.index)
+Base.firstindex(layout::IndexedArray) = firstindex(layout.index)
+Base.lastindex(layout::IndexedArray) = lastindex(layout.index)
+
+Base.getindex(layout::IndexedArray, i::Int) =
+    layout.content[layout.index[i]+firstindex(layout.content)]
+
+Base.getindex(layout::IndexedArray, r::UnitRange{Int}) =
+    copy(layout, index = layout.index[r.start:r.stop])
+
+Base.getindex(layout::IndexedArray, f::Symbol) = copy(layout, content = layout.content[f])
+
+function push!(
+    layout::IndexedArray{INDEX,CONTENT},
+    x::ITEM,
+) where {INDEX<:IndexBig,ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    tmp = length(layout.content)
+    push!(layout.content, x)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function end_list!(
+    layout::IndexedArray{INDEX,CONTENT},
+) where {INDEX<:IndexBig,CONTENT<:ListType}
+    tmp = length(layout.content)
+    end_list!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function end_record!(layout::IndexedArray)
+    tmp = length(layout.content)
+    end_record!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function end_tuple!(layout::IndexedArray)
+    tmp = length(layout.content)
+    end_tuple!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+### IndexedOptionArray ###################################################
+
+abstract type OptionType{BEHAVIOR} <: Content{BEHAVIOR} end
+
+struct IndexedOptionArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
+    index::INDEX
+    content::CONTENT
+    parameters::Parameters
+    IndexedOptionArray(
+        index::INDEX,
+        content::CONTENT;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {INDEX<:IndexBig,CONTENT<:Content} =
+        new{INDEX,CONTENT,behavior}(index, content, parameters)
+end
+
+IndexedOptionArray{INDEX,CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {INDEX<:IndexBig} where {CONTENT<:Content} =
+    IndexedOptionArray(INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::IndexedOptionArray{INDEX1,CONTENT1,BEHAVIOR};
+    index::Union{Unset,INDEX2} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(index, Unset)
+        index = layout.index
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    IndexedOptionArray(index, content, parameters = parameters, behavior = behavior)
+end
+
+function is_valid(layout::IndexedOptionArray)
+    for i in eachindex(layout.index)
+        if layout.index[i] >= length(layout.content)
+            return false
+        end
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::IndexedOptionArray) = length(layout.index)
+Base.firstindex(layout::IndexedOptionArray) = firstindex(layout.index)
+Base.lastindex(layout::IndexedOptionArray) = lastindex(layout.index)
+
+function Base.getindex(layout::IndexedOptionArray, i::Int)
+    if layout.index[i] < 0
+        missing
+    else
+        layout.content[layout.index[i]+firstindex(layout.content)]
+    end
+end
+
+Base.getindex(layout::IndexedOptionArray, r::UnitRange{Int}) =
+    copy(layout, index = layout.index[r.start:r.stop])
+
+Base.getindex(layout::IndexedOptionArray, f::Symbol) =
+    copy(layout, content = layout.content[f])
+
+function push!(
+    layout::IndexedOptionArray{INDEX,CONTENT},
+    x::ITEM,
+) where {INDEX<:IndexBig,ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    tmp = length(layout.content)
+    push!(layout.content, x)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function end_list!(layout::IndexedOptionArray)
+    tmp = length(layout.content)
+    end_list!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function end_record!(layout::IndexedOptionArray)
+    tmp = length(layout.content)
+    end_record!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function end_tuple!(layout::IndexedOptionArray)
+    tmp = length(layout.content)
+    end_tuple!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function push_null!(layout::IndexedOptionArray)
+    Base.push!(layout.index, -1)
+    layout
+end
+
+### ByteMaskedArray ######################################################
+
+struct ByteMaskedArray{INDEX<:IndexBool,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
+    mask::INDEX
+    content::CONTENT
+    valid_when::Bool
+    parameters::Parameters
+    ByteMaskedArray(
+        mask::INDEX,
+        content::CONTENT;
+        valid_when::Bool = false,  # the NumPy MaskedArray convention
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {INDEX<:IndexBool,CONTENT<:Content} =
+        new{INDEX,CONTENT,behavior}(mask, content, valid_when, parameters)
+end
+
+ByteMaskedArray{INDEX,CONTENT}(;
+    valid_when::Bool = false,  # the NumPy MaskedArray convention
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {INDEX<:IndexBool} where {CONTENT<:Content} = ByteMaskedArray(
+    INDEX([]),
+    CONTENT(),
+    valid_when = valid_when,
+    parameters = parameters,
+    behavior = behavior,
+)
+
+function copy(
+    layout::ByteMaskedArray{INDEX1,CONTENT1,BEHAVIOR};
+    mask::Union{Unset,INDEX2} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
+    valid_when::Union{Unset,Bool} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {INDEX1<:IndexBool,INDEX2<:IndexBool,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(mask, Unset)
+        mask = layout.mask
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(valid_when, Unset)
+        valid_when = layout.valid_when
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    ByteMaskedArray(
+        mask,
+        content,
+        valid_when = valid_when,
+        parameters = parameters,
+        behavior = behavior,
+    )
+end
+
+function is_valid(layout::ByteMaskedArray)
+    if length(layout.mask) > length(layout.content)
+        return false
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::ByteMaskedArray) = length(layout.mask)
+Base.firstindex(layout::ByteMaskedArray) = firstindex(layout.mask)
+Base.lastindex(layout::ByteMaskedArray) = lastindex(layout.mask)
+
+function Base.getindex(layout::ByteMaskedArray, i::Int)
+    if (layout.mask[i] != 0) != layout.valid_when
+        missing
+    else
+        adjustment = firstindex(layout.mask) - firstindex(layout.content)
+        layout.content[i-adjustment]
+    end
+end
+
+function Base.getindex(layout::ByteMaskedArray, r::UnitRange{Int})
+    adjustment = firstindex(layout.mask) - firstindex(layout.content)
+    copy(
+        layout,
+        mask = layout.mask[r.start:r.stop],
+        content = layout.content[(r.start-adjustment):(r.stop-adjustment)],
+    )
+end
+
+Base.getindex(layout::ByteMaskedArray, f::Symbol) =
+    copy(layout, content = layout.content[f])
+
+function push!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+    x::ITEM,
+) where {INDEX<:IndexBool,ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    push!(layout.content, x)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function end_list!(layout::ByteMaskedArray)
+    end_list!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function end_record!(layout::ByteMaskedArray)
+    end_record!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function end_tuple!(layout::ByteMaskedArray)
+    end_tuple!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+) where {INDEX<:IndexBool,ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    push!(layout.content, zero(ITEM))
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+) where {INDEX<:IndexBool,CONTENT<:ListType}
+    end_list!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+) where {INDEX<:IndexBool,CONTENT<:RecordArray}
+    end_record!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+) where {INDEX<:IndexBool,CONTENT<:TupleArray}
+    end_tuple!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+### BitMaskedArray #######################################################
+#
+# Note: all Python BitMaskedArrays must be converted to lsb_order = true.
+
+struct BitMaskedArray{CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
+    mask::BitVector
+    content::CONTENT
+    valid_when::Bool
+    parameters::Parameters
+    BitMaskedArray(
+        mask::BitVector,
+        content::CONTENT;
+        valid_when::Bool = false,  # NumPy MaskedArray's convention; note that Arrow's is true
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {CONTENT<:Content} =
+        new{CONTENT,behavior}(mask, content, valid_when, parameters)
+end
+
+BitMaskedArray{CONTENT}(;
+    valid_when::Bool = false,  # NumPy MaskedArray's convention; note that Arrow's is true
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENT<:Content} = BitMaskedArray(
+    BitVector(),
+    CONTENT(),
+    valid_when = valid_when,
+    parameters = parameters,
+    behavior = behavior,
+)
+
+function copy(
+    layout::BitMaskedArray{CONTENT1,BEHAVIOR};
+    mask::Union{Unset,BitVector} = Unset(),
+    content::Union{Unset,CONTENT2} = Unset(),
+    valid_when::Union{Unset,Bool} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(mask, Unset)
+        mask = layout.mask
+    end
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(valid_when, Unset)
+        valid_when = layout.valid_when
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    BitMaskedArray(
+        mask,
+        content,
+        valid_when = valid_when,
+        parameters = parameters,
+        behavior = behavior,
+    )
+end
+
+function is_valid(layout::BitMaskedArray)
+    if length(layout.mask) > length(layout.content)
+        return false
+    end
+    return is_valid(layout.content)
+end
+
+Base.length(layout::BitMaskedArray) = length(layout.mask)
+Base.firstindex(layout::BitMaskedArray) = firstindex(layout.mask)
+Base.lastindex(layout::BitMaskedArray) = lastindex(layout.mask)
+
+function Base.getindex(layout::BitMaskedArray, i::Int)
+    if (layout.mask[i] != 0) != layout.valid_when
+        missing
+    else
+        adjustment = firstindex(layout.mask) - firstindex(layout.content)
+        layout.content[i-adjustment]
+    end
+end
+
+function Base.getindex(layout::BitMaskedArray, r::UnitRange{Int})
+    adjustment = firstindex(layout.mask) - firstindex(layout.content)
+    copy(
+        layout,
+        mask = layout.mask[r.start:r.stop],
+        content = layout.content[(r.start-adjustment):(r.stop-adjustment)],
+    )
+end
+
+Base.getindex(layout::BitMaskedArray, f::Symbol) = copy(layout, content = layout.content[f])
+
+function push!(
+    layout::BitMaskedArray{CONTENT},
+    x::ITEM,
+) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    push!(layout.content, x)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function end_list!(layout::BitMaskedArray)
+    end_list!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function end_record!(layout::BitMaskedArray)
+    end_record!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function end_tuple!(layout::BitMaskedArray)
+    end_tuple!(layout.content)
+    Base.push!(layout.mask, layout.valid_when)
+    layout
+end
+
+function push_null!(
+    layout::BitMaskedArray{CONTENT},
+) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    push!(layout.content, zero(ITEM))
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:ListType}
+    end_list!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:RecordArray}
+    end_record!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:TupleArray}
+    end_tuple!(layout.content)
+    Base.push!(layout.mask, !layout.valid_when)
+    layout
+end
+
+### UnmaskedArray ########################################################
+
+struct UnmaskedArray{CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
+    content::CONTENT
+    parameters::Parameters
+    UnmaskedArray(
+        content::CONTENT;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {CONTENT<:Content} = new{CONTENT,behavior}(content, parameters)
+end
+
+UnmaskedArray{CONTENT}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENT<:Content} =
+    UnmaskedArray(CONTENT(), parameters = parameters, behavior = behavior)
+
+function copy(
+    layout::UnmaskedArray{CONTENT1,BEHAVIOR};
+    content::Union{Unset,CONTENT2} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+    if isa(content, Unset)
+        content = layout.content
+    end
+    if isa(parameters, Unset)
+        parameters = parameters_of(layout)
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    UnmaskedArray(content, parameters = parameters, behavior = behavior)
+end
+
+is_valid(layout::UnmaskedArray) = is_valid(layout.content)
+
+Base.length(layout::UnmaskedArray) = length(layout.content)
+Base.firstindex(layout::UnmaskedArray) = firstindex(layout.content)
+Base.lastindex(layout::UnmaskedArray) = lastindex(layout.content)
+
+# It would have been nice to get this to say that the return type is
+# Union{Missing, return_types(getindex, (typeof(layout.content), typeof(i)))[1]}
+# but Julia is smart enough to see through "if false missing else ...".
+Base.getindex(layout::UnmaskedArray, i::Int) = layout.content[i]
+
+Base.getindex(layout::UnmaskedArray, r::UnitRange{Int}) =
+    copy(layout, content = layout.content[r.start:r.stop])
+
+Base.getindex(layout::UnmaskedArray, f::Symbol) = copy(layout, content = layout.content[f])
+
+function push!(
+    layout::UnmaskedArray{CONTENT},
+    x::ITEM,
+) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
+    push!(layout.content, x)
+    layout
+end
+
+function end_list!(layout::UnmaskedArray)
+    end_list!(layout.content)
+    layout
+end
+
+function end_record!(layout::UnmaskedArray)
+    end_record!(layout.content)
+    layout
+end
+
+function end_tuple!(layout::UnmaskedArray)
+    end_tuple!(layout.content)
+    layout
+end
+
+### UnionArray ###########################################################
+
+struct UnionArray{TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple,BEHAVIOR} <:
+       Content{BEHAVIOR}
+    tags::TAGS
+    index::INDEX
+    contents::CONTENTS
+    parameters::Parameters
+    UnionArray(
+        tags::TAGS,
+        index::INDEX,
+        contents::CONTENTS;
+        parameters::Parameters = Parameters(),
+        behavior::Symbol = :default,
+    ) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} =
+        new{TAGS,INDEX,CONTENTS,behavior}(tags, index, contents, parameters)
+end
+
+UnionArray{TAGS,INDEX,CONTENTS}(
+    contents::CONTENTS;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} =
+    UnionArray(TAGS([]), INDEX([]), contents, parameters = parameters, behavior = behavior)
+
+UnionArray{TAGS,INDEX,CONTENTS}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} = UnionArray(
+    TAGS([]),
+    INDEX([]),
+    Base.Tuple(x() for x in CONTENTS.parameters),
+    parameters = parameters,
+    behavior = behavior,
+)
+
+struct Specialization{ARRAY<:UnionArray,TAGGED<:Content}
+    tag::Int64
+    array::ARRAY
+    tagged::TAGGED
+end
+
+function copy(
+    layout::UnionArray{TAGS1,INDEX1,CONTENTS1,BEHAVIOR};
+    tags::Union{Unset,TAGS2} = Unset(),
+    index::Union{Unset,INDEX2} = Unset(),
+    contents::Union{Unset,CONTENTS2} = Unset(),
+    parameters::Union{Unset,Parameters} = Unset(),
+    behavior::Union{Unset,Symbol} = Unset(),
+) where {
+    TAGS1<:Index8,
+    TAGS2<:Index8,
+    INDEX1<:IndexBig,
+    INDEX2<:IndexBig,
+    CONTENTS1<:Content,
+    CONTENTS2<:Content,
+    BEHAVIOR,
+}
+    if isa(tags, Unset)
+        tags = layout.tags
+    end
+    if isa(index, Unset)
+        index = layout.index
+    end
+    if isa(contents, Unset)
+        contents = layout.contents
+    end
+    if isa(parameters, Unset)
+        parameters = layout.parameters
+    end
+    if isa(behavior, Unset)
+        behavior = typeof(layout).parameters[end]
+    end
+    UnionArray(tags, index, contents, parameters = parameters, behavior = behavior)
+end
+
+function is_valid(layout::UnionArray)
+    if length(layout.tags) > length(layout.index)
+        return false
+    end
+    adjustment = firstindex(layout.tags) - firstindex(layout.index)
+    for i in eachindex(layout.tags)
+        tag = layout.tags[i]
+        index = layout.index[i-adjustment]
+        if tag < 0 || tag >= length(layout.contents)
+            return false
+        end
+        content = layout.contents[tag+firstindex(layout.contents)]
+        if index < 0 || index >= length(content)
+            return false
+        end
+    end
+    for x in layout.contents
+        if !is_valid(x)
+            return false
+        end
+    end
+    return true
+end
+
+Base.length(layout::UnionArray) = length(layout.tags)
+Base.firstindex(layout::UnionArray) = firstindex(layout.tags)
+Base.lastindex(layout::UnionArray) = lastindex(layout.tags)
+
+function Base.getindex(layout::UnionArray, i::Int)
+    adjustment = firstindex(layout.tags) - firstindex(layout.index)
+    tag = layout.tags[i]
+    index = layout.index[i-adjustment]
+    content = layout.contents[tag+firstindex(layout.contents)]
+    content[index+firstindex(content)]
+end
+
+function Base.getindex(layout::UnionArray, r::UnitRange{Int})
+    adjustment = firstindex(layout.tags) - firstindex(layout.index)
+    copy(
+        layout,
+        tags = layout.tags[r.start:r.stop],
+        index = layout.index[(r.start-adjustment):(r.stop-adjustment)],
+    )
+end
+
+Base.getindex(layout::UnionArray, f::Symbol) =
+    copy(layout, contents = Base.Tuple(x[f] for x in layout.contents))
+
+specialization(layout::UnionArray, tag::Int64) =
+    Specialization(tag, layout, layout.contents[tag])
+
+function push!(
+    special::Specialization{ARRAY,TAGGED},
+    x::ITEM,
+) where {ITEM,ARRAY<:UnionArray,TAGGED<:PrimitiveArray{ITEM}}
+    tmp = length(special.tagged)
+    push!(special.tagged, x)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    Base.push!(special.array.index, tmp)
+    special
+end
+
+function push!(
+    special::Specialization{ARRAY,TAGGED},
+    x::ITEM,
+) where {ITEM,ARRAY<:UnionArray,TAGGED<:OptionType}
+    tmp = length(special.tagged)
+    push!(special.tagged, x)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    Base.push!(special.array.index, tmp)
+    special
+end
+
+function end_list!(
+    special::Specialization{ARRAY,TAGGED},
+) where {ARRAY<:UnionArray,TAGGED<:Content}
+    tmp = length(special.tagged)
+    end_list!(special.tagged)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    Base.push!(special.array.index, tmp)
+    special
+end
+
+function end_record!(
+    special::Specialization{ARRAY,TAGGED},
+) where {ARRAY<:UnionArray,TAGGED<:Content}
+    tmp = length(special.tagged)
+    end_record!(special.tagged)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    Base.push!(special.array.index, tmp)
+    special
+end
+
+function end_tuple!(
+    special::Specialization{ARRAY,TAGGED},
+) where {ARRAY<:UnionArray,TAGGED<:Content}
+    tmp = length(special.tagged)
+    end_tuple!(special.tagged)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    Base.push!(special.array.index, tmp)
+    special
+end
+
+function push_null!(
+    special::Specialization{ARRAY,TAGGED},
+) where {ARRAY<:UnionArray,TAGGED<:OptionType}
+    tmp = length(special.tagged)
+    push_null!(special.tagged)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    Base.push!(special.array.index, tmp)
+    special
+end
+
+end  # module AwkwardArray
