@@ -760,6 +760,57 @@ using Test
         @test layout_2 == AwkwardArray.copy(layout_3, length = 2)
     end
 
+    begin
+        layout = AwkwardArray.RecordArray{
+            NamedTuple{
+                (:a, :b),
+                Tuple{
+                    AwkwardArray.PrimitiveArray{Int64},
+                    AwkwardArray.ListOffsetArray{
+                        AwkwardArray.Index64,
+                        AwkwardArray.PrimitiveArray{Float64},
+                    },
+                },
+            },
+        }()
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 0
+
+        a_layout = layout.contents[:a]
+        b_layout = layout.contents[:b]
+        b_sublayout = b_layout.content
+
+        AwkwardArray.push!(a_layout, 1)
+        AwkwardArray.push!(b_sublayout, 1.1)
+        AwkwardArray.push!(b_sublayout, 2.2)
+        AwkwardArray.push!(b_sublayout, 3.3)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_record!(layout)
+        @test length(layout) == 1
+
+        AwkwardArray.push!(a_layout, 2)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_record!(layout)
+        @test length(layout) == 2
+
+        AwkwardArray.push!(a_layout, 3)
+        AwkwardArray.push!(b_sublayout, 4.4)
+        AwkwardArray.push!(b_sublayout, 5.5)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_record!(layout)
+        @test length(layout) == 3
+
+        @test layout == AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([1, 2, 3]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3, 3, 5],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                ),
+            )),
+        )
+    end
+
     ### TupleArray ##########################################################
 
     begin
@@ -912,6 +963,52 @@ using Test
         ),)
 
         @test layout_2 == AwkwardArray.copy(layout_3, length = 2)
+    end
+
+    begin
+        layout = AwkwardArray.TupleArray{
+            Tuple{
+                AwkwardArray.PrimitiveArray{Int64},
+                AwkwardArray.ListOffsetArray{
+                    AwkwardArray.Index64,
+                    AwkwardArray.PrimitiveArray{Float64},
+                },
+            },
+        }()
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 0
+
+        a_layout = layout.contents[1]
+        b_layout = layout.contents[2]
+        b_sublayout = b_layout.content
+
+        AwkwardArray.push!(a_layout, 1)
+        AwkwardArray.push!(b_sublayout, 1.1)
+        AwkwardArray.push!(b_sublayout, 2.2)
+        AwkwardArray.push!(b_sublayout, 3.3)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_tuple!(layout)
+        @test length(layout) == 1
+
+        AwkwardArray.push!(a_layout, 2)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_tuple!(layout)
+        @test length(layout) == 2
+
+        AwkwardArray.push!(a_layout, 3)
+        AwkwardArray.push!(b_sublayout, 4.4)
+        AwkwardArray.push!(b_sublayout, 5.5)
+        AwkwardArray.end_list!(b_layout)
+        AwkwardArray.end_tuple!(layout)
+        @test length(layout) == 3
+
+        @test layout == AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([1, 2, 3]),
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3, 5],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            ),
+        ),)
     end
 
     ### IndexedArray #########################################################
@@ -1320,5 +1417,85 @@ using Test
     end
 
     ### UnionArray ###########################################################
+
+    begin
+        layout = AwkwardArray.UnionArray(
+            Vector{Int8}([0, 0, 0, 1]),
+            [0, 1, 2, 0],
+            (
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 2],
+                    AwkwardArray.PrimitiveArray([4.4, 5.5]),
+                ),
+            ),
+        )
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 4
+        @test layout[1] == 1.1
+        @test layout[2] == 2.2
+        @test layout[3] == 3.3
+        @test layout[4] == AwkwardArray.PrimitiveArray([4.4, 5.5])
+
+        tmp = 0.0
+        for x in layout
+            if isa(x, AwkwardArray.PrimitiveArray)
+                for y in x
+                    @test y < 6
+                    tmp += y
+                end
+            else
+                @test x < 6
+                tmp += x
+            end
+        end
+        @test tmp == 16.5
+
+        @test layout == layout
+    end
+
+    begin
+        layout = AwkwardArray.UnionArray{
+            AwkwardArray.Index8,
+            AwkwardArray.Index64,
+            Tuple{
+                AwkwardArray.PrimitiveArray{Float64},
+                AwkwardArray.ListOffsetArray{
+                    AwkwardArray.Index64,
+                    AwkwardArray.PrimitiveArray{Float64},
+                },
+            },
+        }()
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 0
+
+        special1 = AwkwardArray.specialization(layout, 1)
+        special2 = AwkwardArray.specialization(layout, 2)
+        subspecial2 = special2.tagged.content
+
+        AwkwardArray.push!(special1, 1.1)
+        @test length(layout) == 1
+        @test layout[1] == 1.1
+
+        AwkwardArray.push!(subspecial2, 2.2)
+        AwkwardArray.push!(subspecial2, 3.3)
+        AwkwardArray.end_list!(special2)
+        @test length(layout) == 2
+        @test layout[2][1] == 2.2
+        @test layout[2][2] == 3.3
+
+        @test layout == AwkwardArray.UnionArray(
+            Vector{Int8}([0, 1]),
+            [0, 0],
+            (
+                AwkwardArray.PrimitiveArray([1.1]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 2],
+                    AwkwardArray.PrimitiveArray([2.2, 3.3]),
+                ),
+            ),
+        )
+
+    end
 
 end   # @testset "AwkwardArray.jl"

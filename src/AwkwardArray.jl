@@ -630,6 +630,17 @@ RecordArray(
     behavior = behavior,
 )
 
+RecordArray{CONTENTS}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENTS<:NamedTuple} = RecordArray(
+    NamedTuple{CONTENTS.parameters[1]}(
+        Base.Tuple(x() for x in CONTENTS.parameters[2].parameters),
+    ),
+    parameters = parameters,
+    behavior = behavior,
+)
+
 struct Record{ARRAY<:RecordArray}
     array::ARRAY
     at::Int64
@@ -748,6 +759,15 @@ TupleArray(
     else
         [length(x) for x in contents]
     end),
+    parameters = parameters,
+    behavior = behavior,
+)
+
+TupleArray{CONTENTS}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENTS<:Base.Tuple} = TupleArray(
+    Base.Tuple(x() for x in CONTENTS.parameters),
     parameters = parameters,
     behavior = behavior,
 )
@@ -1447,7 +1467,19 @@ UnionArray{TAGS,INDEX,CONTENTS}(
 ) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} =
     UnionArray(TAGS([]), INDEX([]), contents, parameters = parameters, behavior = behavior)
 
-struct Specialization{TAG<:Int64,ARRAY<:UnionArray,TAGGED<:Content}
+UnionArray{TAGS,INDEX,CONTENTS}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} = UnionArray(
+    TAGS([]),
+    INDEX([]),
+    Base.Tuple(x() for x in CONTENTS.parameters),
+    parameters = parameters,
+    behavior = behavior,
+)
+
+struct Specialization{ARRAY<:UnionArray,TAGGED<:Content}
+    tag::Int64
     array::ARRAY
     tagged::TAGGED
 end
@@ -1487,7 +1519,7 @@ function copy(
 end
 
 function is_valid(layout::UnionArray)
-    if length(tags) > length(index)
+    if length(layout.tags) > length(layout.index)
         return false
     end
     adjustment = firstindex(layout.tags) - firstindex(layout.index)
@@ -1535,68 +1567,68 @@ Base.getindex(layout::UnionArray, f::Symbol) =
     copy(layout, contents = Base.Tuple(x[f] for x in layout.contents))
 
 specialization(layout::UnionArray, tag::Int64) =
-    Specialization{tag}(layout, layout.contents[tag])
+    Specialization(tag, layout, layout.contents[tag])
 
 function push!(
-    special::Specialization{TAG,ARRAY,TAGGED},
+    special::Specialization{ARRAY,TAGGED},
     x::ITEM,
-) where {TAG<:Int64,ITEM,ARRAY<:UnionArray,TAGGED<:PrimitiveArray{ITEM}}
+) where {ITEM,ARRAY<:UnionArray,TAGGED<:PrimitiveArray{ITEM}}
     tmp = length(special.tagged)
     push!(special.tagged, x)
-    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
     Base.push!(special.array.index, tmp)
-    layout
+    special
 end
 
 function push!(
-    special::Specialization{TAG,ARRAY,TAGGED},
+    special::Specialization{ARRAY,TAGGED},
     x::ITEM,
-) where {TAG<:Int64,ITEM,ARRAY<:UnionArray,TAGGED<:OptionType}
+) where {ITEM,ARRAY<:UnionArray,TAGGED<:OptionType}
     tmp = length(special.tagged)
     push!(special.tagged, x)
-    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
     Base.push!(special.array.index, tmp)
-    layout
+    special
 end
 
 function end_list!(
-    special::Specialization{TAG,ARRAY,TAGGED},
-) where {TAG<:Int64,ARRAY<:UnionArray,TAGGED<:Content}
+    special::Specialization{ARRAY,TAGGED},
+) where {ARRAY<:UnionArray,TAGGED<:Content}
     tmp = length(special.tagged)
     end_list!(special.tagged)
-    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
     Base.push!(special.array.index, tmp)
-    layout
+    special
 end
 
 function end_record!(
-    special::Specialization{TAG,ARRAY,TAGGED},
-) where {TAG<:Int64,ARRAY<:UnionArray,TAGGED<:Content}
+    special::Specialization{ARRAY,TAGGED},
+) where {ARRAY<:UnionArray,TAGGED<:Content}
     tmp = length(special.tagged)
     end_record!(special.tagged)
-    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
     Base.push!(special.array.index, tmp)
-    layout
+    special
 end
 
 function end_tuple!(
-    special::Specialization{TAG,ARRAY,TAGGED},
-) where {TAG<:Int64,ARRAY<:UnionArray,TAGGED<:Content}
+    special::Specialization{ARRAY,TAGGED},
+) where {ARRAY<:UnionArray,TAGGED<:Content}
     tmp = length(special.tagged)
     end_tuple!(special.tagged)
-    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
     Base.push!(special.array.index, tmp)
-    layout
+    special
 end
 
 function push_null!(
-    special::Specialization{TAG,ARRAY,TAGGED},
-) where {TAG<:Int64,ARRAY<:UnionArray,TAGGED<:OptionType}
+    special::Specialization{ARRAY,TAGGED},
+) where {ARRAY<:UnionArray,TAGGED<:OptionType}
     tmp = length(special.tagged)
     push_null!(special.tagged)
-    Base.push!(special.array.tags, TAG)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
     Base.push!(special.array.index, tmp)
-    layout
+    special
 end
 
 end  # module AwkwardArray
