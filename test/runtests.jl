@@ -23,15 +23,15 @@ using Test
     begin
         layout = AwkwardArray.PrimitiveArray{Float64}()
         @test length(layout) == 0
-        AwkwardArray.push!(layout, 1.1)
+        push!(layout, 1.1)
         @test length(layout) == 1
-        AwkwardArray.push!(layout, 2.2)
+        push!(layout, 2.2)
         @test length(layout) == 2
-        AwkwardArray.push!(layout, 3.3)
+        push!(layout, 3.3)
         @test length(layout) == 3
-        AwkwardArray.push!(layout, 4.4)
+        push!(layout, 4.4)
         @test length(layout) == 4
-        AwkwardArray.push!(layout, 5.5)
+        push!(layout, 5.5)
         @test length(layout) == 5
         @test layout == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5])
 
@@ -44,34 +44,34 @@ using Test
     begin
         layout = AwkwardArray.PrimitiveArray{Int32}()
 
-        AwkwardArray.push!(layout, 1)
+        push!(layout, 1)
         @test layout == AwkwardArray.PrimitiveArray(Vector{Int32}([1]))
 
-        AwkwardArray.append!(layout, Vector{Int64}([2, 3]))
+        append!(layout, Vector{Int64}([2, 3]))
         @test layout == AwkwardArray.PrimitiveArray(Vector{Int32}([1, 2, 3]))
 
-        AwkwardArray.append!(layout, Vector{Int16}([4, 5]))
+        append!(layout, Vector{Int16}([4, 5]))
         @test layout == AwkwardArray.PrimitiveArray(Vector{Int32}([1, 2, 3, 4, 5]))
     end
 
     begin
         layout = AwkwardArray.PrimitiveArray{Float32}()
 
-        AwkwardArray.push!(layout, 1)
+        push!(layout, 1)
         @test layout == AwkwardArray.PrimitiveArray(Vector{Float32}([1.0]))
 
-        AwkwardArray.append!(layout, Vector{Int64}([2, 3]))
+        append!(layout, Vector{Int64}([2, 3]))
         @test layout == AwkwardArray.PrimitiveArray(Vector{Float32}([1.0, 2.0, 3.0]))
 
-        AwkwardArray.append!(layout, Vector{Int16}([4, 5]))
+        append!(layout, Vector{Int16}([4, 5]))
         @test layout ==
               AwkwardArray.PrimitiveArray(Vector{Float32}([1.0, 2.0, 3.0, 4.0, 5.0]))
 
-        AwkwardArray.push!(layout, 3.14)
+        push!(layout, 3.14)
         @test layout ==
               AwkwardArray.PrimitiveArray(Vector{Float32}([1.0, 2.0, 3.0, 4.0, 5.0, 3.14]))
 
-        AwkwardArray.append!(layout, Vector{Float64}([2.71]))
+        append!(layout, Vector{Float64}([2.71]))
         @test layout == AwkwardArray.PrimitiveArray(
             Vector{Float32}([1.0, 2.0, 3.0, 4.0, 5.0, 3.14, 2.71]),
         )
@@ -100,8 +100,8 @@ using Test
 
     begin
         layout = AwkwardArray.EmptyArray()
-        AwkwardArray.append!(layout, [])
-        AwkwardArray.append!(layout, Vector{Int64}([]))
+        append!(layout, [])
+        append!(layout, Vector{Int64}([]))
     end
 
     ### ListOffsetArray ######################################################
@@ -159,15 +159,15 @@ using Test
         }()
         sublayout = layout.content
         @test length(layout) == 0
-        AwkwardArray.push!(sublayout, 1.1)
-        AwkwardArray.push!(sublayout, 2.2)
-        AwkwardArray.push!(sublayout, 3.3)
+        push!(sublayout, 1.1)
+        push!(sublayout, 2.2)
+        push!(sublayout, 3.3)
         AwkwardArray.end_list!(layout)
         @test length(layout) == 1
         AwkwardArray.end_list!(layout)
         @test length(layout) == 2
-        AwkwardArray.push!(sublayout, 4.4)
-        AwkwardArray.push!(sublayout, 5.5)
+        push!(sublayout, 4.4)
+        push!(sublayout, 5.5)
         AwkwardArray.end_list!(layout)
         @test length(layout) == 3
         @test layout == AwkwardArray.ListOffsetArray(
@@ -190,23 +190,23 @@ using Test
             AwkwardArray.PrimitiveArray{Int64},
         }()
 
-        AwkwardArray.push!(layout, [1, 2, 3])
+        push!(layout, [1, 2, 3])
         @test layout ==
               AwkwardArray.ListOffsetArray([0, 3], AwkwardArray.PrimitiveArray([1, 2, 3]))
 
-        AwkwardArray.push!(layout, Vector{Int64}([]))
+        push!(layout, Vector{Int64}([]))
         @test layout == AwkwardArray.ListOffsetArray(
             [0, 3, 3],
             AwkwardArray.PrimitiveArray([1, 2, 3]),
         )
 
-        AwkwardArray.push!(layout, [4, 5])
+        push!(layout, [4, 5])
         @test layout == AwkwardArray.ListOffsetArray(
             [0, 3, 3, 5],
             AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
         )
 
-        AwkwardArray.append!(layout, [[], [6, 7, 8, 9]])
+        append!(layout, [[], [6, 7, 8, 9]])
         @test layout == AwkwardArray.ListOffsetArray(
             [0, 3, 3, 5, 5, 9],
             AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9]),
@@ -273,15 +273,15 @@ using Test
         }()
         sublayout = layout.content
         @test length(layout) == 0
-        AwkwardArray.push!(sublayout, 1.1)
-        AwkwardArray.push!(sublayout, 2.2)
-        AwkwardArray.push!(sublayout, 3.3)
+        push!(sublayout, 1.1)
+        push!(sublayout, 2.2)
+        push!(sublayout, 3.3)
         AwkwardArray.end_list!(layout)
         @test length(layout) == 1
         AwkwardArray.end_list!(layout)
         @test length(layout) == 2
-        AwkwardArray.push!(sublayout, 4.4)
-        AwkwardArray.push!(sublayout, 5.5)
+        push!(sublayout, 4.4)
+        push!(sublayout, 5.5)
         AwkwardArray.end_list!(layout)
         @test length(layout) == 3
         @test layout == AwkwardArray.ListArray(
@@ -304,22 +304,22 @@ using Test
         layout =
             AwkwardArray.ListArray{AwkwardArray.Index64,AwkwardArray.PrimitiveArray{Int64}}()
 
-        AwkwardArray.push!(layout, [1, 2, 3])
+        push!(layout, [1, 2, 3])
         @test layout ==
               AwkwardArray.ListArray([0], [3], AwkwardArray.PrimitiveArray([1, 2, 3]))
 
-        AwkwardArray.push!(layout, Vector{Int64}([]))
+        push!(layout, Vector{Int64}([]))
         @test layout ==
               AwkwardArray.ListArray([0, 3], [3, 3], AwkwardArray.PrimitiveArray([1, 2, 3]))
 
-        AwkwardArray.push!(layout, [4, 5])
+        push!(layout, [4, 5])
         @test layout == AwkwardArray.ListArray(
             [0, 3, 3],
             [3, 3, 5],
             AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
         )
 
-        AwkwardArray.append!(layout, [[], [6, 7, 8, 9]])
+        append!(layout, [[], [6, 7, 8, 9]])
         @test layout == AwkwardArray.ListArray(
             [0, 3, 3, 5, 5],
             [3, 3, 5, 5, 9],
@@ -379,15 +379,15 @@ using Test
         layout = AwkwardArray.RegularArray{AwkwardArray.PrimitiveArray{Float64}}()
         sublayout = layout.content
         @test length(layout) == 0
-        AwkwardArray.push!(sublayout, 1.1)
-        AwkwardArray.push!(sublayout, 2.2)
-        AwkwardArray.push!(sublayout, 3.3)
+        push!(sublayout, 1.1)
+        push!(sublayout, 2.2)
+        push!(sublayout, 3.3)
         AwkwardArray.end_list!(layout)
         @test length(layout) == 1
         @test layout.size == 3
-        AwkwardArray.push!(sublayout, 4.4)
-        AwkwardArray.push!(sublayout, 5.5)
-        AwkwardArray.push!(sublayout, 6.6)
+        push!(sublayout, 4.4)
+        push!(sublayout, 5.5)
+        push!(sublayout, 6.6)
         AwkwardArray.end_list!(layout)
         @test length(layout) == 2
         @test layout == AwkwardArray.RegularArray(
@@ -408,17 +408,17 @@ using Test
         layout = AwkwardArray.RegularArray{AwkwardArray.PrimitiveArray{Float64}}()
         sublayout = layout.content
         @test length(layout) == 0
-        AwkwardArray.push!(sublayout, 1.1)
-        AwkwardArray.push!(sublayout, 2.2)
+        push!(sublayout, 1.1)
+        push!(sublayout, 2.2)
         AwkwardArray.end_list!(layout)
         @test length(layout) == 1
         @test layout.size == 2
-        AwkwardArray.push!(sublayout, 3.3)
-        AwkwardArray.push!(sublayout, 4.4)
+        push!(sublayout, 3.3)
+        push!(sublayout, 4.4)
         AwkwardArray.end_list!(layout)
         @test length(layout) == 2
-        AwkwardArray.push!(sublayout, 5.5)
-        AwkwardArray.push!(sublayout, 6.6)
+        push!(sublayout, 5.5)
+        push!(sublayout, 6.6)
         AwkwardArray.end_list!(layout)
         @test length(layout) == 3
         @test layout == AwkwardArray.RegularArray(
@@ -454,14 +454,14 @@ using Test
     begin
         layout = AwkwardArray.RegularArray{AwkwardArray.PrimitiveArray{Int64}}()
 
-        AwkwardArray.push!(layout, [1, 2, 3])
+        push!(layout, [1, 2, 3])
         @test layout == AwkwardArray.RegularArray(AwkwardArray.PrimitiveArray([1, 2, 3]), 3)
 
-        AwkwardArray.push!(layout, [4, 5, 6])
+        push!(layout, [4, 5, 6])
         @test layout ==
               AwkwardArray.RegularArray(AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6]), 3)
 
-        AwkwardArray.append!(layout, [[7, 8, 9], [10, 11, 12]])
+        append!(layout, [[7, 8, 9], [10, 11, 12]])
         @test layout == AwkwardArray.RegularArray(
             AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
             3,
@@ -592,30 +592,30 @@ using Test
     begin
         layout = AwkwardArray.StringOffsetArray()
 
-        AwkwardArray.push!(layout, "one")
+        push!(layout, "one")
         @test layout == AwkwardArray.StringOffsetArray([0, 3], "one")
 
-        AwkwardArray.append!(layout, ["two", "", "three"])
+        append!(layout, ["two", "", "three"])
         @test layout == AwkwardArray.StringOffsetArray([0, 3, 6, 6, 11], "onetwothree")
     end
 
     begin
         layout = AwkwardArray.StringArray()
 
-        AwkwardArray.push!(layout, "one")
+        push!(layout, "one")
         @test layout == AwkwardArray.StringArray([0], [3], "one")
 
-        AwkwardArray.append!(layout, ["two", "", "three"])
+        append!(layout, ["two", "", "three"])
         @test layout == AwkwardArray.StringArray([0, 3, 6, 6], [3, 6, 6, 11], "onetwothree")
     end
 
     begin
         layout = AwkwardArray.StringRegularArray()
 
-        AwkwardArray.push!(layout, "one")
+        push!(layout, "one")
         @test layout == AwkwardArray.StringRegularArray("one", 3)
 
-        AwkwardArray.append!(layout, ["two", "333"])
+        append!(layout, ["two", "333"])
         @test layout == AwkwardArray.StringRegularArray("onetwo333", 3)
     end
 
@@ -755,10 +755,10 @@ using Test
     begin
         layout = AwkwardArray.ByteStringOffsetArray()
 
-        AwkwardArray.push!(layout, Vector{UInt8}([0, 1, 2]))
+        push!(layout, Vector{UInt8}([0, 1, 2]))
         @test layout == AwkwardArray.ByteStringOffsetArray([0, 3], Vector{UInt8}([0, 1, 2]))
 
-        AwkwardArray.append!(layout, [Vector{UInt8}([]), Vector{UInt8}([3, 4])])
+        append!(layout, [Vector{UInt8}([]), Vector{UInt8}([3, 4])])
         @test layout == AwkwardArray.ByteStringOffsetArray(
             [0, 3, 3, 5],
             Vector{UInt8}([0, 1, 2, 3, 4]),
@@ -768,10 +768,10 @@ using Test
     begin
         layout = AwkwardArray.ByteStringArray()
 
-        AwkwardArray.push!(layout, Vector{UInt8}([0, 1, 2]))
+        push!(layout, Vector{UInt8}([0, 1, 2]))
         @test layout == AwkwardArray.ByteStringArray([0], [3], Vector{UInt8}([0, 1, 2]))
 
-        AwkwardArray.append!(layout, [Vector{UInt8}([]), Vector{UInt8}([3, 4])])
+        append!(layout, [Vector{UInt8}([]), Vector{UInt8}([3, 4])])
         @test layout == AwkwardArray.ByteStringArray(
             [0, 3, 3],
             [3, 3, 5],
@@ -782,10 +782,10 @@ using Test
     begin
         layout = AwkwardArray.ByteStringRegularArray()
 
-        AwkwardArray.push!(layout, Vector{UInt8}([0, 1, 2]))
+        push!(layout, Vector{UInt8}([0, 1, 2]))
         @test layout == AwkwardArray.ByteStringRegularArray(Vector{UInt8}([0, 1, 2]), 3)
 
-        AwkwardArray.append!(layout, [Vector{UInt8}([3, 4, 5]), Vector{UInt8}([6, 7, 8])])
+        append!(layout, [Vector{UInt8}([3, 4, 5]), Vector{UInt8}([6, 7, 8])])
         @test layout == AwkwardArray.ByteStringRegularArray(
             Vector{UInt8}([0, 1, 2, 3, 4, 5, 6, 7, 8]),
             3,
@@ -951,20 +951,20 @@ using Test
         b_layout = layout.contents[:b]
         b_sublayout = b_layout.content
 
-        AwkwardArray.push!(a_layout, 1)
-        AwkwardArray.push!(b_sublayout, 1.1)
-        AwkwardArray.push!(b_sublayout, 2.2)
-        AwkwardArray.push!(b_sublayout, 3.3)
+        push!(a_layout, 1)
+        push!(b_sublayout, 1.1)
+        push!(b_sublayout, 2.2)
+        push!(b_sublayout, 3.3)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_record!(layout)
 
-        AwkwardArray.push!(a_layout, 2)
+        push!(a_layout, 2)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_record!(layout)
 
-        AwkwardArray.push!(a_layout, 3)
-        AwkwardArray.push!(b_sublayout, 4.4)
-        AwkwardArray.push!(b_sublayout, 5.5)
+        push!(a_layout, 3)
+        push!(b_sublayout, 4.4)
+        push!(b_sublayout, 5.5)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_record!(layout)
 
@@ -1088,22 +1088,22 @@ using Test
         b_layout = layout.contents[:b]
         b_sublayout = b_layout.content
 
-        AwkwardArray.push!(a_layout, 1)
-        AwkwardArray.push!(b_sublayout, 1.1)
-        AwkwardArray.push!(b_sublayout, 2.2)
-        AwkwardArray.push!(b_sublayout, 3.3)
+        push!(a_layout, 1)
+        push!(b_sublayout, 1.1)
+        push!(b_sublayout, 2.2)
+        push!(b_sublayout, 3.3)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_record!(layout)
         @test length(layout) == 1
 
-        AwkwardArray.push!(a_layout, 2)
+        push!(a_layout, 2)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_record!(layout)
         @test length(layout) == 2
 
-        AwkwardArray.push!(a_layout, 3)
-        AwkwardArray.push!(b_sublayout, 4.4)
-        AwkwardArray.push!(b_sublayout, 5.5)
+        push!(a_layout, 3)
+        push!(b_sublayout, 4.4)
+        push!(b_sublayout, 5.5)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_record!(layout)
         @test length(layout) == 3
@@ -1133,7 +1133,7 @@ using Test
             },
         }()
 
-        AwkwardArray.push!(layout, NamedTuple{(:a, :b)}((123, [1.1, 2.2, 3.3])))
+        push!(layout, NamedTuple{(:a, :b)}((123, [1.1, 2.2, 3.3])))
         @test layout == AwkwardArray.RecordArray(
             NamedTuple{(:a, :b)}((
                 AwkwardArray.PrimitiveArray([123]),
@@ -1144,7 +1144,7 @@ using Test
             )),
         )
 
-        AwkwardArray.append!(
+        append!(
             layout,
             [
                 NamedTuple{(:a, :b)}((321, Vector{Float64}([]))),
@@ -1233,20 +1233,20 @@ using Test
         b_layout = layout.contents[2]
         b_sublayout = b_layout.content
 
-        AwkwardArray.push!(a_layout, 1)
-        AwkwardArray.push!(b_sublayout, 1.1)
-        AwkwardArray.push!(b_sublayout, 2.2)
-        AwkwardArray.push!(b_sublayout, 3.3)
+        push!(a_layout, 1)
+        push!(b_sublayout, 1.1)
+        push!(b_sublayout, 2.2)
+        push!(b_sublayout, 3.3)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_tuple!(layout)
 
-        AwkwardArray.push!(a_layout, 2)
+        push!(a_layout, 2)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_tuple!(layout)
 
-        AwkwardArray.push!(a_layout, 3)
-        AwkwardArray.push!(b_sublayout, 4.4)
-        AwkwardArray.push!(b_sublayout, 5.5)
+        push!(a_layout, 3)
+        push!(b_sublayout, 4.4)
+        push!(b_sublayout, 5.5)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_tuple!(layout)
 
@@ -1350,22 +1350,22 @@ using Test
         b_layout = layout.contents[2]
         b_sublayout = b_layout.content
 
-        AwkwardArray.push!(a_layout, 1)
-        AwkwardArray.push!(b_sublayout, 1.1)
-        AwkwardArray.push!(b_sublayout, 2.2)
-        AwkwardArray.push!(b_sublayout, 3.3)
+        push!(a_layout, 1)
+        push!(b_sublayout, 1.1)
+        push!(b_sublayout, 2.2)
+        push!(b_sublayout, 3.3)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_tuple!(layout)
         @test length(layout) == 1
 
-        AwkwardArray.push!(a_layout, 2)
+        push!(a_layout, 2)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_tuple!(layout)
         @test length(layout) == 2
 
-        AwkwardArray.push!(a_layout, 3)
-        AwkwardArray.push!(b_sublayout, 4.4)
-        AwkwardArray.push!(b_sublayout, 5.5)
+        push!(a_layout, 3)
+        push!(b_sublayout, 4.4)
+        push!(b_sublayout, 5.5)
         AwkwardArray.end_list!(b_layout)
         AwkwardArray.end_tuple!(layout)
         @test length(layout) == 3
@@ -1390,7 +1390,7 @@ using Test
             },
         }()
 
-        AwkwardArray.push!(layout, (123, [1.1, 2.2, 3.3]))
+        push!(layout, (123, [1.1, 2.2, 3.3]))
         @test layout == AwkwardArray.TupleArray((
             AwkwardArray.PrimitiveArray([123]),
             AwkwardArray.ListOffsetArray(
@@ -1399,7 +1399,7 @@ using Test
             ),
         ),)
 
-        AwkwardArray.append!(layout, [(321, Vector{Float64}([])), (999, [4.4, 5.5])])
+        append!(layout, [(321, Vector{Float64}([])), (999, [4.4, 5.5])])
         @test layout == AwkwardArray.TupleArray((
             AwkwardArray.PrimitiveArray([123, 321, 999]),
             AwkwardArray.ListOffsetArray(
@@ -1430,11 +1430,11 @@ using Test
         end
         @test tmp == 15.4
 
-        AwkwardArray.push!(layout, 6.6)
+        push!(layout, 6.6)
         @test length(layout) == 5
         @test layout[5] == 6.6
 
-        AwkwardArray.push!(layout, 7.7)
+        push!(layout, 7.7)
         @test length(layout) == 6
         @test layout[6] == 7.7
         @test layout.index == [4, 3, 3, 0, 5, 6]
@@ -1462,8 +1462,8 @@ using Test
         @test layout[4] == AwkwardArray.PrimitiveArray([])
 
         sublayout = layout.content.content
-        AwkwardArray.push!(sublayout, 6.6)
-        AwkwardArray.push!(sublayout, 7.7)
+        push!(sublayout, 6.6)
+        push!(sublayout, 7.7)
         AwkwardArray.end_list!(layout)
         @test length(layout) == 5
         @test layout[5] == AwkwardArray.PrimitiveArray([6.6, 7.7])
@@ -1507,8 +1507,8 @@ using Test
         a_layout = layout.content.contents[:a]
         b_layout = layout.content.contents[:b]
 
-        AwkwardArray.push!(a_layout, 6)
-        AwkwardArray.push!(b_layout, 6.6)
+        push!(a_layout, 6)
+        push!(b_layout, 6.6)
         AwkwardArray.end_record!(layout)
         @test length(layout) == 7
         @test layout[end][:a] == 6
@@ -1540,7 +1540,7 @@ using Test
             },
         }()
 
-        AwkwardArray.push!(layout, NamedTuple{(:a, :b)}((123, [1.1, 2.2, 3.3])))
+        push!(layout, NamedTuple{(:a, :b)}((123, [1.1, 2.2, 3.3])))
         @test layout == AwkwardArray.RecordArray(
             NamedTuple{(:a, :b)}((
                 AwkwardArray.PrimitiveArray([123]),
@@ -1551,7 +1551,7 @@ using Test
             )),
         )
 
-        AwkwardArray.append!(
+        append!(
             layout,
             [
                 NamedTuple{(:a, :b)}((321, Vector{Float64}([]))),
@@ -1594,7 +1594,7 @@ using Test
         end
         @test tmp == 15.4
 
-        AwkwardArray.push!(layout, 6.6)
+        push!(layout, 6.6)
         @test length(layout) == 7
         @test layout[7] == 6.6
 
@@ -1605,7 +1605,7 @@ using Test
         @test length(layout) == 9
         @test ismissing(layout[9])
 
-        AwkwardArray.push!(layout, 7.7)
+        push!(layout, 7.7)
         @test length(layout) == 10
         @test layout[10] == 7.7
         @test layout.index == [4, 3, 3, -1, -1, 0, 5, -1, -1, 6]
@@ -1634,7 +1634,7 @@ using Test
             },
         }()
 
-        AwkwardArray.push!(layout, NamedTuple{(:a, :b)}((123, [1.1, 2.2, 3.3])))
+        push!(layout, NamedTuple{(:a, :b)}((123, [1.1, 2.2, 3.3])))
         @test layout == AwkwardArray.RecordArray(
             NamedTuple{(:a, :b)}((
                 AwkwardArray.PrimitiveArray([123]),
@@ -1645,7 +1645,7 @@ using Test
             )),
         )
 
-        AwkwardArray.push!(layout, missing)
+        push!(layout, missing)
         @test layout == AwkwardArray.IndexedOptionArray(
             [0, -1],
             AwkwardArray.RecordArray(
@@ -1659,7 +1659,7 @@ using Test
             ),
         )
 
-        AwkwardArray.append!(
+        append!(
             layout,
             [
                 NamedTuple{(:a, :b)}((321, Vector{Float64}([]))),
@@ -1706,7 +1706,7 @@ using Test
         end
         @test tmp == 11.0
 
-        AwkwardArray.push!(layout, 6.6)
+        push!(layout, 6.6)
         @test length(layout) == 6
         @test layout[6] == 6.6
 
@@ -1734,10 +1734,10 @@ using Test
 
         sublayout = layout.content.content
 
-        AwkwardArray.push!(sublayout, 6.6)
-        AwkwardArray.push!(sublayout, 7.7)
-        AwkwardArray.push!(sublayout, 8.8)
-        AwkwardArray.push!(sublayout, 9.9)
+        push!(sublayout, 6.6)
+        push!(sublayout, 7.7)
+        push!(sublayout, 8.8)
+        push!(sublayout, 9.9)
         AwkwardArray.end_list!(layout)
 
         @test length(layout) == 4
@@ -1770,8 +1770,8 @@ using Test
         a_layout = layout.content.contents[:a]
         b_layout = layout.content.contents[:b]
 
-        AwkwardArray.push!(a_layout, 6)
-        AwkwardArray.push!(b_layout, 6.6)
+        push!(a_layout, 6)
+        push!(b_layout, 6.6)
         AwkwardArray.end_record!(layout)
         @test length(layout) == 6
         @test layout[6][:a] == 6
@@ -1798,7 +1798,7 @@ using Test
             },
         }()
 
-        AwkwardArray.push!(layout, [1.1, 2.2, 3.3])
+        push!(layout, [1.1, 2.2, 3.3])
         @test layout == AwkwardArray.ByteMaskedArray(
             [true],
             AwkwardArray.ListOffsetArray(
@@ -1808,7 +1808,7 @@ using Test
             valid_when = true,
         )
 
-        AwkwardArray.push!(layout, missing)
+        push!(layout, missing)
         @test layout == AwkwardArray.ByteMaskedArray(
             [true, false],
             AwkwardArray.ListOffsetArray(
@@ -1818,7 +1818,7 @@ using Test
             valid_when = true,
         )
 
-        AwkwardArray.append!(
+        append!(
             layout,
             Vector{Union{Missing,Vector{Float64}}}([[4.4, 5.5], missing, [6.6]]),
         )
@@ -1857,7 +1857,7 @@ using Test
         end
         @test tmp == 11.0
 
-        AwkwardArray.push!(layout, 6.6)
+        push!(layout, 6.6)
         @test length(layout) == 6
         @test layout[6] == 6.6
 
@@ -1885,10 +1885,10 @@ using Test
 
         sublayout = layout.content.content
 
-        AwkwardArray.push!(sublayout, 6.6)
-        AwkwardArray.push!(sublayout, 7.7)
-        AwkwardArray.push!(sublayout, 8.8)
-        AwkwardArray.push!(sublayout, 9.9)
+        push!(sublayout, 6.6)
+        push!(sublayout, 7.7)
+        push!(sublayout, 8.8)
+        push!(sublayout, 9.9)
         AwkwardArray.end_list!(layout)
 
         @test length(layout) == 4
@@ -1921,8 +1921,8 @@ using Test
         a_layout = layout.content.contents[:a]
         b_layout = layout.content.contents[:b]
 
-        AwkwardArray.push!(a_layout, 6)
-        AwkwardArray.push!(b_layout, 6.6)
+        push!(a_layout, 6)
+        push!(b_layout, 6.6)
         AwkwardArray.end_record!(layout)
         @test length(layout) == 6
         @test layout[6][:a] == 6
@@ -1948,7 +1948,7 @@ using Test
             },
         }()
 
-        AwkwardArray.push!(layout, [1.1, 2.2, 3.3])
+        push!(layout, [1.1, 2.2, 3.3])
         @test layout == AwkwardArray.ByteMaskedArray(
             [true],
             AwkwardArray.ListOffsetArray(
@@ -1958,7 +1958,7 @@ using Test
             valid_when = true,
         )
 
-        AwkwardArray.push!(layout, missing)
+        push!(layout, missing)
         @test layout == AwkwardArray.ByteMaskedArray(
             [true, false],
             AwkwardArray.ListOffsetArray(
@@ -1968,7 +1968,7 @@ using Test
             valid_when = true,
         )
 
-        AwkwardArray.append!(
+        append!(
             layout,
             Vector{Union{Missing,Vector{Float64}}}([[4.4, 5.5], missing, [6.6]]),
         )
@@ -2005,7 +2005,7 @@ using Test
         end
         @test tmp == 16.5
 
-        AwkwardArray.push!(layout, 6.6)
+        push!(layout, 6.6)
         @test length(layout) == 6
         @test layout[6] == 6.6
 
@@ -2027,10 +2027,10 @@ using Test
 
         sublayout = layout.content.content
 
-        AwkwardArray.push!(sublayout, 6.6)
-        AwkwardArray.push!(sublayout, 7.7)
-        AwkwardArray.push!(sublayout, 8.8)
-        AwkwardArray.push!(sublayout, 9.9)
+        push!(sublayout, 6.6)
+        push!(sublayout, 7.7)
+        push!(sublayout, 8.8)
+        push!(sublayout, 9.9)
         AwkwardArray.end_list!(layout)
 
         @test length(layout) == 4
@@ -2057,8 +2057,8 @@ using Test
         a_layout = layout.content.contents[:a]
         b_layout = layout.content.contents[:b]
 
-        AwkwardArray.push!(a_layout, 6)
-        AwkwardArray.push!(b_layout, 6.6)
+        push!(a_layout, 6)
+        push!(b_layout, 6.6)
         AwkwardArray.end_record!(layout)
         @test length(layout) == 6
         @test layout[6][:a] == 6
@@ -2083,7 +2083,7 @@ using Test
             },
         }()
 
-        AwkwardArray.push!(layout, [1.1, 2.2, 3.3])
+        push!(layout, [1.1, 2.2, 3.3])
         @test layout == AwkwardArray.ByteMaskedArray(
             [true],
             AwkwardArray.ListOffsetArray(
@@ -2093,7 +2093,7 @@ using Test
             valid_when = true,
         )
 
-        AwkwardArray.append!(layout, Vector{Vector{Float64}}([[4.4, 5.5], [6.6]]))
+        append!(layout, Vector{Vector{Float64}}([[4.4, 5.5], [6.6]]))
         @test layout == AwkwardArray.ByteMaskedArray(
             [true, true, true],
             AwkwardArray.ListOffsetArray(
@@ -2161,12 +2161,12 @@ using Test
         special2 = AwkwardArray.specialization(layout, 2)
         subspecial2 = special2.tagged.content
 
-        AwkwardArray.push!(special1, 1.1)
+        push!(special1, 1.1)
         @test length(layout) == 1
         @test layout[1] == 1.1
 
-        AwkwardArray.push!(subspecial2, 2.2)
-        AwkwardArray.push!(subspecial2, 3.3)
+        push!(subspecial2, 2.2)
+        push!(subspecial2, 3.3)
         AwkwardArray.end_list!(special2)
         @test length(layout) == 2
         @test layout[2][1] == 2.2

@@ -144,7 +144,7 @@ function Base.:(==)(layout1::Content, layout2::Content)
     return true
 end
 
-function append!(layout::Content, input)
+function Base.append!(layout::Content, input)
     for item in input
         push!(layout, item)
     end
@@ -211,13 +211,13 @@ function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
     end
 end
 
-function push!(layout::PrimitiveArray{ITEM}, input::ITEM) where {ITEM}
-    Base.push!(layout.data, input)
+function Base.push!(layout::PrimitiveArray{ITEM}, input::ITEM) where {ITEM}
+    push!(layout.data, input)
     layout
 end
 
-function push!(layout::PrimitiveArray{ITEM}, input::Number) where {ITEM}
-    Base.push!(layout.data, ITEM(input))
+function Base.push!(layout::PrimitiveArray{ITEM}, input::Number) where {ITEM}
+    push!(layout.data, ITEM(input))
 end
 
 function push_dummy!(layout::PrimitiveArray{ITEM}) where {ITEM}
@@ -251,7 +251,7 @@ function Base.getindex(layout::EmptyArray, r::UnitRange{Int})
     end
 end
 
-function push!(layout::EmptyArray, input)
+function Base.push!(layout::EmptyArray, input)
     error("attempting to fill $(typeof(layout)) with data")
 end
 
@@ -332,7 +332,7 @@ Base.getindex(layout::ListOffsetArray, f::Symbol) =
     copy(layout, content = layout.content[f])
 
 function end_list!(layout::ListOffsetArray)
-    Base.push!(layout.offsets, length(layout.content))
+    push!(layout.offsets, length(layout.content))
     layout
 end
 
@@ -430,11 +430,11 @@ Base.getindex(layout::ListArray, f::Symbol) = copy(layout, content = layout.cont
 
 function end_list!(layout::ListArray)
     if isempty(layout.stops)
-        Base.push!(layout.starts, 0)
+        push!(layout.starts, 0)
     else
-        Base.push!(layout.starts, layout.stops[end])
+        push!(layout.starts, layout.stops[end])
     end
-    Base.push!(layout.stops, length(layout.content))
+    push!(layout.stops, length(layout.content))
 end
 
 function push_dummy!(layout::ListArray)
@@ -735,16 +735,16 @@ function Base.getindex(
     )
 end
 
-function push!(layout::ListType{BEHAVIOR}, input::String) where {BEHAVIOR}
+function Base.push!(layout::ListType{BEHAVIOR}, input::String) where {BEHAVIOR}
     if BEHAVIOR == :string
-        Base.append!(layout.content.data, Vector{UInt8}(input))
+        append!(layout.content.data, Vector{UInt8}(input))
         end_list!(layout)
     else
         error("attempting to fill a non-string $(typeof(layout)) with a string")
     end
 end
 
-function push!(layout::ListType, input::AbstractVector)
+function Base.push!(layout::ListType, input::AbstractVector)
     append!(layout.content, input)
     end_list!(layout)
 end
@@ -1017,7 +1017,7 @@ function Base.:(==)(
     return true
 end
 
-function push!(layout::RecordArray, input::NamedTuple)
+function Base.push!(layout::RecordArray, input::NamedTuple)
     if typeof(layout.contents).parameters[1] == typeof(input).parameters[1]
         for field in eachindex(layout.contents)
             push!(layout.contents[field], input[field])
@@ -1177,7 +1177,7 @@ function Base.:(==)(
     return true
 end
 
-function push!(layout::TupleArray, input::Base.Tuple)
+function Base.push!(layout::TupleArray, input::Base.Tuple)
     if length(typeof(layout.contents).parameters) == length(typeof(input).parameters)
         adjustment = firstindex(layout.contents) - firstindex(input)
         for index in eachindex(layout.contents)
@@ -1268,38 +1268,38 @@ Base.getindex(layout::IndexedArray, r::UnitRange{Int}) =
 
 Base.getindex(layout::IndexedArray, f::Symbol) = copy(layout, content = layout.content[f])
 
-function push!(layout::IndexedArray, input)
+function Base.push!(layout::IndexedArray, input)
     tmp = length(layout.content)
     push!(layout.content, input)
-    Base.push!(layout.index, tmp)
+    push!(layout.index, tmp)
     layout
 end
 
 function end_list!(layout::IndexedArray)
     tmp = length(layout.content)
     end_list!(layout.content)
-    Base.push!(layout.index, tmp)
+    push!(layout.index, tmp)
     layout
 end
 
 function end_record!(layout::IndexedArray)
     tmp = length(layout.content)
     end_record!(layout.content)
-    Base.push!(layout.index, tmp)
+    push!(layout.index, tmp)
     layout
 end
 
 function end_tuple!(layout::IndexedArray)
     tmp = length(layout.content)
     end_tuple!(layout.content)
-    Base.push!(layout.index, tmp)
+    push!(layout.index, tmp)
     layout
 end
 
 function push_dummy!(layout::IndexedArray)
     tmp = length(layout.content)
     push_dummy!(layout.content)
-    Base.push!(layout.index, tmp)
+    push!(layout.index, tmp)
     layout
 end
 
@@ -1307,7 +1307,7 @@ end
 
 abstract type OptionType{BEHAVIOR} <: Content{BEHAVIOR} end
 
-function append!(layout::OptionType, input)
+function Base.append!(layout::OptionType, input)
     for item in input
         if ismissing(item)
             push_null!(layout)
@@ -1386,13 +1386,13 @@ Base.getindex(layout::IndexedOptionArray, r::UnitRange{Int}) =
 Base.getindex(layout::IndexedOptionArray, f::Symbol) =
     copy(layout, content = layout.content[f])
 
-function push!(layout::IndexedOptionArray, input)
+function Base.push!(layout::IndexedOptionArray, input)
     if ismissing(input)
         push_null!(layout)
     else
         tmp = length(layout.content)
         push!(layout.content, input)
-        Base.push!(layout.index, tmp)
+        push!(layout.index, tmp)
         layout
     end
 end
@@ -1400,26 +1400,26 @@ end
 function end_list!(layout::IndexedOptionArray)
     tmp = length(layout.content)
     end_list!(layout.content)
-    Base.push!(layout.index, tmp)
+    push!(layout.index, tmp)
     layout
 end
 
 function end_record!(layout::IndexedOptionArray)
     tmp = length(layout.content)
     end_record!(layout.content)
-    Base.push!(layout.index, tmp)
+    push!(layout.index, tmp)
     layout
 end
 
 function end_tuple!(layout::IndexedOptionArray)
     tmp = length(layout.content)
     end_tuple!(layout.content)
-    Base.push!(layout.index, tmp)
+    push!(layout.index, tmp)
     layout
 end
 
 function push_null!(layout::IndexedOptionArray)
-    Base.push!(layout.index, -1)
+    push!(layout.index, -1)
     layout
 end
 
@@ -1520,37 +1520,37 @@ end
 Base.getindex(layout::ByteMaskedArray, f::Symbol) =
     copy(layout, content = layout.content[f])
 
-function push!(layout::ByteMaskedArray, input)
+function Base.push!(layout::ByteMaskedArray, input)
     if ismissing(input)
         push_null!(layout)
     else
         push!(layout.content, input)
-        Base.push!(layout.mask, layout.valid_when)
+        push!(layout.mask, layout.valid_when)
         layout
     end
 end
 
 function end_list!(layout::ByteMaskedArray)
     end_list!(layout.content)
-    Base.push!(layout.mask, layout.valid_when)
+    push!(layout.mask, layout.valid_when)
     layout
 end
 
 function end_record!(layout::ByteMaskedArray)
     end_record!(layout.content)
-    Base.push!(layout.mask, layout.valid_when)
+    push!(layout.mask, layout.valid_when)
     layout
 end
 
 function end_tuple!(layout::ByteMaskedArray)
     end_tuple!(layout.content)
-    Base.push!(layout.mask, layout.valid_when)
+    push!(layout.mask, layout.valid_when)
     layout
 end
 
 function push_null!(layout::ByteMaskedArray)
     push_dummy!(layout.content)
-    Base.push!(layout.mask, !layout.valid_when)
+    push!(layout.mask, !layout.valid_when)
     layout
 end
 
@@ -1652,37 +1652,37 @@ end
 
 Base.getindex(layout::BitMaskedArray, f::Symbol) = copy(layout, content = layout.content[f])
 
-function push!(layout::BitMaskedArray, input)
+function Base.push!(layout::BitMaskedArray, input)
     if ismissing(input)
         push_null!(layout)
     else
         push!(layout.content, input)
-        Base.push!(layout.mask, layout.valid_when)
+        push!(layout.mask, layout.valid_when)
         layout
     end
 end
 
 function end_list!(layout::BitMaskedArray)
     end_list!(layout.content)
-    Base.push!(layout.mask, layout.valid_when)
+    push!(layout.mask, layout.valid_when)
     layout
 end
 
 function end_record!(layout::BitMaskedArray)
     end_record!(layout.content)
-    Base.push!(layout.mask, layout.valid_when)
+    push!(layout.mask, layout.valid_when)
     layout
 end
 
 function end_tuple!(layout::BitMaskedArray)
     end_tuple!(layout.content)
-    Base.push!(layout.mask, layout.valid_when)
+    push!(layout.mask, layout.valid_when)
     layout
 end
 
 function push_null!(layout::BitMaskedArray)
     push_dummy!(layout.content)
-    Base.push!(layout.mask, !layout.valid_when)
+    push!(layout.mask, !layout.valid_when)
     layout
 end
 
@@ -1742,7 +1742,7 @@ Base.getindex(layout::UnmaskedArray, r::UnitRange{Int}) =
 
 Base.getindex(layout::UnmaskedArray, f::Symbol) = copy(layout, content = layout.content[f])
 
-function push!(layout::UnmaskedArray, input)
+function Base.push!(layout::UnmaskedArray, input)
     push!(layout.content, input)
     layout
 end
@@ -1893,35 +1893,35 @@ Base.getindex(layout::UnionArray, f::Symbol) =
 specialization(layout::UnionArray, tag::Int64) =
     Specialization(tag, layout, layout.contents[tag])
 
-function push!(special::Specialization, input)
+function Base.push!(special::Specialization, input)
     tmp = length(special.tagged)
     push!(special.tagged, input)
-    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    Base.push!(special.array.index, tmp)
+    push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    push!(special.array.index, tmp)
     special
 end
 
 function end_list!(special::Specialization)
     tmp = length(special.tagged)
     end_list!(special.tagged)
-    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    Base.push!(special.array.index, tmp)
+    push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    push!(special.array.index, tmp)
     special
 end
 
 function end_record!(special::Specialization)
     tmp = length(special.tagged)
     end_record!(special.tagged)
-    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    Base.push!(special.array.index, tmp)
+    push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    push!(special.array.index, tmp)
     special
 end
 
 function end_tuple!(special::Specialization)
     tmp = length(special.tagged)
     end_tuple!(special.tagged)
-    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    Base.push!(special.array.index, tmp)
+    push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    push!(special.array.index, tmp)
     special
 end
 
@@ -1930,16 +1930,16 @@ function push_null!(
 ) where {ARRAY<:UnionArray,TAGGED<:OptionType}
     tmp = length(special.tagged)
     push_null!(special.tagged)
-    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    Base.push!(special.array.index, tmp)
+    push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    push!(special.array.index, tmp)
     special
 end
 
 function push_dummy!(special::Specialization)
     tmp = length(special.tagged)
     push_dummy!(special.tagged)
-    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    Base.push!(special.array.index, tmp)
+    push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    push!(special.array.index, tmp)
     special
 end
 
