@@ -34,6 +34,11 @@ using Test
         AwkwardArray.push!(layout, 5.5)
         @test length(layout) == 5
         @test layout == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5])
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 6
+        @test layout == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 0.0])
+        @test AwkwardArray.is_valid(layout)
     end
 
     ### EmptyArray ###########################################################
@@ -127,6 +132,14 @@ using Test
             [0, 3, 3, 5],
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 4
+        @test layout == AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 5, 5],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+        @test AwkwardArray.is_valid(layout)
     end
 
     ### ListArray ######################################################
@@ -205,6 +218,15 @@ using Test
             [3, 3, 5],
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 4
+        @test layout == AwkwardArray.ListArray(
+            [0, 3, 3, 5],
+            [3, 3, 5, 5],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+        )
+        @test AwkwardArray.is_valid(layout)
     end
 
     ### RegularArray #########################################################
@@ -274,6 +296,14 @@ using Test
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
             3,
         )
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 3
+        @test layout == AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 0.0, 0.0, 0.0]),
+            3,
+        )
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -297,6 +327,14 @@ using Test
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
             2,
         )
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 4
+        @test layout == AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 0.0, 0.0]),
+            2,
+        )
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -354,6 +392,10 @@ using Test
         @test layout[6] == "💰"
 
         @test Vector(layout) == ["hey", "there", "\$", "¢", "€", "💰"]
+
+        AwkwardArray.push_dummy!(layout)
+        @test Vector(layout) == ["hey", "there", "\$", "¢", "€", "💰", ""]
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -394,6 +436,10 @@ using Test
         @test layout[6] == "💰"
 
         @test Vector(layout) == ["hey", "there", "\$", "¢", "€", "💰"]
+
+        AwkwardArray.push_dummy!(layout)
+        @test Vector(layout) == ["hey", "there", "\$", "¢", "€", "💰", ""]
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -410,6 +456,10 @@ using Test
         @test layout[2] == "two"
 
         @test Vector(layout) == ["one", "two"]
+
+        AwkwardArray.push_dummy!(layout)
+        @test Vector(layout) == ["one", "two", "\0\0\0"]
+        @test AwkwardArray.is_valid(layout)
     end
 
     ### ListType with behavior = :bytestring #################################
@@ -449,6 +499,10 @@ using Test
         @test layout[4] == [0xc2, 0xa2]
         @test layout[5] == [0xe2, 0x82, 0xac]
         @test layout[6] == [0xf0, 0x9f, 0x92, 0xb0]
+
+        AwkwardArray.push_dummy!(layout)
+        @test layout[7] == []
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -487,6 +541,10 @@ using Test
         @test layout[4] == [0xc2, 0xa2]
         @test layout[5] == [0xe2, 0x82, 0xac]
         @test layout[6] == [0xf0, 0x9f, 0x92, 0xb0]
+
+        AwkwardArray.push_dummy!(layout)
+        @test layout[7] == []
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -503,6 +561,10 @@ using Test
         @test layout[2] == [0x74, 0x77, 0x6f]
 
         @test Vector(layout) == [[0x6f, 0x6e, 0x65], [0x74, 0x77, 0x6f]]
+
+        AwkwardArray.push_dummy!(layout)
+        @test Vector(layout) == [[0x6f, 0x6e, 0x65], [0x74, 0x77, 0x6f], [0x00, 0x00, 0x00]]
+        @test AwkwardArray.is_valid(layout)
     end
 
     ### ListType with other parameters #######################################
@@ -734,6 +796,27 @@ using Test
             ),
             1,
         )
+
+        AwkwardArray.push_dummy!(layout)
+        @test layout == AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([1, 2, 3, 0]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3, 3, 5, 5],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                ),
+            )),
+        )
+        @test layout[4] == AwkwardArray.Record(
+            AwkwardArray.RecordArray(
+                NamedTuple{(:a, :b)}((
+                    AwkwardArray.PrimitiveArray([0]),
+                    AwkwardArray.ListOffsetArray([0, 0], AwkwardArray.PrimitiveArray([])),
+                )),
+            ),
+            1,
+        )
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -943,6 +1026,23 @@ using Test
             ),),
             1,
         )
+
+        AwkwardArray.push_dummy!(layout)
+        @test layout == AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([1, 2, 3, 0]),
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3, 5, 5],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            ),
+        ),)
+        @test layout[4] == AwkwardArray.Tuple(
+            AwkwardArray.TupleArray((
+                AwkwardArray.PrimitiveArray([0]),
+                AwkwardArray.ListOffsetArray([0, 0], AwkwardArray.PrimitiveArray([])),
+            ),),
+            1,
+        )
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -1041,6 +1141,11 @@ using Test
         @test layout[6] == 7.7
         @test layout.index == [4, 3, 3, 0, 5, 6]
         @test layout == AwkwardArray.PrimitiveArray([5.5, 4.4, 4.4, 1.1, 6.6, 7.7])
+
+        AwkwardArray.push_dummy!(layout)
+        @test layout == AwkwardArray.PrimitiveArray([5.5, 4.4, 4.4, 1.1, 6.6, 7.7, 0.0])
+        @test layout.index == [4, 3, 3, 0, 5, 6, 7]
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -1065,6 +1170,19 @@ using Test
         @test length(layout) == 5
         @test layout[5] == AwkwardArray.PrimitiveArray([6.6, 7.7])
         @test layout.index == [2, 0, 0, 1, 3]
+
+        @test layout == AwkwardArray.ListArray(
+            [3, 0, 0, 3, 5],
+            [5, 3, 3, 3, 7],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7]),
+        )
+        AwkwardArray.push_dummy!(layout)
+        @test layout == AwkwardArray.ListArray(
+            [3, 0, 0, 3, 5, 7],
+            [5, 3, 3, 3, 7, 7],
+            AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7]),
+        )
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -1098,6 +1216,13 @@ using Test
         @test layout[end][:a] == 6
         @test layout[end][:b] == 6.6
         @test layout.index == [3, 4, 0, 0, 1, 2, 5]
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 8
+        @test layout[end][:a] == 0
+        @test layout[end][:b] == 0.0
+        @test layout.index == [3, 4, 0, 0, 1, 2, 5, 6]
+        @test AwkwardArray.is_valid(layout)
     end
 
     ### IndexedOptionArray ###################################################
@@ -1140,6 +1265,12 @@ using Test
         @test length(layout) == 10
         @test layout[10] == 7.7
         @test layout.index == [4, 3, 3, -1, -1, 0, 5, -1, -1, 6]
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 11
+        @test ismissing(layout[11])
+        @test layout.index == [4, 3, 3, -1, -1, 0, 5, -1, -1, 6, -1]
+        @test AwkwardArray.is_valid(layout)
     end
 
     ### ByteMaskedArray ######################################################
@@ -1174,6 +1305,11 @@ using Test
         AwkwardArray.push_null!(layout)
         @test length(layout) == 7
         @test ismissing(layout[7])
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 8
+        @test ismissing(layout[8])
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -1202,6 +1338,11 @@ using Test
         AwkwardArray.push_null!(layout)
         @test length(layout) == 5
         @test ismissing(layout[5])
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 6
+        @test ismissing(layout[6])
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -1230,15 +1371,14 @@ using Test
         @test layout[:a][6] == 6
         @test layout[:b][6] == 6.6
 
-        # this is the tricky part: users have to add dummy values to records
-        # with Bit/ByteMaskedArray and *not* with IndexedOptionArray
-        # FIXME: https://github.com/jpivarski/AwkwardArray.jl/issues/15
-        AwkwardArray.push!(a_layout, 7)
-        AwkwardArray.push!(b_layout, 7.7)
         AwkwardArray.push_null!(layout)
         @test length(layout) == 7
         @test ismissing(layout[7])
 
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 8
+        @test ismissing(layout[8])
+        @test AwkwardArray.is_valid(layout)
     end
 
     ### BitMaskedArray #######################################################
@@ -1273,6 +1413,11 @@ using Test
         AwkwardArray.push_null!(layout)
         @test length(layout) == 7
         @test ismissing(layout[7])
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 8
+        @test ismissing(layout[8])
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -1301,6 +1446,11 @@ using Test
         AwkwardArray.push_null!(layout)
         @test length(layout) == 5
         @test ismissing(layout[5])
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 6
+        @test ismissing(layout[6])
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -1329,15 +1479,14 @@ using Test
         @test layout[:a][6] == 6
         @test layout[:b][6] == 6.6
 
-        # this is the tricky part: users have to add dummy values to records
-        # with Bit/BitMaskedArray and *not* with IndexedOptionArray
-        # FIXME: https://github.com/jpivarski/AwkwardArray.jl/issues/15
-        AwkwardArray.push!(a_layout, 7)
-        AwkwardArray.push!(b_layout, 7.7)
         AwkwardArray.push_null!(layout)
         @test length(layout) == 7
         @test ismissing(layout[7])
 
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 8
+        @test ismissing(layout[8])
+        @test AwkwardArray.is_valid(layout)
     end
 
     ### UnmaskedArray ########################################################
@@ -1366,6 +1515,11 @@ using Test
         AwkwardArray.push!(layout, 6.6)
         @test length(layout) == 6
         @test layout[6] == 6.6
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 7
+        @test layout[7] == 0.0
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -1388,6 +1542,11 @@ using Test
 
         @test length(layout) == 4
         @test layout[4] == AwkwardArray.PrimitiveArray([6.6, 7.7, 8.8, 9.9])
+
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 5
+        @test layout[5] == AwkwardArray.PrimitiveArray([])
+        @test AwkwardArray.is_valid(layout)
     end
 
     begin
@@ -1414,6 +1573,13 @@ using Test
         @test layout[:a][6] == 6
         @test layout[:b][6] == 6.6
 
+        AwkwardArray.push_dummy!(layout)
+        @test length(layout) == 7
+        @test layout[7][:a] == 0
+        @test layout[7][:b] == 0.0
+        @test layout[:a][7] == 0
+        @test layout[:b][7] == 0.0
+        @test AwkwardArray.is_valid(layout)
     end
 
     ### UnionArray ###########################################################
@@ -1496,6 +1662,33 @@ using Test
             ),
         )
 
+        AwkwardArray.push_dummy!(special1)
+        @test layout == AwkwardArray.UnionArray(
+            Vector{Int8}([0, 1, 0]),
+            [0, 0, 1],
+            (
+                AwkwardArray.PrimitiveArray([1.1, 0.0]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 2],
+                    AwkwardArray.PrimitiveArray([2.2, 3.3]),
+                ),
+            ),
+        )
+
+        AwkwardArray.push_dummy!(special2)
+        @test layout == AwkwardArray.UnionArray(
+            Vector{Int8}([0, 1, 0, 1]),
+            [0, 0, 1, 1],
+            (
+                AwkwardArray.PrimitiveArray([1.1, 0.0]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 2, 2],
+                    AwkwardArray.PrimitiveArray([2.2, 3.3]),
+                ),
+            ),
+        )
+
+        @test AwkwardArray.is_valid(layout)
     end
 
 end   # @testset "AwkwardArray.jl"
