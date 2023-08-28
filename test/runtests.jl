@@ -356,6 +356,18 @@ using Test
     ### ListType with behavior = :string #####################################
 
     begin
+        AwkwardArray.is_valid(AwkwardArray.StringOffsetArray([0, 3, 3, 6], "onetwo"))
+        AwkwardArray.is_valid(AwkwardArray.StringOffsetArray())
+
+        AwkwardArray.is_valid(AwkwardArray.StringArray([0, 3, 3], [3, 3, 6], "onetwo"))
+        AwkwardArray.is_valid(AwkwardArray.StringArray())
+
+        AwkwardArray.is_valid(AwkwardArray.StringRegularArray("onetwo", 3))
+        AwkwardArray.is_valid(AwkwardArray.StringRegularArray(3))
+        AwkwardArray.is_valid(AwkwardArray.StringRegularArray())
+    end
+
+    begin
         layout = AwkwardArray.ListOffsetArray(
             [0, 3, 8, 9, 11, 14, 18],
             AwkwardArray.PrimitiveArray(
@@ -463,6 +475,34 @@ using Test
     end
 
     ### ListType with behavior = :bytestring #################################
+
+    begin
+        AwkwardArray.is_valid(
+            AwkwardArray.ByteStringOffsetArray(
+                [0, 3, 3, 6],
+                Vector{UInt8}([0x6f, 0x6e, 0x65, 0x74, 0x77, 0x6f]),
+            ),
+        )
+        AwkwardArray.is_valid(AwkwardArray.ByteStringOffsetArray())
+
+        AwkwardArray.is_valid(
+            AwkwardArray.ByteStringArray(
+                [0, 3, 3],
+                [3, 3, 6],
+                Vector{UInt8}([0x6f, 0x6e, 0x65, 0x74, 0x77, 0x6f]),
+            ),
+        )
+        AwkwardArray.is_valid(AwkwardArray.ByteStringArray())
+
+        AwkwardArray.is_valid(
+            AwkwardArray.ByteStringRegularArray(
+                Vector{UInt8}([0x6f, 0x6e, 0x65, 0x74, 0x77, 0x6f]),
+                3,
+            ),
+        )
+        AwkwardArray.is_valid(AwkwardArray.ByteStringRegularArray(3))
+        AwkwardArray.is_valid(AwkwardArray.ByteStringRegularArray())
+    end
 
     begin
         layout = AwkwardArray.ListOffsetArray(

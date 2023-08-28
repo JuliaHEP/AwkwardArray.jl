@@ -445,7 +445,7 @@ mutable struct RegularArray{CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
 end
 
 RegularArray{CONTENT}(
-    size::Int64;
+    size::Int;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
 ) where {CONTENT<:Content} = RegularArray(
@@ -534,7 +534,7 @@ function end_list!(layout::RegularArray)
         layout.length += 1
     else
         error(
-            "RegularArray list lengths changed: from $layout.size to $(div(length(layout.content), (layout.length + 1)))",
+            "RegularArray list lengths changed: from $(layout.size) to $(length(layout.content) - (layout.length * layout.size))",
         )
     end
 end
@@ -547,6 +547,128 @@ function push_dummy!(layout::RegularArray)
 end
 
 ### ListType with behavior = :string #####################################
+
+StringOffsetArray(
+    offsets::INDEX,
+    data::AbstractVector{UInt8};
+    parameters::Parameters = Parameters(),
+    char_parameters::Parameters = Parameters(),
+) where {INDEX<:IndexBig} = ListOffsetArray(
+    offsets,
+    PrimitiveArray(data, parameters = char_parameters, behavior = :char),
+    parameters = parameters,
+    behavior = :string,
+)
+
+StringOffsetArray(
+    offsets::INDEX,
+    data::String;   # data provided as a String, rather than AbstractVector{UInt8}
+    parameters::Parameters = Parameters(),
+    char_parameters::Parameters = Parameters(),
+) where {INDEX<:IndexBig} = StringOffsetArray(
+    offsets,
+    Vector{UInt8}(data),
+    parameters = parameters,
+    char_parameters = char_parameters,
+)
+
+StringOffsetArray(; parameters = Parameters(), char_parameters = Parameters()) =
+    StringOffsetArray(
+        Index64([0]),
+        Vector{UInt8}([]),
+        parameters = parameters,
+        char_parameters = char_parameters,
+    )
+
+StringArray(
+    starts::INDEX,
+    stops::INDEX,
+    data::AbstractVector{UInt8};
+    parameters::Parameters = Parameters(),
+    char_parameters::Parameters = Parameters(),
+) where {INDEX<:IndexBig} = ListArray(
+    starts,
+    stops,
+    PrimitiveArray(data, parameters = char_parameters, behavior = :char),
+    parameters = parameters,
+    behavior = :string,
+)
+
+StringArray(
+    starts::INDEX,
+    stops::INDEX,
+    data::String;   # data provided as a String, rather than AbstractVector{UInt8}
+    parameters::Parameters = Parameters(),
+    char_parameters::Parameters = Parameters(),
+) where {INDEX<:IndexBig} = StringArray(
+    starts,
+    stops,
+    Vector{UInt8}(data),
+    parameters = parameters,
+    char_parameters = char_parameters,
+)
+
+StringArray(;
+    parameters::Parameters = Parameters(),
+    char_parameters::Parameters = Parameters(),
+) = StringArray(
+    Index64([]),
+    Index64([]),
+    Vector{UInt8}([]),
+    parameters = parameters,
+    char_parameters = char_parameters,
+)
+
+StringRegularArray(
+    data::AbstractVector{UInt8},
+    size::Int;
+    zeros_length::Int = 0,
+    parameters::Parameters = Parameters(),
+    char_parameters::Parameters = Parameters(),
+) = RegularArray(
+    PrimitiveArray(data, parameters = char_parameters, behavior = :char),
+    size,
+    zeros_length = zeros_length,
+    parameters = parameters,
+    behavior = :string,
+)
+
+StringRegularArray(
+    data::String,   # data provided as a String, rather than AbstractVector{UInt8}
+    size::Int;
+    zeros_length::Int = 0,
+    parameters::Parameters = Parameters(),
+    char_parameters::Parameters = Parameters(),
+) = StringRegularArray(
+    Vector{UInt8}(data),
+    size,
+    zeros_length = zeros_length,
+    parameters = parameters,
+    char_parameters = char_parameters,
+)
+
+StringRegularArray(
+    size::Int;
+    parameters::Parameters = Parameters(),
+    char_parameters::Parameters = Parameters(),
+) = StringRegularArray(
+    Vector{UInt8}([]),
+    size,
+    zeros_length = 0,
+    parameters = parameters,
+    char_parameters = char_parameters,
+)
+
+StringRegularArray(;
+    parameters::Parameters = Parameters(),
+    char_parameters::Parameters = Parameters(),
+) = StringRegularArray(
+    Vector{UInt8}([]),
+    -1,
+    zeros_length = 0,
+    parameters = parameters,
+    char_parameters = char_parameters,
+)
 
 function Base.getindex(
     layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
@@ -597,6 +719,90 @@ function Base.getindex(
 end
 
 ### ListType with behavior = :bytestring #################################
+
+ByteStringOffsetArray(
+    offsets::INDEX,
+    data::AbstractVector{UInt8};
+    parameters::Parameters = Parameters(),
+    byte_parameters::Parameters = Parameters(),
+) where {INDEX<:IndexBig} = ListOffsetArray(
+    offsets,
+    PrimitiveArray(data, parameters = byte_parameters, behavior = :byte),
+    parameters = parameters,
+    behavior = :bytestring,
+)
+
+ByteStringOffsetArray(;
+    parameters::Parameters = Parameters(),
+    byte_parameters::Parameters = Parameters(),
+) = ByteStringOffsetArray(
+    Index64([0]),
+    Vector{UInt8}([]),
+    parameters = parameters,
+    byte_parameters = byte_parameters,
+)
+
+ByteStringArray(
+    starts::INDEX,
+    stops::INDEX,
+    data::AbstractVector{UInt8};
+    parameters::Parameters = Parameters(),
+    byte_parameters::Parameters = Parameters(),
+) where {INDEX<:IndexBig} = ListArray(
+    starts,
+    stops,
+    PrimitiveArray(data, parameters = byte_parameters, behavior = :byte),
+    parameters = parameters,
+    behavior = :bytestring,
+)
+
+ByteStringArray(;
+    parameters::Parameters = Parameters(),
+    byte_parameters::Parameters = Parameters(),
+) = ByteStringArray(
+    Index64([]),
+    Index64([]),
+    Vector{UInt8}([]),
+    parameters = parameters,
+    byte_parameters = byte_parameters,
+)
+
+ByteStringRegularArray(
+    data::AbstractVector{UInt8},
+    size::Int;
+    zeros_length::Int = 0,
+    parameters::Parameters = Parameters(),
+    byte_parameters::Parameters = Parameters(),
+) = RegularArray(
+    PrimitiveArray(data, parameters = byte_parameters, behavior = :byte),
+    size,
+    zeros_length = zeros_length,
+    parameters = parameters,
+    behavior = :bytestring,
+)
+
+ByteStringRegularArray(
+    size::Int;
+    parameters::Parameters = Parameters(),
+    byte_parameters::Parameters = Parameters(),
+) = ByteStringRegularArray(
+    Vector{UInt8}([]),
+    size,
+    zeros_length = 0,
+    parameters = parameters,
+    byte_parameters = byte_parameters,
+)
+
+ByteStringRegularArray(;
+    parameters::Parameters = Parameters(),
+    byte_parameters::Parameters = Parameters(),
+) = ByteStringRegularArray(
+    Vector{UInt8}([]),
+    -1,
+    zeros_length = 0,
+    parameters = parameters,
+    byte_parameters = byte_parameters,
+)
 
 function Base.getindex(
     layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:byte},:bytestring},
@@ -1691,6 +1897,76 @@ function push_dummy!(
     Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
     Base.push!(special.array.index, tmp)
     special
+end
+
+### from_iter ############################################################
+
+function from_iter!(layout::PrimitiveArray{ITEM}, input) where {ITEM}
+    INPUT = eltype(input)
+    if INPUT <: Number
+        for item in input
+            push!(layout, ITEM(item))
+        end
+    else
+        error("cannot fill $(typeof(layout)) with $(INPUT)")
+    end
+end
+
+function from_iter!(layout::EmptyArray, input)
+    for x in input
+        error("attempting to fill $(typeof(layout)) with data")
+    end
+end
+
+function from_iter!(layout::ListType, input)
+    INPUT = eltype(input)
+    if INPUT <: String && typeof(layout).parameters[end] == :string
+        for string in input
+            append!(layout.content.data, Vector{UInt8}(string))
+            end_list!(layout)
+        end
+    elseif INPUT <: AbstractVector
+        for item in input
+            from_iter!(layout.content, item)
+            end_list!(layout)
+        end
+    else
+        error("cannot fill $(typeof(layout)) with $(INPUT)")
+    end
+end
+
+function from_iter!(layout::RecordArray, input)
+    INPUT = eltype(input)
+    if INPUT <: NamedTuple && typeof(layout.contents).parameters[1] == INPUT.parameters[1]
+        for item in input
+            for field in INPUT.parameters[1]
+                from_iter!(layout.contents[field], [item[field]])
+            end
+            end_record!(layout)
+        end
+    else
+        error(
+            "cannot fill RecordArray with fields $(typeof(layout.contents).parameters[1]) with NamedTuples with keys $(INPUT.parameters[1])",
+        )
+    end
+end
+
+function from_iter!(layout::TupleArray, input)
+    INPUT = eltype(input)
+    if INPUT <: Base.Tuple &&
+       length(typeof(layout.contents).parameters) == length(INPUT.parameters)
+        for item in input
+            adjustment = firstindex(layout.contents) - firstindex(item)
+            for index in eachindex(layout.contents)
+                from_iter!(layout.contents[index], [item[index-adjustment]])
+            end
+            end_tuple!(layout)
+        end
+    else
+        error(
+            "cannot fill TupleArray of length $(length(typeof(layout.contents).parameters)) with Tuples of length $(length(INPUT.parameters))",
+        )
+    end
 end
 
 end  # module AwkwardArray
