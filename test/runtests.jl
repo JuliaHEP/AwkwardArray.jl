@@ -41,6 +41,42 @@ using Test
         @test AwkwardArray.is_valid(layout)
     end
 
+    begin
+        layout = AwkwardArray.PrimitiveArray{Int32}()
+
+        AwkwardArray.push!(layout, 1)
+        @test layout == AwkwardArray.PrimitiveArray(Vector{Int32}([1]))
+
+        AwkwardArray.append!(layout, Vector{Int64}([2, 3]))
+        @test layout == AwkwardArray.PrimitiveArray(Vector{Int32}([1, 2, 3]))
+
+        AwkwardArray.append!(layout, Vector{Int16}([4, 5]))
+        @test layout == AwkwardArray.PrimitiveArray(Vector{Int32}([1, 2, 3, 4, 5]))
+    end
+
+    begin
+        layout = AwkwardArray.PrimitiveArray{Float32}()
+
+        AwkwardArray.push!(layout, 1)
+        @test layout == AwkwardArray.PrimitiveArray(Vector{Float32}([1.0]))
+
+        AwkwardArray.append!(layout, Vector{Int64}([2, 3]))
+        @test layout == AwkwardArray.PrimitiveArray(Vector{Float32}([1.0, 2.0, 3.0]))
+
+        AwkwardArray.append!(layout, Vector{Int16}([4, 5]))
+        @test layout ==
+              AwkwardArray.PrimitiveArray(Vector{Float32}([1.0, 2.0, 3.0, 4.0, 5.0]))
+
+        AwkwardArray.push!(layout, 3.14)
+        @test layout ==
+              AwkwardArray.PrimitiveArray(Vector{Float32}([1.0, 2.0, 3.0, 4.0, 5.0, 3.14]))
+
+        AwkwardArray.append!(layout, Vector{Float64}([2.71]))
+        @test layout == AwkwardArray.PrimitiveArray(
+            Vector{Float32}([1.0, 2.0, 3.0, 4.0, 5.0, 3.14, 2.71]),
+        )
+    end
+
     ### EmptyArray ###########################################################
 
     begin
@@ -60,6 +96,12 @@ using Test
         layout = AwkwardArray.EmptyArray()
         @test length(layout) == 0
         @test layout == AwkwardArray.EmptyArray()
+    end
+
+    begin
+        layout = AwkwardArray.EmptyArray()
+        AwkwardArray.append!(layout, [])
+        AwkwardArray.append!(layout, Vector{Int64}([]))
     end
 
     ### ListOffsetArray ######################################################
@@ -140,6 +182,35 @@ using Test
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.ListOffsetArray{
+            AwkwardArray.Index64,
+            AwkwardArray.PrimitiveArray{Int64},
+        }()
+
+        AwkwardArray.push!(layout, [1, 2, 3])
+        @test layout ==
+              AwkwardArray.ListOffsetArray([0, 3], AwkwardArray.PrimitiveArray([1, 2, 3]))
+
+        AwkwardArray.push!(layout, Vector{Int64}([]))
+        @test layout == AwkwardArray.ListOffsetArray(
+            [0, 3, 3],
+            AwkwardArray.PrimitiveArray([1, 2, 3]),
+        )
+
+        AwkwardArray.push!(layout, [4, 5])
+        @test layout == AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 5],
+            AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+        )
+
+        AwkwardArray.append!(layout, [[], [6, 7, 8, 9]])
+        @test layout == AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 5, 5, 9],
+            AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9]),
+        )
     end
 
     ### ListArray ######################################################
@@ -227,6 +298,33 @@ using Test
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout =
+            AwkwardArray.ListArray{AwkwardArray.Index64,AwkwardArray.PrimitiveArray{Int64}}()
+
+        AwkwardArray.push!(layout, [1, 2, 3])
+        @test layout ==
+              AwkwardArray.ListArray([0], [3], AwkwardArray.PrimitiveArray([1, 2, 3]))
+
+        AwkwardArray.push!(layout, Vector{Int64}([]))
+        @test layout ==
+              AwkwardArray.ListArray([0, 3], [3, 3], AwkwardArray.PrimitiveArray([1, 2, 3]))
+
+        AwkwardArray.push!(layout, [4, 5])
+        @test layout == AwkwardArray.ListArray(
+            [0, 3, 3],
+            [3, 3, 5],
+            AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+        )
+
+        AwkwardArray.append!(layout, [[], [6, 7, 8, 9]])
+        @test layout == AwkwardArray.ListArray(
+            [0, 3, 3, 5, 5],
+            [3, 3, 5, 5, 9],
+            AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9]),
+        )
     end
 
     ### RegularArray #########################################################
@@ -353,6 +451,23 @@ using Test
         )
     end
 
+    begin
+        layout = AwkwardArray.RegularArray{AwkwardArray.PrimitiveArray{Int64}}()
+
+        AwkwardArray.push!(layout, [1, 2, 3])
+        @test layout == AwkwardArray.RegularArray(AwkwardArray.PrimitiveArray([1, 2, 3]), 3)
+
+        AwkwardArray.push!(layout, [4, 5, 6])
+        @test layout ==
+              AwkwardArray.RegularArray(AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6]), 3)
+
+        AwkwardArray.append!(layout, [[7, 8, 9], [10, 11, 12]])
+        @test layout == AwkwardArray.RegularArray(
+            AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+            3,
+        )
+    end
+
     ### ListType with behavior = :string #####################################
 
     begin
@@ -472,6 +587,36 @@ using Test
         AwkwardArray.push_dummy!(layout)
         @test Vector(layout) == ["one", "two", "\0\0\0"]
         @test AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.StringOffsetArray()
+
+        AwkwardArray.push!(layout, "one")
+        @test layout == AwkwardArray.StringOffsetArray([0, 3], "one")
+
+        AwkwardArray.append!(layout, ["two", "", "three"])
+        @test layout == AwkwardArray.StringOffsetArray([0, 3, 6, 6, 11], "onetwothree")
+    end
+
+    begin
+        layout = AwkwardArray.StringArray()
+
+        AwkwardArray.push!(layout, "one")
+        @test layout == AwkwardArray.StringArray([0], [3], "one")
+
+        AwkwardArray.append!(layout, ["two", "", "three"])
+        @test layout == AwkwardArray.StringArray([0, 3, 6, 6], [3, 6, 6, 11], "onetwothree")
+    end
+
+    begin
+        layout = AwkwardArray.StringRegularArray()
+
+        AwkwardArray.push!(layout, "one")
+        @test layout == AwkwardArray.StringRegularArray("one", 3)
+
+        AwkwardArray.append!(layout, ["two", "333"])
+        @test layout == AwkwardArray.StringRegularArray("onetwo333", 3)
     end
 
     ### ListType with behavior = :bytestring #################################
@@ -605,6 +750,46 @@ using Test
         AwkwardArray.push_dummy!(layout)
         @test Vector(layout) == [[0x6f, 0x6e, 0x65], [0x74, 0x77, 0x6f], [0x00, 0x00, 0x00]]
         @test AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.ByteStringOffsetArray()
+
+        AwkwardArray.push!(layout, Vector{UInt8}([0, 1, 2]))
+        @test layout == AwkwardArray.ByteStringOffsetArray([0, 3], Vector{UInt8}([0, 1, 2]))
+
+        AwkwardArray.append!(layout, [Vector{UInt8}([]), Vector{UInt8}([3, 4])])
+        @test layout == AwkwardArray.ByteStringOffsetArray(
+            [0, 3, 3, 5],
+            Vector{UInt8}([0, 1, 2, 3, 4]),
+        )
+    end
+
+    begin
+        layout = AwkwardArray.ByteStringArray()
+
+        AwkwardArray.push!(layout, Vector{UInt8}([0, 1, 2]))
+        @test layout == AwkwardArray.ByteStringArray([0], [3], Vector{UInt8}([0, 1, 2]))
+
+        AwkwardArray.append!(layout, [Vector{UInt8}([]), Vector{UInt8}([3, 4])])
+        @test layout == AwkwardArray.ByteStringArray(
+            [0, 3, 3],
+            [3, 3, 5],
+            Vector{UInt8}([0, 1, 2, 3, 4]),
+        )
+    end
+
+    begin
+        layout = AwkwardArray.ByteStringRegularArray()
+
+        AwkwardArray.push!(layout, Vector{UInt8}([0, 1, 2]))
+        @test layout == AwkwardArray.ByteStringRegularArray(Vector{UInt8}([0, 1, 2]), 3)
+
+        AwkwardArray.append!(layout, [Vector{UInt8}([3, 4, 5]), Vector{UInt8}([6, 7, 8])])
+        @test layout == AwkwardArray.ByteStringRegularArray(
+            Vector{UInt8}([0, 1, 2, 3, 4, 5, 6, 7, 8]),
+            3,
+        )
     end
 
     ### ListType with other parameters #######################################
@@ -934,6 +1119,49 @@ using Test
         )
     end
 
+    begin
+        layout = AwkwardArray.RecordArray{
+            NamedTuple{
+                (:a, :b),
+                Tuple{
+                    AwkwardArray.PrimitiveArray{Int64},
+                    AwkwardArray.ListOffsetArray{
+                        AwkwardArray.Index64,
+                        AwkwardArray.PrimitiveArray{Float64},
+                    },
+                },
+            },
+        }()
+
+        AwkwardArray.push!(layout, NamedTuple{(:a, :b)}((123, [1.1, 2.2, 3.3])))
+        @test layout == AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([123]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+                ),
+            )),
+        )
+
+        AwkwardArray.append!(
+            layout,
+            [
+                NamedTuple{(:a, :b)}((321, Vector{Float64}([]))),
+                NamedTuple{(:a, :b)}((999, [4.4, 5.5])),
+            ],
+        )
+        @test layout == AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([123, 321, 999]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3, 3, 5],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                ),
+            )),
+        )
+    end
+
     ### TupleArray ##########################################################
 
     begin
@@ -1151,6 +1379,36 @@ using Test
         ),)
     end
 
+    begin
+        layout = AwkwardArray.TupleArray{
+            Tuple{
+                AwkwardArray.PrimitiveArray{Int64},
+                AwkwardArray.ListOffsetArray{
+                    AwkwardArray.Index64,
+                    AwkwardArray.PrimitiveArray{Float64},
+                },
+            },
+        }()
+
+        AwkwardArray.push!(layout, (123, [1.1, 2.2, 3.3]))
+        @test layout == AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([123]),
+            AwkwardArray.ListOffsetArray(
+                [0, 3],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+            ),
+        ),)
+
+        AwkwardArray.append!(layout, [(321, Vector{Float64}([])), (999, [4.4, 5.5])])
+        @test layout == AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([123, 321, 999]),
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3, 5],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            ),
+        ),)
+    end
+
     ### IndexedArray #########################################################
 
     begin
@@ -1265,6 +1523,52 @@ using Test
         @test AwkwardArray.is_valid(layout)
     end
 
+    begin
+        layout = AwkwardArray.IndexedArray{
+            AwkwardArray.Index64,
+            AwkwardArray.RecordArray{
+                NamedTuple{
+                    (:a, :b),
+                    Tuple{
+                        AwkwardArray.PrimitiveArray{Int64},
+                        AwkwardArray.ListOffsetArray{
+                            AwkwardArray.Index64,
+                            AwkwardArray.PrimitiveArray{Float64},
+                        },
+                    },
+                },
+            },
+        }()
+
+        AwkwardArray.push!(layout, NamedTuple{(:a, :b)}((123, [1.1, 2.2, 3.3])))
+        @test layout == AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([123]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+                ),
+            )),
+        )
+
+        AwkwardArray.append!(
+            layout,
+            [
+                NamedTuple{(:a, :b)}((321, Vector{Float64}([]))),
+                NamedTuple{(:a, :b)}((999, [4.4, 5.5])),
+            ],
+        )
+        @test layout == AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([123, 321, 999]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3, 3, 5],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                ),
+            )),
+        )
+    end
+
     ### IndexedOptionArray ###################################################
 
     begin
@@ -1311,6 +1615,70 @@ using Test
         @test ismissing(layout[11])
         @test layout.index == [4, 3, 3, -1, -1, 0, 5, -1, -1, 6, -1]
         @test AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.IndexedOptionArray{
+            AwkwardArray.Index64,
+            AwkwardArray.RecordArray{
+                NamedTuple{
+                    (:a, :b),
+                    Tuple{
+                        AwkwardArray.PrimitiveArray{Int64},
+                        AwkwardArray.ListOffsetArray{
+                            AwkwardArray.Index64,
+                            AwkwardArray.PrimitiveArray{Float64},
+                        },
+                    },
+                },
+            },
+        }()
+
+        AwkwardArray.push!(layout, NamedTuple{(:a, :b)}((123, [1.1, 2.2, 3.3])))
+        @test layout == AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([123]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3],
+                    AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+                ),
+            )),
+        )
+
+        AwkwardArray.push!(layout, missing)
+        @test layout == AwkwardArray.IndexedOptionArray(
+            [0, -1],
+            AwkwardArray.RecordArray(
+                NamedTuple{(:a, :b)}((
+                    AwkwardArray.PrimitiveArray([123]),
+                    AwkwardArray.ListOffsetArray(
+                        [0, 3],
+                        AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+                    ),
+                )),
+            ),
+        )
+
+        AwkwardArray.append!(
+            layout,
+            [
+                NamedTuple{(:a, :b)}((321, Vector{Float64}([]))),
+                missing,
+                NamedTuple{(:a, :b)}((999, [4.4, 5.5])),
+            ],
+        )
+        @test layout == AwkwardArray.IndexedOptionArray(
+            [0, -1, 1, -1, 2],
+            AwkwardArray.RecordArray(
+                NamedTuple{(:a, :b)}((
+                    AwkwardArray.PrimitiveArray([123, 321, 999]),
+                    AwkwardArray.ListOffsetArray(
+                        [0, 3, 3, 5],
+                        AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+                    ),
+                )),
+            ),
+        )
     end
 
     ### ByteMaskedArray ######################################################
@@ -1421,6 +1789,49 @@ using Test
         @test AwkwardArray.is_valid(layout)
     end
 
+    begin
+        layout = AwkwardArray.ByteMaskedArray{
+            AwkwardArray.Index8,
+            AwkwardArray.ListOffsetArray{
+                AwkwardArray.Index64,
+                AwkwardArray.PrimitiveArray{Float64},
+            },
+        }()
+
+        AwkwardArray.push!(layout, [1.1, 2.2, 3.3])
+        @test layout == AwkwardArray.ByteMaskedArray(
+            [true],
+            AwkwardArray.ListOffsetArray(
+                [0, 3],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+            ),
+            valid_when = true,
+        )
+
+        AwkwardArray.push!(layout, missing)
+        @test layout == AwkwardArray.ByteMaskedArray(
+            [true, false],
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+            ),
+            valid_when = true,
+        )
+
+        AwkwardArray.append!(
+            layout,
+            Vector{Union{Missing,Vector{Float64}}}([[4.4, 5.5], missing, [6.6]]),
+        )
+        @test layout == AwkwardArray.ByteMaskedArray(
+            [true, false, true, false, true],
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3, 5, 5, 6],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
+            ),
+            valid_when = true,
+        )
+    end
+
     ### BitMaskedArray #######################################################
 
     begin
@@ -1529,6 +1940,48 @@ using Test
         @test AwkwardArray.is_valid(layout)
     end
 
+    begin
+        layout = AwkwardArray.BitMaskedArray{
+            AwkwardArray.ListOffsetArray{
+                AwkwardArray.Index64,
+                AwkwardArray.PrimitiveArray{Float64},
+            },
+        }()
+
+        AwkwardArray.push!(layout, [1.1, 2.2, 3.3])
+        @test layout == AwkwardArray.ByteMaskedArray(
+            [true],
+            AwkwardArray.ListOffsetArray(
+                [0, 3],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+            ),
+            valid_when = true,
+        )
+
+        AwkwardArray.push!(layout, missing)
+        @test layout == AwkwardArray.ByteMaskedArray(
+            [true, false],
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+            ),
+            valid_when = true,
+        )
+
+        AwkwardArray.append!(
+            layout,
+            Vector{Union{Missing,Vector{Float64}}}([[4.4, 5.5], missing, [6.6]]),
+        )
+        @test layout == AwkwardArray.ByteMaskedArray(
+            [true, false, true, false, true],
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 3, 5, 5, 6],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
+            ),
+            valid_when = true,
+        )
+    end
+
     ### UnmaskedArray ########################################################
 
     begin
@@ -1620,6 +2073,35 @@ using Test
         @test layout[:a][7] == 0
         @test layout[:b][7] == 0.0
         @test AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.BitMaskedArray{
+            AwkwardArray.ListOffsetArray{
+                AwkwardArray.Index64,
+                AwkwardArray.PrimitiveArray{Float64},
+            },
+        }()
+
+        AwkwardArray.push!(layout, [1.1, 2.2, 3.3])
+        @test layout == AwkwardArray.ByteMaskedArray(
+            [true],
+            AwkwardArray.ListOffsetArray(
+                [0, 3],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3]),
+            ),
+            valid_when = true,
+        )
+
+        AwkwardArray.append!(layout, Vector{Vector{Float64}}([[4.4, 5.5], [6.6]]))
+        @test layout == AwkwardArray.ByteMaskedArray(
+            [true, true, true],
+            AwkwardArray.ListOffsetArray(
+                [0, 3, 5, 6],
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
+            ),
+            valid_when = true,
+        )
     end
 
     ### UnionArray ###########################################################

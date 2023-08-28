@@ -135,11 +135,20 @@ function Base.:(==)(layout1::Content, layout2::Content)
         return false
     end
     for (x, y) in zip(layout1, layout2)
-        if x != y
+        if ismissing(x) && ismissing(y)
+        elseif x == y
+        else
             return false
         end
     end
     return true
+end
+
+function append!(layout::Content, input)
+    for item in input
+        push!(layout, item)
+    end
+    layout
 end
 
 ### PrimitiveArray #######################################################
@@ -202,9 +211,13 @@ function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
     end
 end
 
-function push!(layout::PrimitiveArray{ITEM}, x::ITEM) where {ITEM}
-    Base.push!(layout.data, x)
+function push!(layout::PrimitiveArray{ITEM}, input::ITEM) where {ITEM}
+    Base.push!(layout.data, input)
     layout
+end
+
+function push!(layout::PrimitiveArray{ITEM}, input::Number) where {ITEM}
+    Base.push!(layout.data, ITEM(input))
 end
 
 function push_dummy!(layout::PrimitiveArray{ITEM}) where {ITEM}
@@ -236,6 +249,10 @@ function Base.getindex(layout::EmptyArray, r::UnitRange{Int})
     else
         layout
     end
+end
+
+function push!(layout::EmptyArray, input)
+    error("attempting to fill $(typeof(layout)) with data")
 end
 
 ### ListOffsetArray ######################################################
@@ -718,6 +735,20 @@ function Base.getindex(
     )
 end
 
+function push!(layout::ListType{BEHAVIOR}, input::String) where {BEHAVIOR}
+    if BEHAVIOR == :string
+        Base.append!(layout.content.data, Vector{UInt8}(input))
+        end_list!(layout)
+    else
+        error("attempting to fill a non-string $(typeof(layout)) with a string")
+    end
+end
+
+function push!(layout::ListType, input::AbstractVector)
+    append!(layout.content, input)
+    end_list!(layout)
+end
+
 ### ListType with behavior = :bytestring #################################
 
 ByteStringOffsetArray(
@@ -986,6 +1017,19 @@ function Base.:(==)(
     return true
 end
 
+function push!(layout::RecordArray, input::NamedTuple)
+    if typeof(layout.contents).parameters[1] == typeof(input).parameters[1]
+        for field in eachindex(layout.contents)
+            push!(layout.contents[field], input[field])
+        end
+        end_record!(layout)
+    else
+        error(
+            "cannot fill RecordArray of fields $(typeof(layout.contents).parameters[1]) with a NamedTuple of keys $(INPUT.parameters[1])",
+        )
+    end
+end
+
 function end_record!(layout::RecordArray)
     layout.length += 1
     @assert all(length(x) >= layout.length for x in layout.contents)
@@ -1133,6 +1177,20 @@ function Base.:(==)(
     return true
 end
 
+function push!(layout::TupleArray, input::Base.Tuple)
+    if length(typeof(layout.contents).parameters) == length(typeof(input).parameters)
+        adjustment = firstindex(layout.contents) - firstindex(input)
+        for index in eachindex(layout.contents)
+            push!(layout.contents[index], input[index-adjustment])
+        end
+        end_tuple!(layout)
+    else
+        error(
+            "cannot fill TupleArray of $(length(typeof(layout.contents).parameters)) slots with a Tuple of $(length(typeof(input).parameters)) slots",
+        )
+    end
+end
+
 function end_tuple!(layout::TupleArray)
     layout.length += 1
     @assert all(length(x) >= layout.length for x in layout.contents)
@@ -1210,12 +1268,9 @@ Base.getindex(layout::IndexedArray, r::UnitRange{Int}) =
 
 Base.getindex(layout::IndexedArray, f::Symbol) = copy(layout, content = layout.content[f])
 
-function push!(
-    layout::IndexedArray{INDEX,CONTENT},
-    x::ITEM,
-) where {INDEX<:IndexBig,ITEM,CONTENT<:PrimitiveArray{ITEM}}
+function push!(layout::IndexedArray, input)
     tmp = length(layout.content)
-    push!(layout.content, x)
+    push!(layout.content, input)
     Base.push!(layout.index, tmp)
     layout
 end
@@ -1251,6 +1306,17 @@ end
 ### IndexedOptionArray ###################################################
 
 abstract type OptionType{BEHAVIOR} <: Content{BEHAVIOR} end
+
+function append!(layout::OptionType, input)
+    for item in input
+        if ismissing(item)
+            push_null!(layout)
+        else
+            push!(layout, item)
+        end
+    end
+    layout
+end
 
 struct IndexedOptionArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
     index::INDEX
@@ -1320,14 +1386,15 @@ Base.getindex(layout::IndexedOptionArray, r::UnitRange{Int}) =
 Base.getindex(layout::IndexedOptionArray, f::Symbol) =
     copy(layout, content = layout.content[f])
 
-function push!(
-    layout::IndexedOptionArray{INDEX,CONTENT},
-    x::ITEM,
-) where {INDEX<:IndexBig,ITEM,CONTENT<:PrimitiveArray{ITEM}}
-    tmp = length(layout.content)
-    push!(layout.content, x)
-    Base.push!(layout.index, tmp)
-    layout
+function push!(layout::IndexedOptionArray, input)
+    if ismissing(input)
+        push_null!(layout)
+    else
+        tmp = length(layout.content)
+        push!(layout.content, input)
+        Base.push!(layout.index, tmp)
+        layout
+    end
 end
 
 function end_list!(layout::IndexedOptionArray)
@@ -1453,13 +1520,14 @@ end
 Base.getindex(layout::ByteMaskedArray, f::Symbol) =
     copy(layout, content = layout.content[f])
 
-function push!(
-    layout::ByteMaskedArray{INDEX,CONTENT},
-    x::ITEM,
-) where {INDEX<:IndexBool,ITEM,CONTENT<:PrimitiveArray{ITEM}}
-    push!(layout.content, x)
-    Base.push!(layout.mask, layout.valid_when)
-    layout
+function push!(layout::ByteMaskedArray, input)
+    if ismissing(input)
+        push_null!(layout)
+    else
+        push!(layout.content, input)
+        Base.push!(layout.mask, layout.valid_when)
+        layout
+    end
 end
 
 function end_list!(layout::ByteMaskedArray)
@@ -1584,13 +1652,14 @@ end
 
 Base.getindex(layout::BitMaskedArray, f::Symbol) = copy(layout, content = layout.content[f])
 
-function push!(
-    layout::BitMaskedArray{CONTENT},
-    x::ITEM,
-) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
-    push!(layout.content, x)
-    Base.push!(layout.mask, layout.valid_when)
-    layout
+function push!(layout::BitMaskedArray, input)
+    if ismissing(input)
+        push_null!(layout)
+    else
+        push!(layout.content, input)
+        Base.push!(layout.mask, layout.valid_when)
+        layout
+    end
 end
 
 function end_list!(layout::BitMaskedArray)
@@ -1673,11 +1742,8 @@ Base.getindex(layout::UnmaskedArray, r::UnitRange{Int}) =
 
 Base.getindex(layout::UnmaskedArray, f::Symbol) = copy(layout, content = layout.content[f])
 
-function push!(
-    layout::UnmaskedArray{CONTENT},
-    x::ITEM,
-) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
-    push!(layout.content, x)
+function push!(layout::UnmaskedArray, input)
+    push!(layout.content, input)
     layout
 end
 
@@ -1827,31 +1893,15 @@ Base.getindex(layout::UnionArray, f::Symbol) =
 specialization(layout::UnionArray, tag::Int64) =
     Specialization(tag, layout, layout.contents[tag])
 
-function push!(
-    special::Specialization{ARRAY,TAGGED},
-    x::ITEM,
-) where {ITEM,ARRAY<:UnionArray,TAGGED<:PrimitiveArray{ITEM}}
+function push!(special::Specialization, input)
     tmp = length(special.tagged)
-    push!(special.tagged, x)
+    push!(special.tagged, input)
     Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
     Base.push!(special.array.index, tmp)
     special
 end
 
-function push!(
-    special::Specialization{ARRAY,TAGGED},
-    x::ITEM,
-) where {ITEM,ARRAY<:UnionArray,TAGGED<:OptionType}
-    tmp = length(special.tagged)
-    push!(special.tagged, x)
-    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    Base.push!(special.array.index, tmp)
-    special
-end
-
-function end_list!(
-    special::Specialization{ARRAY,TAGGED},
-) where {ARRAY<:UnionArray,TAGGED<:Content}
+function end_list!(special::Specialization)
     tmp = length(special.tagged)
     end_list!(special.tagged)
     Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
@@ -1859,9 +1909,7 @@ function end_list!(
     special
 end
 
-function end_record!(
-    special::Specialization{ARRAY,TAGGED},
-) where {ARRAY<:UnionArray,TAGGED<:Content}
+function end_record!(special::Specialization)
     tmp = length(special.tagged)
     end_record!(special.tagged)
     Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
@@ -1869,9 +1917,7 @@ function end_record!(
     special
 end
 
-function end_tuple!(
-    special::Specialization{ARRAY,TAGGED},
-) where {ARRAY<:UnionArray,TAGGED<:Content}
+function end_tuple!(special::Specialization)
     tmp = length(special.tagged)
     end_tuple!(special.tagged)
     Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
@@ -1889,9 +1935,7 @@ function push_null!(
     special
 end
 
-function push_dummy!(
-    special::Specialization{ARRAY,TAGGED},
-) where {ARRAY<:UnionArray,TAGGED<:Content}
+function push_dummy!(special::Specialization)
     tmp = length(special.tagged)
     push_dummy!(special.tagged)
     Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
@@ -1899,74 +1943,7 @@ function push_dummy!(
     special
 end
 
-### from_iter ############################################################
 
-function from_iter!(layout::PrimitiveArray{ITEM}, input) where {ITEM}
-    INPUT = eltype(input)
-    if INPUT <: Number
-        for item in input
-            push!(layout, ITEM(item))
-        end
-    else
-        error("cannot fill $(typeof(layout)) with $(INPUT)")
-    end
-end
 
-function from_iter!(layout::EmptyArray, input)
-    for x in input
-        error("attempting to fill $(typeof(layout)) with data")
-    end
-end
-
-function from_iter!(layout::ListType, input)
-    INPUT = eltype(input)
-    if INPUT <: String && typeof(layout).parameters[end] == :string
-        for string in input
-            append!(layout.content.data, Vector{UInt8}(string))
-            end_list!(layout)
-        end
-    elseif INPUT <: AbstractVector
-        for item in input
-            from_iter!(layout.content, item)
-            end_list!(layout)
-        end
-    else
-        error("cannot fill $(typeof(layout)) with $(INPUT)")
-    end
-end
-
-function from_iter!(layout::RecordArray, input)
-    INPUT = eltype(input)
-    if INPUT <: NamedTuple && typeof(layout.contents).parameters[1] == INPUT.parameters[1]
-        for item in input
-            for field in INPUT.parameters[1]
-                from_iter!(layout.contents[field], [item[field]])
-            end
-            end_record!(layout)
-        end
-    else
-        error(
-            "cannot fill RecordArray with fields $(typeof(layout.contents).parameters[1]) with NamedTuples with keys $(INPUT.parameters[1])",
-        )
-    end
-end
-
-function from_iter!(layout::TupleArray, input)
-    INPUT = eltype(input)
-    if INPUT <: Base.Tuple &&
-       length(typeof(layout.contents).parameters) == length(INPUT.parameters)
-        for item in input
-            adjustment = firstindex(layout.contents) - firstindex(item)
-            for index in eachindex(layout.contents)
-                from_iter!(layout.contents[index], [item[index-adjustment]])
-            end
-            end_tuple!(layout)
-        end
-    else
-        error(
-            "cannot fill TupleArray of length $(length(typeof(layout.contents).parameters)) with Tuples of length $(length(INPUT.parameters))",
-        )
-    end
-end
 
 end  # module AwkwardArray
