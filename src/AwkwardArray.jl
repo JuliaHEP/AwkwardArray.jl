@@ -194,11 +194,21 @@ Base.getindex(layout::PrimitiveArray, i::Int) = layout.data[i]
 Base.getindex(layout::PrimitiveArray, r::UnitRange{Int}) =
     copy(layout, data = layout.data[r])
 
-Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray) = layout1.data == layout2.data  # override for performance
+function Base.:(==)(layout1::PrimitiveArray, layout2::PrimitiveArray)
+    if length(layout1) == 0 && length(layout2) == 0
+        true
+    else
+        layout1.data == layout2.data
+    end
+end
 
 function push!(layout::PrimitiveArray{ITEM}, x::ITEM) where {ITEM}
     Base.push!(layout.data, x)
     layout
+end
+
+function push_dummy!(layout::PrimitiveArray{ITEM}) where {ITEM}
+    push!(layout, zero(ITEM))
 end
 
 ### EmptyArray ###########################################################
@@ -309,6 +319,10 @@ function end_list!(layout::ListOffsetArray)
     layout
 end
 
+function push_dummy!(layout::ListOffsetArray)
+    end_list!(layout)
+end
+
 ### ListArray ############################################################
 
 struct ListArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
@@ -406,6 +420,10 @@ function end_list!(layout::ListArray)
     Base.push!(layout.stops, length(layout.content))
 end
 
+function push_dummy!(layout::ListArray)
+    end_list!(layout)
+end
+
 ### RegularArray #########################################################
 
 mutable struct RegularArray{CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
@@ -426,12 +444,24 @@ mutable struct RegularArray{CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
     end, parameters)
 end
 
+RegularArray{CONTENT}(
+    size::Int64;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {CONTENT<:Content} = RegularArray(
+    CONTENT(),
+    size,
+    zeros_length = 0,
+    parameters = parameters,
+    behavior = behavior,
+)
+
 RegularArray{CONTENT}(;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
 ) where {CONTENT<:Content} = RegularArray(
     CONTENT(),
-    0,
+    -1,
     zeros_length = 0,
     parameters = parameters,
     behavior = behavior,
@@ -481,21 +511,23 @@ Base.firstindex(layout::RegularArray) = 1
 Base.lastindex(layout::RegularArray) = length(layout)
 
 function Base.getindex(layout::RegularArray, i::Int)
-    start = (i - firstindex(layout)) * layout.size + firstindex(layout.content)
-    stop = (i + 1 - firstindex(layout)) * layout.size + firstindex(layout.content) - 1
+    size = max(0, layout.size)
+    start = (i - firstindex(layout)) * size + firstindex(layout.content)
+    stop = (i + 1 - firstindex(layout)) * size + firstindex(layout.content) - 1
     layout.content[start:stop]
 end
 
 function Base.getindex(layout::RegularArray, r::UnitRange{Int})
-    start = (r.start - firstindex(layout)) * layout.size + firstindex(layout.content)
-    stop = (r.stop - 1 - firstindex(layout)) * layout.size + firstindex(layout.content) + 1
+    size = max(0, layout.size)
+    start = (r.start - firstindex(layout)) * size + firstindex(layout.content)
+    stop = (r.stop - 1 - firstindex(layout)) * size + firstindex(layout.content) + 1
     copy(layout, content = layout.content[start:stop], zeros_length = r.stop - r.start + 1)
 end
 
 Base.getindex(layout::RegularArray, f::Symbol) = copy(layout, content = layout.content[f])
 
 function end_list!(layout::RegularArray)
-    if layout.length == 0
+    if layout.size < 0 && layout.length == 0
         layout.size = length(layout.content)
         layout.length = 1
     elseif length(layout.content) == (layout.length + 1) * layout.size
@@ -505,6 +537,13 @@ function end_list!(layout::RegularArray)
             "RegularArray list lengths changed: from $layout.size to $(div(length(layout.content), (layout.length + 1)))",
         )
     end
+end
+
+function push_dummy!(layout::RegularArray)
+    for _ = 1:max(0, layout.size)
+        push_dummy!(layout.content)
+    end
+    end_list!(layout)
 end
 
 ### ListType with behavior = :string #####################################
@@ -699,16 +738,21 @@ function Base.getindex(layout::RecordArray, f::Symbol)
     content[firstindex(content):firstindex(content)+length(layout)-1]
 end
 
+slot(layout::RecordArray, f::Symbol) = layout[f]   # synonym; necessary for TupleArray
+
 Base.getindex(layout::Record, f::Symbol) = layout.array.contents[f][layout.at]
 
 function Base.:(==)(
-    layout1::RecordArray{CONTENTS},
-    layout2::RecordArray{CONTENTS},
-) where {CONTENTS<:NamedTuple}
+    layout1::RecordArray{CONTENTS1},
+    layout2::RecordArray{CONTENTS2},
+) where {CONTENTS1<:NamedTuple,CONTENTS2<:NamedTuple}
     if length(layout1) != length(layout2)
         return false
     end
-    for k in keys(layout1.contents)   # same keys because same CONTENTS type
+    if keys(layout1) != keys(layout2)
+        return false
+    end
+    for k in keys(layout1.contents)
         if layout1[k] != layout2[k]   # compare whole arrays
             return false
         end
@@ -717,11 +761,19 @@ function Base.:(==)(
 end
 
 function Base.:(==)(
-    layout1::Record{ARRAY},
-    layout2::Record{ARRAY},
-) where {CONTENTS<:NamedTuple,ARRAY<:RecordArray{CONTENTS}}
-    for k in keys(layout1.array.contents)   # same keys because same CONTENTS type
-        if layout1[k] != layout2[k]         # compare record items
+    layout1::Record{ARRAY1},
+    layout2::Record{ARRAY2},
+) where {
+    CONTENTS1<:NamedTuple,
+    CONTENTS2<:NamedTuple,
+    ARRAY1<:RecordArray{CONTENTS1},
+    ARRAY2<:RecordArray{CONTENTS2},
+}
+    if keys(layout1.array.contents) != keys(layout2.array.contents)
+        return false
+    end
+    for k in keys(layout1.array.contents)
+        if layout1[k] != layout2[k]   # compare record items
             return false
         end
     end
@@ -732,6 +784,13 @@ function end_record!(layout::RecordArray)
     layout.length += 1
     @assert all(length(x) >= layout.length for x in layout.contents)
     layout
+end
+
+function push_dummy!(layout::RecordArray)
+    for x in layout.contents
+        push_dummy!(x)
+    end
+    end_record!(layout)
 end
 
 ### TupleArray ###########################################################
@@ -831,10 +890,13 @@ end
 Base.getindex(layout::Tuple, f::Int64) = layout.array.contents[f][layout.at]
 
 function Base.:(==)(
-    layout1::TupleArray{CONTENTS},
-    layout2::TupleArray{CONTENTS},
-) where {CONTENTS<:Base.Tuple}
+    layout1::TupleArray{CONTENTS1},
+    layout2::TupleArray{CONTENTS2},
+) where {CONTENTS1<:Base.Tuple,CONTENTS2<:Base.Tuple}
     if length(layout1) != length(layout2)
+        return false
+    end
+    if length(layout1.contents) != length(layout2.contents)
         return false
     end
     for i in eachindex(layout1.contents)         # same indexes because same CONTENTS type
@@ -846,9 +908,17 @@ function Base.:(==)(
 end
 
 function Base.:(==)(
-    layout1::Tuple{ARRAY},
-    layout2::Tuple{ARRAY},
-) where {CONTENTS<:Base.Tuple,ARRAY<:TupleArray{CONTENTS}}
+    layout1::Tuple{ARRAY1},
+    layout2::Tuple{ARRAY2},
+) where {
+    CONTENTS1<:Base.Tuple,
+    CONTENTS2<:Base.Tuple,
+    ARRAY1<:TupleArray{CONTENTS1},
+    ARRAY2<:TupleArray{CONTENTS2},
+}
+    if length(layout1.array.contents) != length(layout2.array.contents)
+        return false
+    end
     for i in eachindex(layout1.array.contents)   # same indexes because same CONTENTS type
         if layout1[i] != layout2[i]              # compare tuple items
             return false
@@ -861,6 +931,13 @@ function end_tuple!(layout::TupleArray)
     layout.length += 1
     @assert all(length(x) >= layout.length for x in layout.contents)
     layout
+end
+
+function push_dummy!(layout::TupleArray)
+    for x in layout.contents
+        push_dummy!(x)
+    end
+    end_tuple!(layout)
 end
 
 ### IndexedArray #########################################################
@@ -937,9 +1014,7 @@ function push!(
     layout
 end
 
-function end_list!(
-    layout::IndexedArray{INDEX,CONTENT},
-) where {INDEX<:IndexBig,CONTENT<:ListType}
+function end_list!(layout::IndexedArray)
     tmp = length(layout.content)
     end_list!(layout.content)
     Base.push!(layout.index, tmp)
@@ -956,6 +1031,13 @@ end
 function end_tuple!(layout::IndexedArray)
     tmp = length(layout.content)
     end_tuple!(layout.content)
+    Base.push!(layout.index, tmp)
+    layout
+end
+
+function push_dummy!(layout::IndexedArray)
+    tmp = length(layout.content)
+    push_dummy!(layout.content)
     Base.push!(layout.index, tmp)
     layout
 end
@@ -1066,6 +1148,10 @@ end
 function push_null!(layout::IndexedOptionArray)
     Base.push!(layout.index, -1)
     layout
+end
+
+function push_dummy!(layout::IndexedOptionArray)
+    push_null!(layout)
 end
 
 ### ByteMaskedArray ######################################################
@@ -1188,36 +1274,14 @@ function end_tuple!(layout::ByteMaskedArray)
     layout
 end
 
-function push_null!(
-    layout::ByteMaskedArray{INDEX,CONTENT},
-) where {INDEX<:IndexBool,ITEM,CONTENT<:PrimitiveArray{ITEM}}
-    push!(layout.content, zero(ITEM))
+function push_null!(layout::ByteMaskedArray)
+    push_dummy!(layout.content)
     Base.push!(layout.mask, !layout.valid_when)
     layout
 end
 
-function push_null!(
-    layout::ByteMaskedArray{INDEX,CONTENT},
-) where {INDEX<:IndexBool,CONTENT<:ListType}
-    end_list!(layout.content)
-    Base.push!(layout.mask, !layout.valid_when)
-    layout
-end
-
-function push_null!(
-    layout::ByteMaskedArray{INDEX,CONTENT},
-) where {INDEX<:IndexBool,CONTENT<:RecordArray}
-    end_record!(layout.content)
-    Base.push!(layout.mask, !layout.valid_when)
-    layout
-end
-
-function push_null!(
-    layout::ByteMaskedArray{INDEX,CONTENT},
-) where {INDEX<:IndexBool,CONTENT<:TupleArray}
-    end_tuple!(layout.content)
-    Base.push!(layout.mask, !layout.valid_when)
-    layout
+function push_dummy!(layout::ByteMaskedArray)
+    push_null!(layout)
 end
 
 ### BitMaskedArray #######################################################
@@ -1341,30 +1405,14 @@ function end_tuple!(layout::BitMaskedArray)
     layout
 end
 
-function push_null!(
-    layout::BitMaskedArray{CONTENT},
-) where {ITEM,CONTENT<:PrimitiveArray{ITEM}}
-    push!(layout.content, zero(ITEM))
+function push_null!(layout::BitMaskedArray)
+    push_dummy!(layout.content)
     Base.push!(layout.mask, !layout.valid_when)
     layout
 end
 
-function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:ListType}
-    end_list!(layout.content)
-    Base.push!(layout.mask, !layout.valid_when)
-    layout
-end
-
-function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:RecordArray}
-    end_record!(layout.content)
-    Base.push!(layout.mask, !layout.valid_when)
-    layout
-end
-
-function push_null!(layout::BitMaskedArray{CONTENT}) where {CONTENT<:TupleArray}
-    end_tuple!(layout.content)
-    Base.push!(layout.mask, !layout.valid_when)
-    layout
+function push_dummy!(layout::BitMaskedArray)
+    push_null!(layout)
 end
 
 ### UnmaskedArray ########################################################
@@ -1440,6 +1488,10 @@ end
 function end_tuple!(layout::UnmaskedArray)
     end_tuple!(layout.content)
     layout
+end
+
+function push_dummy!(layout::UnmaskedArray)
+    push_dummy!(layout.content)
 end
 
 ### UnionArray ###########################################################
@@ -1626,6 +1678,16 @@ function push_null!(
 ) where {ARRAY<:UnionArray,TAGGED<:OptionType}
     tmp = length(special.tagged)
     push_null!(special.tagged)
+    Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
+    Base.push!(special.array.index, tmp)
+    special
+end
+
+function push_dummy!(
+    special::Specialization{ARRAY,TAGGED},
+) where {ARRAY<:UnionArray,TAGGED<:Content}
+    tmp = length(special.tagged)
+    push_dummy!(special.tagged)
     Base.push!(special.array.tags, special.tag - firstindex(special.array.contents))
     Base.push!(special.array.index, tmp)
     special
