@@ -922,6 +922,7 @@ using Test
                 AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
                 AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
             )),
+            5,
         )
         @test AwkwardArray.is_valid(layout)
         @test length(layout) == 5
@@ -1113,14 +1114,12 @@ using Test
 
     begin
         layout = AwkwardArray.RecordArray{
-            NamedTuple{
-                (:a, :b),
-                Tuple{
-                    AwkwardArray.PrimitiveArray{Int64},
-                    AwkwardArray.ListOffsetArray{
-                        AwkwardArray.Index64,
-                        AwkwardArray.PrimitiveArray{Float64},
-                    },
+            (:a, :b),
+            Tuple{
+                AwkwardArray.PrimitiveArray{Int64},
+                AwkwardArray.ListOffsetArray{
+                    AwkwardArray.Index64,
+                    AwkwardArray.PrimitiveArray{Float64},
                 },
             },
         }()
@@ -1164,14 +1163,12 @@ using Test
 
     begin
         layout = AwkwardArray.RecordArray{
-            NamedTuple{
-                (:a, :b),
-                Tuple{
-                    AwkwardArray.PrimitiveArray{Int64},
-                    AwkwardArray.ListOffsetArray{
-                        AwkwardArray.Index64,
-                        AwkwardArray.PrimitiveArray{Float64},
-                    },
+            (:a, :b),
+            Tuple{
+                AwkwardArray.PrimitiveArray{Int64},
+                AwkwardArray.ListOffsetArray{
+                    AwkwardArray.Index64,
+                    AwkwardArray.PrimitiveArray{Float64},
                 },
             },
         }()
@@ -1577,14 +1574,12 @@ using Test
         layout = AwkwardArray.IndexedArray{
             AwkwardArray.Index64,
             AwkwardArray.RecordArray{
-                NamedTuple{
-                    (:a, :b),
-                    Tuple{
-                        AwkwardArray.PrimitiveArray{Int64},
-                        AwkwardArray.ListOffsetArray{
-                            AwkwardArray.Index64,
-                            AwkwardArray.PrimitiveArray{Float64},
-                        },
+                (:a, :b),
+                Tuple{
+                    AwkwardArray.PrimitiveArray{Int64},
+                    AwkwardArray.ListOffsetArray{
+                        AwkwardArray.Index64,
+                        AwkwardArray.PrimitiveArray{Float64},
                     },
                 },
             },
@@ -1673,14 +1668,12 @@ using Test
         layout = AwkwardArray.IndexedOptionArray{
             AwkwardArray.Index64,
             AwkwardArray.RecordArray{
-                NamedTuple{
-                    (:a, :b),
-                    Tuple{
-                        AwkwardArray.PrimitiveArray{Int64},
-                        AwkwardArray.ListOffsetArray{
-                            AwkwardArray.Index64,
-                            AwkwardArray.PrimitiveArray{Float64},
-                        },
+                (:a, :b),
+                Tuple{
+                    AwkwardArray.PrimitiveArray{Int64},
+                    AwkwardArray.ListOffsetArray{
+                        AwkwardArray.Index64,
+                        AwkwardArray.PrimitiveArray{Float64},
                     },
                 },
             },
