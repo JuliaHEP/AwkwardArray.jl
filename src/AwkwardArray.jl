@@ -199,7 +199,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     PrimitiveArray(data, parameters = parameters, behavior = behavior)
 end
@@ -311,7 +311,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     ListOffsetArray(offsets, content, parameters = parameters, behavior = behavior)
 end
@@ -405,7 +405,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     ListArray(starts, stops, content, parameters = parameters, behavior = behavior)
 end
@@ -536,7 +536,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     RegularArray(
         content,
@@ -722,48 +722,29 @@ function Base.getindex(
     layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
     i::Int,
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
-    String(
-        getindex(
-            copy(
-                layout,
-                content = copy(layout.content, behavior = :default),
-                behavior = :default,
-            ),
-            i,
-        ).data,
-    )
+    start = layout.offsets[i] + firstindex(layout.content)
+    stop = layout.offsets[i+1] + firstindex(layout.content) - 1
+    String(layout.content[start:stop].data)
 end
 
 function Base.getindex(
     layout::ListArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
     i::Int,
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
-    String(
-        getindex(
-            copy(
-                layout,
-                content = copy(layout.content, behavior = :default),
-                behavior = :default,
-            ),
-            i,
-        ).data,
-    )
+    adjustment = firstindex(layout.starts) - firstindex(layout.stops)
+    start = layout.starts[i] + firstindex(layout.content)
+    stop = layout.stops[i-adjustment] - layout.starts[i] + start - 1
+    String(layout.content[start:stop].data)
 end
 
 function Base.getindex(
     layout::RegularArray{PrimitiveArray{UInt8,BUFFER,:char},:string},
     i::Int,
 ) where {BUFFER<:AbstractVector{UInt8}}
-    String(
-        getindex(
-            copy(
-                layout,
-                content = copy(layout.content, behavior = :default),
-                behavior = :default,
-            ),
-            i,
-        ).data,
-    )
+    size = max(0, layout.size)
+    start = (i - firstindex(layout)) * size + firstindex(layout.content)
+    stop = (i + 1 - firstindex(layout)) * size + firstindex(layout.content) - 1
+    String(layout.content[start:stop].data)
 end
 
 function Base.push!(layout::ListType{BEHAVIOR}, input::String) where {BEHAVIOR}
@@ -970,7 +951,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     RecordArray(contents, length, parameters = parameters, behavior = behavior)
 end
@@ -993,11 +974,12 @@ Base.lastindex(layout::RecordArray) = layout.length
 
 Base.getindex(layout::RecordArray, i::Int) = Record(layout, i)
 
-Base.getindex(layout::RecordArray, r::UnitRange{Int}) = copy(
+Base.getindex(
+    layout::RecordArray{CONTENTS,BEHAVIOR},
+    r::UnitRange{Int},
+) where {KEYS,VALUES,CONTENTS<:NamedTuple{KEYS,VALUES},BEHAVIOR} = copy(
     layout,
-    contents = NamedTuple{keys(layout.contents)}(
-        Pair(k, v[r]) for (k, v) in pairs(layout.contents)
-    ),
+    contents = NamedTuple{KEYS,VALUES}(Base.Tuple(x[r] for x in layout.contents)),
     length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
 )
 
@@ -1134,7 +1116,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     TupleArray(contents, length, parameters = parameters, behavior = behavior)
 end
@@ -1157,9 +1139,12 @@ Base.lastindex(layout::TupleArray) = layout.length
 
 Base.getindex(layout::TupleArray, i::Int) = Tuple(layout, i)
 
-Base.getindex(layout::TupleArray, r::UnitRange{Int}) = copy(
+Base.getindex(
+    layout::TupleArray{CONTENTS,BEHAVIOR},
+    r::UnitRange{Int},
+) where {VALUES,CONTENTS<:Base.Tuple{VALUES},BEHAVIOR} = copy(
     layout,
-    contents = Base.Tuple(x[r] for x in layout.contents),
+    contents = Base.Tuple{VALUES}(x[r] for x in layout.contents),
     length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
 )
 
@@ -1273,7 +1258,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     IndexedArray(index, content, parameters = parameters, behavior = behavior)
 end
@@ -1385,7 +1370,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     IndexedOptionArray(index, content, parameters = parameters, behavior = behavior)
 end
@@ -1508,7 +1493,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     ByteMaskedArray(
         mask,
@@ -1641,7 +1626,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     BitMaskedArray(
         mask,
@@ -1752,7 +1737,7 @@ function copy(
         parameters = parameters_of(layout)
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     UnmaskedArray(content, parameters = parameters, behavior = behavior)
 end
@@ -1854,8 +1839,8 @@ function copy(
     TAGS2<:Index8,
     INDEX1<:IndexBig,
     INDEX2<:IndexBig,
-    CONTENTS1<:Content,
-    CONTENTS2<:Content,
+    CONTENTS1<:Base.Tuple,
+    CONTENTS2<:Base.Tuple,
     BEHAVIOR,
 }
     if isa(tags, Unset)
@@ -1871,7 +1856,7 @@ function copy(
         parameters = layout.parameters
     end
     if isa(behavior, Unset)
-        behavior = typeof(layout).parameters[end]
+        behavior = BEHAVIOR
     end
     UnionArray(tags, index, contents, parameters = parameters, behavior = behavior)
 end
