@@ -979,6 +979,9 @@ using Test
 
         @inferred layout[3]
         @inferred layout[1:3]
+        @inferred layout[:a][3]
+        @inferred layout[:b][3]
+        @inferred layout[:b][3][1]
     end
 
     begin
@@ -1262,6 +1265,9 @@ using Test
 
         @inferred layout[3]
         @inferred layout[1:3]
+        @inferred AwkwardArray.slot(layout, 1)[3]
+        @inferred AwkwardArray.slot(layout, 2)[3]
+        @inferred AwkwardArray.slot(layout, 2)[3][1]
     end
 
     begin
