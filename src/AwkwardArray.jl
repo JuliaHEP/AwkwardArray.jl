@@ -1063,7 +1063,7 @@ end
 
 ### TupleArray ###########################################################
 
-mutable struct TupleArray{CONTENTS<:Base.Tuple,BEHAVIOR} <: Content{BEHAVIOR}
+mutable struct TupleArray{CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} <: Content{BEHAVIOR}
     const contents::CONTENTS
     length::Int64
     const parameters::Parameters
@@ -1072,14 +1072,14 @@ mutable struct TupleArray{CONTENTS<:Base.Tuple,BEHAVIOR} <: Content{BEHAVIOR}
         length::Int64;
         parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
-    ) where {CONTENTS<:Base.Tuple} = new{CONTENTS,behavior}(contents, length, parameters)
+    ) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = new{CONTENTS,behavior}(contents, length, parameters)
 end
 
 TupleArray(
     contents::CONTENTS;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {CONTENTS<:Base.Tuple} = TupleArray(
+) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = TupleArray(
     contents,
     minimum(if length(contents) == 0
         0
@@ -1093,8 +1093,8 @@ TupleArray(
 TupleArray{CONTENTS}(;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {CONTENTS<:Base.Tuple} = TupleArray(
-    Base.Tuple(x() for x in CONTENTS.parameters),
+) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = TupleArray(
+    Base.Tuple{Vararg{Content}}(x() for x in CONTENTS.parameters),
     parameters = parameters,
     behavior = behavior,
 )
@@ -1110,7 +1110,7 @@ function copy(
     length::Union{Unset,Int64} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {CONTENTS1<:Base.Tuple,CONTENTS2<:Base.Tuple,BEHAVIOR}
+) where {CONTENTS1<:Base.Tuple{Vararg{Content}},CONTENTS2<:Base.Tuple{Vararg{Content}},BEHAVIOR}
     if isa(contents, Unset)
         contents = layout.contents
     end
@@ -1147,7 +1147,7 @@ Base.getindex(layout::TupleArray, i::Int) = Tuple(layout, i)
 Base.getindex(
     layout::TupleArray{CONTENTS,BEHAVIOR},
     r::UnitRange{Int},
-) where {VALUES,CONTENTS<:Base.Tuple{VALUES},BEHAVIOR} = copy(
+) where {VALUES<:Content,CONTENTS<:Base.Tuple{VALUES},BEHAVIOR} = copy(
     layout,
     contents = Base.Tuple{VALUES}(x[r] for x in layout.contents),
     length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
@@ -1155,7 +1155,7 @@ Base.getindex(
 
 function slot(
     layout::TupleArray{CONTENTS,BEHAVIOR}, f::Int
-) where {CONTENTS<:Base.Tuple,BEHAVIOR}
+) where {CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR}
     content = layout.contents[f]
     content[firstindex(content):firstindex(content)+length(layout)-1]
 end
@@ -1165,7 +1165,7 @@ Base.getindex(layout::Tuple, f::Int64) = layout.array.contents[f][layout.at]
 function Base.:(==)(
     layout1::TupleArray{CONTENTS1},
     layout2::TupleArray{CONTENTS2},
-) where {CONTENTS1<:Base.Tuple,CONTENTS2<:Base.Tuple}
+) where {CONTENTS1<:Base.Tuple{Vararg{Content}},CONTENTS2<:Base.Tuple{Vararg{Content}}}
     if length(layout1) != length(layout2)
         return false
     end
@@ -1184,8 +1184,8 @@ function Base.:(==)(
     layout1::Tuple{ARRAY1},
     layout2::Tuple{ARRAY2},
 ) where {
-    CONTENTS1<:Base.Tuple,
-    CONTENTS2<:Base.Tuple,
+    CONTENTS1<:Base.Tuple{Vararg{Content}},
+    CONTENTS2<:Base.Tuple{Vararg{Content}},
     ARRAY1<:TupleArray{CONTENTS1},
     ARRAY2<:TupleArray{CONTENTS2},
 }
