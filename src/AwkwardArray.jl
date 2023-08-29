@@ -169,6 +169,17 @@ struct PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} <: LeafType{BE
         new{ITEM,BUFFER,behavior}(data, parameters)
 end
 
+PrimitiveArray{ITEM,BUFFER,BEHAVIOR}(;
+    parameters::Parameters = Parameters(),
+) where {ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} =
+    PrimitiveArray(BUFFER([]), parameters = parameters, behavior = BEHAVIOR)
+
+PrimitiveArray{ITEM,BUFFER}(;
+    parameters::Parameters = Parameters(),
+    behavior::Symbol = :default,
+) where {ITEM,BUFFER<:AbstractVector{ITEM}} =
+    PrimitiveArray(BUFFER([]), parameters = parameters, behavior = behavior)
+
 PrimitiveArray{ITEM}(;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
@@ -272,6 +283,11 @@ struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: ListType{BE
         new{INDEX,CONTENT,behavior}(offsets, content, parameters)
 end
 
+ListOffsetArray{INDEX,CONTENT,BEHAVIOR}(;
+    parameters::Parameters = Parameters(),
+) where {INDEX<:IndexBig} where {CONTENT<:Content} where {BEHAVIOR} =
+    ListOffsetArray(INDEX([0]), CONTENT(), parameters = parameters, behavior = BEHAVIOR)
+
 ListOffsetArray{INDEX,CONTENT}(;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
@@ -356,6 +372,11 @@ struct ListArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR
     ) where {INDEX<:IndexBig,CONTENT<:Content} =
         new{INDEX,CONTENT,behavior}(starts, stops, content, parameters)
 end
+
+ListArray{INDEX,CONTENT,BEHAVIOR}(;
+    parameters::Parameters = Parameters(),
+) where {INDEX<:IndexBig} where {CONTENT<:Content} where {BEHAVIOR} =
+    ListArray(INDEX([]), INDEX([]), CONTENT(), parameters = parameters, behavior = BEHAVIOR)
 
 ListArray{INDEX,CONTENT}(;
     parameters::Parameters = Parameters(),
@@ -471,6 +492,16 @@ RegularArray{CONTENT}(
     zeros_length = 0,
     parameters = parameters,
     behavior = behavior,
+)
+
+RegularArray{CONTENT,BEHAVIOR}(;
+    parameters::Parameters = Parameters(),
+) where {CONTENT<:Content,BEHAVIOR} = RegularArray(
+    CONTENT(),
+    -1,
+    zeros_length = 0,
+    parameters = parameters,
+    behavior = BEHAVIOR,
 )
 
 RegularArray{CONTENT}(;
@@ -1971,14 +2002,14 @@ function layout_for(ItemType)
         PrimitiveArray{ItemType}
 
     elseif ItemType <: String
-        ListOffsetArray{Index64,PrimitiveArray{UInt8,Vector{UInt8},:char},:string}
+        ListOffsetArray{Vector{Int64},PrimitiveArray{UInt8,Vector{UInt8},:char},:string}
 
     elseif ItemType <: AbstractVector
-        ListOffsetArray{Index64,layout_for(eltype(ItemType))}
+        ListOffsetArray{Vector{Int64},layout_for(eltype(ItemType))}
 
     elseif ItemType <: AbstractArray
         out = layout_for(eltype(ItemType))
-        for _ in 1:ndims(ItemType)
+        for _ = 1:ndims(ItemType)
             out = RegularArray{out}
         end
         out
@@ -1994,10 +2025,10 @@ function layout_for(ItemType)
     elseif Missing <: ItemType
         OtherTypes = [x for x in Base.uniontypes(ItemType) if x != Missing]
         if length(OtherTypes) == 0
-            IndexedOptionArray{Index64,EmptyArray}
+            IndexedOptionArray{Vector{Int64},EmptyArray}
         else
             if OtherTypes[begin] <: NamedTuple || OtherTypes[begin] <: Base.Tuple
-                out = IndexedOptionArray{Index64,layout_for(OtherTypes[begin])}
+                out = IndexedOptionArray{Vector{Int64},layout_for(OtherTypes[begin])}
             else
                 out = ByteMaskedArray{Index8,layout_for(OtherTypes[begin])}
             end
@@ -2006,10 +2037,10 @@ function layout_for(ItemType)
                 out
             else
                 contents = [out]
-                for i in (firstindex(OtherTypes) + 1):(lastindex(OtherTypes))
+                for i = (firstindex(OtherTypes)+1):(lastindex(OtherTypes))
                     push!(contents, UnmaskedArray{layout_for(OtherTypes[i])})
                 end
-                UnionArray{Index8,Index64,Base.Tuple{contents...}}
+                UnionArray{Index8,Vector{Int64},Base.Tuple{contents...}}
             end
         end
 
@@ -2017,13 +2048,21 @@ function layout_for(ItemType)
         OtherTypes = Base.uniontypes(ItemType)
         if length(OtherTypes) > 1
             contents = [layout_for(x) for x in OtherTypes]
-            UnionArray{Index8,Index64,Base.Tuple{contents...}}
+            UnionArray{Index8,Vector{Int64},Base.Tuple{contents...}}
         else
             error("cannot produce an AwkwardArray layout for $ItemType")
         end
     end
 end
 
-
+function from_iter(input)
+    ItemType = eltype(input)
+    AwkwardType = layout_for(ItemType)
+    out = AwkwardType()
+    for item in input
+        push!(out, item)
+    end
+    out
+end
 
 end  # module AwkwardArray
