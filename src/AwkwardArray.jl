@@ -983,12 +983,17 @@ Base.getindex(
     length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
 )
 
-function Base.getindex(layout::RecordArray, f::Symbol)
+function Base.getindex(
+    layout::RecordArray{CONTENTS,BEHAVIOR}, f::Symbol
+) where {KEYS,VALUES,CONTENTS<:NamedTuple{KEYS,VALUES},BEHAVIOR}
     content = layout.contents[f]
     content[firstindex(content):firstindex(content)+length(layout)-1]
 end
 
-slot(layout::RecordArray, f::Symbol) = layout[f]   # synonym; necessary for TupleArray
+# synonym; necessary for TupleArray
+slot(
+    layout::RecordArray{CONTENTS,BEHAVIOR}, f::Symbol
+) where {KEYS,VALUES,CONTENTS<:NamedTuple{KEYS,VALUES},BEHAVIOR} = layout[f]
 
 Base.getindex(layout::Record, f::Symbol) = layout.array.contents[f][layout.at]
 
@@ -1148,7 +1153,9 @@ Base.getindex(
     length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
 )
 
-function slot(layout::TupleArray, f::Int)
+function slot(
+    layout::TupleArray{CONTENTS,BEHAVIOR}, f::Int
+) where {CONTENTS<:Base.Tuple,BEHAVIOR}
     content = layout.contents[f]
     content[firstindex(content):firstindex(content)+length(layout)-1]
 end
