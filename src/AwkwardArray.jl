@@ -1964,6 +1964,66 @@ function Base.push!(layout::UnionArray, input)
     end
 end
 
+### from_iter ############################################################
+
+function layout_for(ItemType)
+    if ItemType <: Number   # || ItemType <: Dates.DateTime || ItemType <: Dates.TimePeriod
+        PrimitiveArray{ItemType}
+
+    elseif ItemType <: String
+        ListOffsetArray{Index64,PrimitiveArray{UInt8,Vector{UInt8},:char},:string}
+
+    elseif ItemType <: AbstractVector
+        ListOffsetArray{Index64,layout_for(eltype(ItemType))}
+
+    elseif ItemType <: AbstractArray
+        out = layout_for(eltype(ItemType))
+        for _ in 1:ndims(ItemType)
+            out = RegularArray{out}
+        end
+        out
+
+    elseif ItemType <: NamedTuple
+        contents = [layout_for(x) for x in ItemType.parameters[2].parameters]
+        RecordArray{NamedTuple{ItemType.parameters[1],Base.Tuple{contents...}}}
+
+    elseif ItemType <: Base.Tuple
+        contents = [layout_for(x) for x in ItemType.parameters]
+        TupleArray{Base.Tuple{contents...}}
+
+    elseif Missing <: ItemType
+        OtherTypes = [x for x in Base.uniontypes(ItemType) if x != Missing]
+        if length(OtherTypes) == 0
+            IndexedOptionArray{Index64,EmptyArray}
+        else
+            if OtherTypes[begin] <: NamedTuple || OtherTypes[begin] <: Base.Tuple
+                out = IndexedOptionArray{Index64,layout_for(OtherTypes[begin])}
+            else
+                out = ByteMaskedArray{Index8,layout_for(OtherTypes[begin])}
+            end
+
+            if length(OtherTypes) == 1
+                out
+            else
+                contents = [out]
+                for i in (firstindex(OtherTypes) + 1):(lastindex(OtherTypes))
+                    push!(contents, UnmaskedArray{layout_for(OtherTypes[i])})
+                end
+                UnionArray{Index8,Index64,Base.Tuple{contents...}}
+            end
+        end
+
+    else
+        OtherTypes = Base.uniontypes(ItemType)
+        if length(OtherTypes) > 1
+            contents = [layout_for(x) for x in OtherTypes]
+            UnionArray{Index8,Index64,Base.Tuple{contents...}}
+        else
+            error("cannot produce an AwkwardArray layout for $ItemType")
+        end
+    end
+end
+
 
 
 end  # module AwkwardArray
