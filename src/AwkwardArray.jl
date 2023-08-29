@@ -1176,14 +1176,15 @@ Base.getindex(layout::Tuple, f::Int64) = layout.array.contents[f][layout.at]
 function Base.:(==)(
     layout1::TupleArray{CONTENTS1},
     layout2::TupleArray{CONTENTS2},
-) where {CONTENTS1<:Base.Tuple{Vararg{Content}},CONTENTS2<:Base.Tuple{Vararg{Content}}}
+) where {
+    N,
+    CONTENTS1<:Base.Tuple{Vararg{Content,N}},
+    CONTENTS2<:Base.Tuple{Vararg{Content,N}},
+}
     if length(layout1) != length(layout2)
         return false
     end
-    if length(layout1.contents) != length(layout2.contents)
-        return false
-    end
-    for i in eachindex(layout1.contents)         # same indexes because same CONTENTS type
+    for i in eachindex(layout1.contents)         # same number of indexes by type constraint
         if slot(layout1, i) != slot(layout2, i)  # compare whole arrays
             return false
         end
@@ -1195,15 +1196,13 @@ function Base.:(==)(
     layout1::Tuple{ARRAY1},
     layout2::Tuple{ARRAY2},
 ) where {
-    CONTENTS1<:Base.Tuple{Vararg{Content}},
-    CONTENTS2<:Base.Tuple{Vararg{Content}},
+    N,
+    CONTENTS1<:Base.Tuple{Vararg{Content,N}},
+    CONTENTS2<:Base.Tuple{Vararg{Content,N}},
     ARRAY1<:TupleArray{CONTENTS1},
     ARRAY2<:TupleArray{CONTENTS2},
 }
-    if length(layout1.array.contents) != length(layout2.array.contents)
-        return false
-    end
-    for i in eachindex(layout1.array.contents)   # same indexes because same CONTENTS type
+    for i in eachindex(layout1.array.contents)   # same number of indexes by type constraint
         if layout1[i] != layout2[i]              # compare tuple items
             return false
         end
@@ -1211,18 +1210,15 @@ function Base.:(==)(
     return true
 end
 
-function Base.push!(layout::TupleArray, input::Base.Tuple)
-    if length(typeof(layout.contents).parameters) == length(typeof(input).parameters)
-        adjustment = firstindex(layout.contents) - firstindex(input)
-        for index in eachindex(layout.contents)
-            push!(layout.contents[index], input[index-adjustment])
-        end
-        end_tuple!(layout)
-    else
-        error(
-            "cannot fill TupleArray of $(length(typeof(layout.contents).parameters)) slots with a Tuple of $(length(typeof(input).parameters)) slots",
-        )
+function Base.push!(
+    layout::TupleArray{CONTENTS},
+    input::INPUT,
+) where {N,CONTENTS<:Base.Tuple{Vararg{Content,N}},INPUT<:Base.Tuple{Vararg{Any,N}}}
+    adjustment = firstindex(layout.contents) - firstindex(input)
+    for index in eachindex(layout.contents)      # same number of indexes by type constraint
+        push!(layout.contents[index], input[index-adjustment])
     end
+    end_tuple!(layout)
 end
 
 function end_tuple!(layout::TupleArray)
