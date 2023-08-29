@@ -2157,8 +2157,8 @@ using Test
         @test AwkwardArray.is_valid(layout)
         @test length(layout) == 0
 
-        special1 = AwkwardArray.specialization(layout, 1)
-        special2 = AwkwardArray.specialization(layout, 2)
+        special1 = AwkwardArray.Specialization(layout, 1)
+        special2 = AwkwardArray.Specialization(layout, 2)
         subspecial2 = special2.tagged.content
 
         push!(special1, 1.1)
@@ -2211,6 +2211,56 @@ using Test
         )
 
         @test AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.UnionArray{
+            AwkwardArray.Index8,
+            AwkwardArray.Index64,
+            Tuple{
+                AwkwardArray.PrimitiveArray{Float64},
+                AwkwardArray.ListOffsetArray{
+                    AwkwardArray.Index64,
+                    AwkwardArray.PrimitiveArray{Int64},
+                },
+            },
+        }()
+
+        push!(layout, 3.14)
+        @test layout == AwkwardArray.UnionArray(
+            Vector{Int8}([0]),
+            [0],
+            (
+                AwkwardArray.PrimitiveArray([3.14]),
+                AwkwardArray.ListOffsetArray([0], AwkwardArray.PrimitiveArray([])),
+            ),
+        )
+
+        push!(layout, [1, 2, 3])
+        @test layout == AwkwardArray.UnionArray(
+            Vector{Int8}([0, 1]),
+            [0, 0],
+            (
+                AwkwardArray.PrimitiveArray([3.14]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3],
+                    AwkwardArray.PrimitiveArray([1, 2, 3]),
+                ),
+            ),
+        )
+
+        append!(layout, Vector{Union{Float64,Vector{Int64}}}([2.71, [4, 5]]))
+        @test layout == AwkwardArray.UnionArray(
+            Vector{Int8}([0, 1, 0, 1]),
+            [0, 0, 1, 1],
+            (
+                AwkwardArray.PrimitiveArray([3.14, 2.71]),
+                AwkwardArray.ListOffsetArray(
+                    [0, 3, 5],
+                    AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                ),
+            ),
+        )
     end
 
 end   # @testset "AwkwardArray.jl"

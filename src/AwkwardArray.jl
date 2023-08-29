@@ -1803,10 +1803,13 @@ UnionArray{TAGS,INDEX,CONTENTS}(;
 )
 
 struct Specialization{ARRAY<:UnionArray,TAGGED<:Content}
-    tag::Int64
+    tag::Int8
     array::ARRAY
     tagged::TAGGED
 end
+
+Specialization(layout::UnionArray, tag::Int) =
+    Specialization(Int8(tag), layout, layout.contents[tag])
 
 function copy(
     layout::UnionArray{TAGS1,INDEX1,CONTENTS1,BEHAVIOR};
@@ -1890,14 +1893,18 @@ end
 Base.getindex(layout::UnionArray, f::Symbol) =
     copy(layout, contents = Base.Tuple(x[f] for x in layout.contents))
 
-specialization(layout::UnionArray, tag::Int64) =
-    Specialization(tag, layout, layout.contents[tag])
-
 function Base.push!(special::Specialization, input)
     tmp = length(special.tagged)
     push!(special.tagged, input)
     push!(special.array.tags, special.tag - firstindex(special.array.contents))
     push!(special.array.index, tmp)
+    special
+end
+
+function Base.append!(special::Specialization, input)
+    for item in input
+        push!(special, item)
+    end
     special
 end
 
@@ -1943,6 +1950,19 @@ function push_dummy!(special::Specialization)
     special
 end
 
+function Base.push!(layout::UnionArray, input)
+    for index in eachindex(layout.contents)
+        special = Specialization(layout, index)
+        if index == lastindex(layout.contents)
+            return push!(special, input)
+        else
+            try
+                return push!(special, input)
+            catch
+            end
+        end
+    end
+end
 
 
 
