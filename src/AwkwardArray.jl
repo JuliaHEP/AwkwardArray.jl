@@ -2331,7 +2331,18 @@ end
 
 ### show (pretty-print) ##################################################
 
-Base.show(io::IO, data::Union{Content,Record,Tuple}) = print(io, _vertical(data, 20, 80))
+Base.show(
+    io::IO,
+    data::Union{Content,Record,Tuple};
+    limit_rows::Int = 1,
+    limit_cols::Int = 80,
+) = print(io, _vertical(data, limit_rows, limit_cols))
+
+Base.show(
+    data::Union{Content,Record,Tuple};
+    limit_rows::Int = 1,
+    limit_cols::Int = 80,
+) = print(stdout, _vertical(data, limit_rows, limit_cols))
 
 function _alternate(range::AbstractRange{Int64})
     function generator(channel::Channel{Base.Tuple{Bool,Int64}})
@@ -2543,15 +2554,15 @@ function _horizontal(data::Any, limit_cols::Int)
         push!(front, ")")
         return (original_limit_cols - limit_cols, front)
 
-    ### You need a LIBRARY for this?!?
+        ### You need a LIBRARY for this?!?
 
-    # elseif isa(data, AbstractFloat)
-    #     out = @sprintf "%.3g" data
-    #     return (length(out), [out])
+        # elseif isa(data, AbstractFloat)
+        #     out = @sprintf "%.3g" data
+        #     return (length(out), [out])
 
-    # elseif isa(data, Complex)
-    #     out = @sprintf "%.3g + %.3gim" data data
-    #     return (length(out), [out])
+        # elseif isa(data, Complex)
+        #     out = @sprintf "%.3g + %.3gim" data data
+        #     return (length(out), [out])
 
     else
         out = repr(data)
@@ -2603,8 +2614,81 @@ function _vertical(data::Union{Content,Record,Tuple}, limit_rows::Int, limit_col
 
         return join(out, "\n")
 
-    else
-        return "blah"
+    elseif isa(data, Record)
+        front = Vector{String}([])  # 1-indexed
+
+        which = 0
+        fields = keys(data.array.contents)
+        for field in fields
+            key = Base.string(field)
+            if occursin(r"^[A-Za-z_][A-Za-z_0-9]*$", key)
+                key_str = key * ": "
+            else
+                key_str = repr(key) + ": "
+            end
+
+            (_, strs) = _horizontal(data[field], limit_cols - 2 - length(key_str))
+            push!(front, key_str * join(strs, ""))
+
+            which += 1
+            if which >= limit_rows
+                break
+            end
+        end
+
+        if !isempty(fields) && which != length(fields)
+            front[end] = "..."
+        end
+
+        out = front                 # 1-indexed
+        for (i, val) in enumerate(out)
+            if i > 1
+                val = out[i] = " " * val
+            else
+                val = out[i] = "{" * val
+            end
+            if i < length(out)
+                out[i] = val * ","
+            else
+                out[i] = val * "}"
+            end
+        end
+        return join(out, "\n")
+
+    elseif isa(data, Tuple)
+        front = Vector{String}([])  # 1-indexed
+
+        which = 0
+        fields = eachindex(data.array.contents)
+        for field in fields
+            (_, strs) = _horizontal(data[field], limit_cols - 2)
+            push!(front, join(strs, ""))
+
+            which += 1
+            if which >= limit_rows
+                break
+            end
+        end
+
+        if !isempty(fields) && which != length(fields)
+            front[end] = "..."
+        end
+
+        out = front                 # 1-indexed
+        for (i, val) in enumerate(out)
+            if i > 1
+                val = out[i] = " " * val
+            else
+                val = out[i] = "(" * val
+            end
+            if i < length(out)
+                out[i] = val * ","
+            else
+                out[i] = val * ")"
+            end
+        end
+        return join(out, "\n")
+
     end
 
 end
