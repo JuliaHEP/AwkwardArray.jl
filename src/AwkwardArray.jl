@@ -2329,5 +2329,152 @@ function to_vector(
     [contents[layout.tags[i]+one][layout.index[i-adj]+ones[layout.tags[i]+one]] for i in r]
 end
 
+### show (pretty-print) ##################################################
+
+Base.show(io::IO, data::Union{Content,Record,Tuple}) = print(io, _vertical(data, 20, 80))
+
+_half(integer::Int) = Int64(ceil(integer / 2))
+
+function _alternate(range::AbstractRange{Int64})
+    function generator(channel::Channel{Base.Tuple{Bool,Int64}})
+        now = 0.0
+        halfway = length(range) / 2.0
+        for (fore, back) in zip(range, reverse(range))
+            put!(channel, (true, fore))
+            if fore != back
+                put!(channel, (false, back))
+            end
+            now += 1.0
+            if now >= halfway
+                break
+            end
+        end
+    end
+    Channel{Base.Tuple{Bool,Int64}}(generator)
+end
+
+function _horizontal(data::Any, limit_cols::Int)
+    original_limit_cols = limit_cols
+
+    if isa(data, Content)
+        front = ["["]
+        back = ["]"]
+        limit_cols -= 2
+
+        if isempty(data)
+            return (2, vcat(front, back))
+
+        elseif length(data) == 1
+            (cols_taken, strs) = _horizontal(data[begin], limit_cols)
+            return (2 + cols_taken, vcat(front, strs, back))
+
+        else
+            limit_cols -= 5   # anticipate the ", ..."
+            which = 0
+            for (forward, index) in _alternate(eachindex(data))
+                current = data[index]
+
+                if forward
+                    if which == 0
+                        for_comma = 0
+                    else
+                        for_comma = 2
+                    end
+                    (cols_taken, strs) = _horizontal(current, limit_cols - for_comma)
+
+                    if limit_cols - (for_comma + cols_taken) >= 0
+                        if which != 0
+                            push!(front, ", ")
+                            limit_cols -= 2
+                        end
+                        append!(front, strs)
+                        limit_cols -= cols_taken
+                    else
+                        break
+                    end
+
+                else
+                    (cols_taken, strs) = _horizontal(current, limit_cols - 2)
+
+                    if limit_cols - (2 + cols_taken) >= 0
+                        prepend!(back, strs)
+                        pushfirst!(back, ", ")
+                        limit_cols -= 2 + cols_taken
+                    else
+                        break
+                    end
+                end
+
+                which += 1
+            end
+
+            if which == 0
+                push!(front, "...")
+                limit_cols -= 3
+            elseif which != length(data)
+                push!(front, ", ...")
+                limit_cols -= 5
+            end
+
+            limit_cols += 5   # credit the ", ..."
+            return (original_limit_cols - limit_cols, vcat(front, back))
+
+        end
+
+    else
+        out = Base.string(data)
+        return (length(out), [out])
+    end
+
+end
+
+function _vertical(data::Union{Content,Record,Tuple}, limit_rows::Int, limit_cols::Int)
+    if limit_rows <= 1
+        (_, strs) = _horizontal(data, limit_cols)
+        return join(strs, "")
+
+    elseif isa(data, Content)
+        front = Vector{String}([])  # 1-indexed
+        back = Vector{String}([])   # 1-indexed
+        which = 0
+        for (forward, index) in _alternate(eachindex(data))
+            (_, strs) = _horizontal(data[index], limit_cols - 2)
+            if forward
+                push!(front, join(strs, ""))
+            else
+                pushfirst!(back, join(strs, ""))
+            end
+
+            which += 1
+            if which >= limit_rows
+                break
+            end
+        end
+
+        if !isempty(data) && which != length(data)
+            back[1] = "..."
+        end
+
+        out = vcat(front, back)     # 1-indexed
+        for (i, val) in enumerate(out)
+            if i > 1
+                val = out[i] = " " * val
+            else
+                val = out[i] = "[" * val
+            end
+            if i < length(out)
+                out[i] = val * ","
+            else
+                out[i] = val * "]"
+            end
+        end
+
+        return join(out, "\n")
+
+    else
+        return "blah"
+    end
+
+end
 
 end  # module AwkwardArray
