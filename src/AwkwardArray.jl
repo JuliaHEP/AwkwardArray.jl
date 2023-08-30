@@ -929,8 +929,8 @@ RecordArray{FIELDS,CONTENTS}(;
     behavior = behavior,
 )
 
-struct Record{ARRAY<:RecordArray}
-    array::ARRAY
+struct Record{FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR}
+    array::RecordArray{FIELDS,CONTENTS,BEHAVIOR}
     at::Int64
 end
 
@@ -978,7 +978,9 @@ Base.length(layout::RecordArray) = layout.length
 Base.firstindex(layout::RecordArray) = 1
 Base.lastindex(layout::RecordArray) = layout.length
 
-Base.getindex(layout::RecordArray, i::Int) = Record(layout, i)
+Base.getindex(layout::RecordArray{FIELDS,CONTENTS,BEHAVIOR}, i::Int) where {
+    FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR
+} = Record(layout, i)
 
 Base.getindex(
     layout::RecordArray{FIELDS,CONTENTS,BEHAVIOR},
@@ -1003,7 +1005,9 @@ slot(
     f::Symbol,
 ) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} = layout[f]
 
-Base.getindex(layout::Record, f::Symbol) = layout.array.contents[f][layout.at]
+Base.getindex(layout::Record{FIELDS,CONTENTS}, f::Symbol) where {
+    FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}
+} = layout.array.contents[f][layout.at]
 
 function Base.:(==)(
     layout1::RecordArray{FIELDS,CONTENTS1},
@@ -1025,14 +1029,12 @@ function Base.:(==)(
 end
 
 function Base.:(==)(
-    layout1::Record{ARRAY1},
-    layout2::Record{ARRAY2},
+    layout1::Record{FIELDS,CONTENTS1},
+    layout2::Record{FIELDS,CONTENTS2},
 ) where {
     FIELDS,
     CONTENTS1<:Base.Tuple{Vararg{Content}},
     CONTENTS2<:Base.Tuple{Vararg{Content}},
-    ARRAY1<:RecordArray{FIELDS,CONTENTS1},
-    ARRAY2<:RecordArray{FIELDS,CONTENTS2},
 }
     for k in FIELDS                   # type signature forces same FIELDS
         if layout1[k] != layout2[k]   # compare record items
