@@ -2333,8 +2333,6 @@ end
 
 Base.show(io::IO, data::Union{Content,Record,Tuple}) = print(io, _vertical(data, 20, 80))
 
-_half(integer::Int) = Int64(ceil(integer / 2))
-
 function _alternate(range::AbstractRange{Int64})
     function generator(channel::Channel{Base.Tuple{Bool,Int64}})
         now = 0.0
@@ -2421,8 +2419,142 @@ function _horizontal(data::Any, limit_cols::Int)
 
         end
 
+    elseif isa(data, Record)
+        front = ["{"]
+        limit_cols -= 2   # both the opening and closing brackets
+        limit_cols -= 5   # anticipate the ", ..."
+
+        which = 0
+        fields = keys(data.array.contents)
+        for field in fields
+            key = Base.string(field)
+
+            if which == 0
+                for_comma = 0
+            else
+                for_comma = 2
+            end
+
+            if occursin(r"^[A-Za-z_][A-Za-z_0-9]*$", key)
+                key_str = key * ": "
+            else
+                key_str = repr(key) + ": "
+            end
+
+            if limit_cols - (for_comma + length(key_str) + 3) >= 0
+                if which != 0
+                    push!(front, ", ")
+                    limit_cols -= 2
+                end
+                push!(front, key_str)
+                limit_cols -= length(key_str)
+                which += 1
+
+                if length(fields) == 1
+                    target = limit_cols
+                else
+                    target = Int64(ceil(limit_cols / 2))   # generously half the fields
+                end
+                (cols_taken, strs) = _horizontal(data[field], target)
+                if limit_cols - cols_taken >= 0
+                    append!(front, strs)
+                    limit_cols -= cols_taken
+                else
+                    push!(front, "...")
+                    limit_cols -= 3
+                    break
+                end
+
+            else
+                break
+            end
+
+            which += 1
+        end
+
+        if !isempty(fields)
+            if which == 0
+                push!(front, "...")
+                limit_cols -= 3
+            elseif which != 2 * length(fields)
+                push!(front, ", ...")
+                limit_cols -= 5
+            end
+        end
+
+        limit_cols += 5   # credit the ", ..."
+        push!(front, "}")
+        return (original_limit_cols - limit_cols, front)
+
+    elseif isa(data, Tuple)
+        front = ["("]
+        limit_cols -= 2   # both the opening and closing brackets
+        limit_cols -= 5   # anticipate the ", ..."
+
+        which = 0
+        fields = eachindex(data.array.contents)
+        for field in fields
+            if which == 0
+                for_comma = 0
+            else
+                for_comma = 2
+            end
+
+            if limit_cols - (for_comma + 3) >= 0
+                if which != 0
+                    push!(front, ", ")
+                    limit_cols -= 2
+                end
+                which += 1
+
+                if length(fields) == 1
+                    target = limit_cols
+                else
+                    target = Int64(ceil(limit_cols / 2))   # generously half the fields
+                end
+                (cols_taken, strs) = _horizontal(data[field], target)
+                if limit_cols - cols_taken >= 0
+                    append!(front, strs)
+                    limit_cols -= cols_taken
+                else
+                    push!(front, "...")
+                    limit_cols -= 3
+                    break
+                end
+
+            else
+                break
+            end
+
+            which += 1
+        end
+
+        if !isempty(fields)
+            if which == 0
+                push!(front, "...")
+                limit_cols -= 3
+            elseif which != 2 * length(fields)
+                push!(front, ", ...")
+                limit_cols -= 5
+            end
+        end
+
+        limit_cols += 5   # credit the ", ..."
+        push!(front, ")")
+        return (original_limit_cols - limit_cols, front)
+
+    ### You need a LIBRARY for this?!?
+
+    # elseif isa(data, AbstractFloat)
+    #     out = @sprintf "%.3g" data
+    #     return (length(out), [out])
+
+    # elseif isa(data, Complex)
+    #     out = @sprintf "%.3g + %.3gim" data data
+    #     return (length(out), [out])
+
     else
-        out = Base.string(data)
+        out = repr(data)
         return (length(out), [out])
     end
 
