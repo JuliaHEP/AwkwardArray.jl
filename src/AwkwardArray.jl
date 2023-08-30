@@ -434,7 +434,7 @@ Base.lastindex(layout::ListArray) = lastindex(layout.starts)
 function Base.getindex(layout::ListArray, i::Int)
     adjustment = firstindex(layout.starts) - firstindex(layout.stops)
     start = layout.starts[i] + firstindex(layout.content)
-    stop = layout.stops[i-adjustment] - layout.starts[i] + start - 1
+    stop = layout.stops[i-adjustment] + firstindex(layout.content) - 1
     layout.content[start:stop]
 end
 
@@ -1806,8 +1806,12 @@ end
 
 ### UnionArray ###########################################################
 
-struct UnionArray{TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple,BEHAVIOR} <:
-       Content{BEHAVIOR}
+struct UnionArray{
+    TAGS<:Index8,
+    INDEX<:IndexBig,
+    CONTENTS<:Base.Tuple{Vararg{Content}},
+    BEHAVIOR,
+} <: Content{BEHAVIOR}
     tags::TAGS
     index::INDEX
     contents::CONTENTS
@@ -1818,7 +1822,7 @@ struct UnionArray{TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple,BEHAVIOR} <:
         contents::CONTENTS;
         parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
-    ) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} =
+    ) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple{Vararg{Content}}} =
         new{TAGS,INDEX,CONTENTS,behavior}(tags, index, contents, parameters)
 end
 
@@ -1826,16 +1830,16 @@ UnionArray{TAGS,INDEX,CONTENTS}(
     contents::CONTENTS;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} =
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple{Vararg{Content}}} =
     UnionArray(TAGS([]), INDEX([]), contents, parameters = parameters, behavior = behavior)
 
 UnionArray{TAGS,INDEX,CONTENTS}(;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} = UnionArray(
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple{Vararg{Content}}} = UnionArray(
     TAGS([]),
     INDEX([]),
-    Base.Tuple(x() for x in CONTENTS.parameters),
+    Base.Tuple{Vararg{Content}}(x() for x in CONTENTS.parameters),
     parameters = parameters,
     behavior = behavior,
 )
@@ -1861,8 +1865,8 @@ function copy(
     TAGS2<:Index8,
     INDEX1<:IndexBig,
     INDEX2<:IndexBig,
-    CONTENTS1<:Base.Tuple,
-    CONTENTS2<:Base.Tuple,
+    CONTENTS1<:Base.Tuple{Vararg{Content}},
+    CONTENTS2<:Base.Tuple{Vararg{Content}},
     BEHAVIOR,
 }
     if isa(tags, Unset)
@@ -2070,6 +2074,623 @@ function from_iter(input)
         push!(out, item)
     end
     out
+end
+
+### to_vector ############################################################
+
+to_vector(layout::Content; view::Bool = false, na::Union{Missing,Nothing} = missing) =
+    to_vector(layout, firstindex(layout):lastindex(layout), view = view, na = na)
+
+to_vector_or_scalar(x::Content; view::Bool = false, na::Union{Missing,Nothing} = missing) =
+    to_vector(x, view = view, na = na)
+to_vector_or_scalar(x; view::Bool = false, na = missing) = x
+
+to_vector(
+    record::Record{FIELDS,CONTENTS};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}} = NamedTuple{FIELDS}(
+    to_vector_or_scalar(record.array.contents[f][record.at], view = view, na = na) for
+    f in FIELDS
+)
+
+to_vector(
+    tuple::Tuple{CONTENTS};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = Base.Tuple(
+    to_vector_or_scalar(content[record.at], view = view, na = na) for
+    content in tuple.array.contents
+)
+
+function to_vector(
+    layout::PrimitiveArray{ITEM},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {ITEM}
+    if view
+        Base.view(layout.data, r)
+    else
+        layout.data[r]
+    end
+end
+
+function to_vector(
+    layout::EmptyArray,
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+)
+    Vector{Any}()
+end
+
+function to_vector(
+    layout::ListOffsetArray{INDEX,CONTENT},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {INDEX<:IndexBig,CONTENT<:Content}
+    off = firstindex(layout.content)
+    [
+        to_vector(
+            layout.content,
+            (layout.offsets[i]+off):(layout.offsets[i+1]+off-1),
+            view = view,
+            na = na,
+        ) for i in r
+    ]
+end
+
+function to_vector(
+    layout::ListArray{INDEX,CONTENT},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {INDEX<:IndexBig,CONTENT<:Content}
+    adj = firstindex(layout.starts) - firstindex(layout.stops)
+    off = firstindex(layout.content)
+    [
+        to_vector(
+            layout.content,
+            (layout.starts[i]+off):(layout.stops[i-adj]+off-1),
+            view = view,
+            na = na,
+        ) for i in r
+    ]
+end
+
+function to_vector(
+    layout::RegularArray{CONTENT},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {CONTENT<:Content}
+    size = max(0, layout.size)
+    one = firstindex(layout)
+    off = firstindex(layout.content)
+    [
+        to_vector(
+            layout.content,
+            ((i-one)*size+off):((i+1-one)*size+off-1),
+            view = view,
+            na = na,
+        ) for i in r
+    ]
+end
+
+function to_vector(
+    layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
+    off = firstindex(layout.content)
+    [
+        String(layout.content.data[(layout.offsets[i]+off):(layout.offsets[i+1]+off-1)]) for
+        i in r
+    ]
+end
+
+function to_vector(
+    layout::ListArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
+    adj = firstindex(layout.starts) - firstindex(layout.stops)
+    off = firstindex(layout.content)
+    [
+        String(layout.content.data[(layout.starts[i]+off):(layout.stops[i-adj]+off-1)]) for
+        i in r
+    ]
+end
+
+function to_vector(
+    layout::RegularArray{PrimitiveArray{UInt8,BUFFER,:char},:string},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {BUFFER<:AbstractVector{UInt8}}
+    size = max(0, layout.size)
+    one = firstindex(layout)
+    off = firstindex(layout.content)
+    [String(layout.content.data[((i-one)*size+off):((i+1-one)*size+off-1)]) for i in r]
+end
+
+function to_vector(
+    layout::RecordArray{FIELDS,CONTENTS},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}}
+    contents = NamedTuple{FIELDS}(
+        to_vector(layout.contents[f], r, view = view, na = na) for f in FIELDS
+    )
+    [NamedTuple{FIELDS}(contents[f][i] for f in FIELDS) for i in eachindex(r)]
+end
+
+function to_vector(
+    layout::TupleArray{CONTENTS},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {CONTENTS<:Base.Tuple{Vararg{Content}}}
+    contents = Base.Tuple(
+        to_vector(content, r, view = view, na = na) for content in layout.contents
+    )
+    [Base.Tuple(content[i] for content in contents) for i in eachindex(r)]
+end
+
+function to_vector(
+    layout::IndexedArray{INDEX,CONTENT},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {INDEX<:IndexBig,CONTENT<:Content}
+    off = firstindex(layout.content)
+    content = to_vector(layout.content, view = view, na = na)
+    [content[layout.index[i]+off] for i in r]
+end
+
+function to_vector(
+    layout::IndexedOptionArray{INDEX,CONTENT},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {INDEX<:IndexBig,CONTENT<:Content}
+    off = firstindex(layout.content)
+    content = to_vector(layout.content, view = view, na = na)
+    [
+        if layout.index[i] < 0
+            na
+        else
+            content[layout.index[i]+off]
+        end for i in r
+    ]
+end
+
+function to_vector(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {INDEX<:IndexBool,CONTENT<:Content}
+    adj = firstindex(layout.mask) - firstindex(layout.content)
+    off = firstindex(layout.content)
+    content = to_vector(layout.content, view = view, na = na)
+    [
+        if (layout.mask[i] != 0) != layout.valid_when
+            na
+        else
+            content[i-adj]
+        end for i in r
+    ]
+end
+
+function to_vector(
+    layout::BitMaskedArray{CONTENT},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {CONTENT<:Content}
+    adj = firstindex(layout.mask) - firstindex(layout.content)
+    off = firstindex(layout.content)
+    content = to_vector(layout.content, view = view, na = na)
+    [
+        if (layout.mask[i] != 0) != layout.valid_when
+            na
+        else
+            content[i-adj]
+        end for i in r
+    ]
+end
+
+function to_vector(
+    layout::UnmaskedArray{CONTENT},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {CONTENT<:Content}
+    to_vector(layout.content, r, view = view, na = na)
+end
+
+function to_vector(
+    layout::UnionArray{TAGS,INDEX,CONTENTS},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple}
+    adj = firstindex(layout.tags) - firstindex(layout.index)
+    contents =
+        Base.Tuple(to_vector(content, view = view, na = na) for content in layout.contents)
+    ones = Base.Tuple(firstindex(content) for content in contents)
+    one = firstindex(contents)
+    [contents[layout.tags[i]+one][layout.index[i-adj]+ones[layout.tags[i]+one]] for i in r]
+end
+
+### show (pretty-print) ##################################################
+
+Base.show(
+    io::IO,
+    data::Union{Content,Record,Tuple};
+    limit_rows::Int = 1,
+    limit_cols::Int = 80,
+) = print(io, _vertical(data, limit_rows, limit_cols))
+
+Base.show(
+    data::Union{Content,Record,Tuple};
+    limit_rows::Int = 1,
+    limit_cols::Int = 80,
+) = print(stdout, _vertical(data, limit_rows, limit_cols))
+
+function _alternate(range::AbstractRange{Int64})
+    function generator(channel::Channel{Base.Tuple{Bool,Int64}})
+        now = 0.0
+        halfway = length(range) / 2.0
+        for (fore, back) in zip(range, reverse(range))
+            put!(channel, (true, fore))
+            if fore != back
+                put!(channel, (false, back))
+            end
+            now += 1.0
+            if now >= halfway
+                break
+            end
+        end
+    end
+    Channel{Base.Tuple{Bool,Int64}}(generator)
+end
+
+function _horizontal(data::Any, limit_cols::Int)
+    original_limit_cols = limit_cols
+
+    if isa(data, Content)
+        front = ["["]
+        back = ["]"]
+        limit_cols -= 2
+
+        if isempty(data)
+            return (2, vcat(front, back))
+
+        elseif length(data) == 1
+            (cols_taken, strs) = _horizontal(data[begin], limit_cols)
+            return (2 + cols_taken, vcat(front, strs, back))
+
+        else
+            limit_cols -= 5   # anticipate the ", ..."
+            which = 0
+            for (forward, index) in _alternate(eachindex(data))
+                current = data[index]
+
+                if forward
+                    if which == 0
+                        for_comma = 0
+                    else
+                        for_comma = 2
+                    end
+                    (cols_taken, strs) = _horizontal(current, limit_cols - for_comma)
+
+                    if limit_cols - (for_comma + cols_taken) >= 0
+                        if which != 0
+                            push!(front, ", ")
+                            limit_cols -= 2
+                        end
+                        append!(front, strs)
+                        limit_cols -= cols_taken
+                    else
+                        break
+                    end
+
+                else
+                    (cols_taken, strs) = _horizontal(current, limit_cols - 2)
+
+                    if limit_cols - (2 + cols_taken) >= 0
+                        prepend!(back, strs)
+                        pushfirst!(back, ", ")
+                        limit_cols -= 2 + cols_taken
+                    else
+                        break
+                    end
+                end
+
+                which += 1
+            end
+
+            if which == 0
+                push!(front, "...")
+                limit_cols -= 3
+            elseif which != length(data)
+                push!(front, ", ...")
+                limit_cols -= 5
+            end
+
+            limit_cols += 5   # credit the ", ..."
+            return (original_limit_cols - limit_cols, vcat(front, back))
+
+        end
+
+    elseif isa(data, Record)
+        front = ["{"]
+        limit_cols -= 2   # both the opening and closing brackets
+        limit_cols -= 5   # anticipate the ", ..."
+
+        which = 0
+        fields = keys(data.array.contents)
+        for field in fields
+            key = Base.string(field)
+
+            if which == 0
+                for_comma = 0
+            else
+                for_comma = 2
+            end
+
+            if occursin(r"^[A-Za-z_][A-Za-z_0-9]*$", key)
+                key_str = key * ": "
+            else
+                key_str = repr(key) + ": "
+            end
+
+            if limit_cols - (for_comma + length(key_str) + 3) >= 0
+                if which != 0
+                    push!(front, ", ")
+                    limit_cols -= 2
+                end
+                push!(front, key_str)
+                limit_cols -= length(key_str)
+                which += 1
+
+                if length(fields) == 1
+                    target = limit_cols
+                else
+                    target = Int64(ceil(limit_cols / 2))   # generously half the fields
+                end
+                (cols_taken, strs) = _horizontal(data[field], target)
+                if limit_cols - cols_taken >= 0
+                    append!(front, strs)
+                    limit_cols -= cols_taken
+                else
+                    push!(front, "...")
+                    limit_cols -= 3
+                    break
+                end
+
+            else
+                break
+            end
+
+            which += 1
+        end
+
+        if !isempty(fields)
+            if which == 0
+                push!(front, "...")
+                limit_cols -= 3
+            elseif which != 2 * length(fields)
+                push!(front, ", ...")
+                limit_cols -= 5
+            end
+        end
+
+        limit_cols += 5   # credit the ", ..."
+        push!(front, "}")
+        return (original_limit_cols - limit_cols, front)
+
+    elseif isa(data, Tuple)
+        front = ["("]
+        limit_cols -= 2   # both the opening and closing brackets
+        limit_cols -= 5   # anticipate the ", ..."
+
+        which = 0
+        fields = eachindex(data.array.contents)
+        for field in fields
+            if which == 0
+                for_comma = 0
+            else
+                for_comma = 2
+            end
+
+            if limit_cols - (for_comma + 3) >= 0
+                if which != 0
+                    push!(front, ", ")
+                    limit_cols -= 2
+                end
+                which += 1
+
+                if length(fields) == 1
+                    target = limit_cols
+                else
+                    target = Int64(ceil(limit_cols / 2))   # generously half the fields
+                end
+                (cols_taken, strs) = _horizontal(data[field], target)
+                if limit_cols - cols_taken >= 0
+                    append!(front, strs)
+                    limit_cols -= cols_taken
+                else
+                    push!(front, "...")
+                    limit_cols -= 3
+                    break
+                end
+
+            else
+                break
+            end
+
+            which += 1
+        end
+
+        if !isempty(fields)
+            if which == 0
+                push!(front, "...")
+                limit_cols -= 3
+            elseif which != 2 * length(fields)
+                push!(front, ", ...")
+                limit_cols -= 5
+            end
+        end
+
+        limit_cols += 5   # credit the ", ..."
+        push!(front, ")")
+        return (original_limit_cols - limit_cols, front)
+
+        ### You need a LIBRARY for this?!?
+
+        # elseif isa(data, AbstractFloat)
+        #     out = @sprintf "%.3g" data
+        #     return (length(out), [out])
+
+        # elseif isa(data, Complex)
+        #     out = @sprintf "%.3g + %.3gim" data data
+        #     return (length(out), [out])
+
+    else
+        out = repr(data)
+        return (length(out), [out])
+    end
+
+end
+
+function _vertical(data::Union{Content,Record,Tuple}, limit_rows::Int, limit_cols::Int)
+    if limit_rows <= 1
+        (_, strs) = _horizontal(data, limit_cols)
+        return join(strs, "")
+
+    elseif isa(data, Content)
+        front = Vector{String}([])  # 1-indexed
+        back = Vector{String}([])   # 1-indexed
+        which = 0
+        for (forward, index) in _alternate(eachindex(data))
+            (_, strs) = _horizontal(data[index], limit_cols - 2)
+            if forward
+                push!(front, join(strs, ""))
+            else
+                pushfirst!(back, join(strs, ""))
+            end
+
+            which += 1
+            if which >= limit_rows
+                break
+            end
+        end
+
+        if !isempty(data) && which != length(data)
+            back[1] = "..."
+        end
+
+        out = vcat(front, back)     # 1-indexed
+        for (i, val) in enumerate(out)
+            if i > 1
+                val = out[i] = " " * val
+            else
+                val = out[i] = "[" * val
+            end
+            if i < length(out)
+                out[i] = val * ","
+            else
+                out[i] = val * "]"
+            end
+        end
+
+        return join(out, "\n")
+
+    elseif isa(data, Record)
+        front = Vector{String}([])  # 1-indexed
+
+        which = 0
+        fields = keys(data.array.contents)
+        for field in fields
+            key = Base.string(field)
+            if occursin(r"^[A-Za-z_][A-Za-z_0-9]*$", key)
+                key_str = key * ": "
+            else
+                key_str = repr(key) + ": "
+            end
+
+            (_, strs) = _horizontal(data[field], limit_cols - 2 - length(key_str))
+            push!(front, key_str * join(strs, ""))
+
+            which += 1
+            if which >= limit_rows
+                break
+            end
+        end
+
+        if !isempty(fields) && which != length(fields)
+            front[end] = "..."
+        end
+
+        out = front                 # 1-indexed
+        for (i, val) in enumerate(out)
+            if i > 1
+                val = out[i] = " " * val
+            else
+                val = out[i] = "{" * val
+            end
+            if i < length(out)
+                out[i] = val * ","
+            else
+                out[i] = val * "}"
+            end
+        end
+        return join(out, "\n")
+
+    elseif isa(data, Tuple)
+        front = Vector{String}([])  # 1-indexed
+
+        which = 0
+        fields = eachindex(data.array.contents)
+        for field in fields
+            (_, strs) = _horizontal(data[field], limit_cols - 2)
+            push!(front, join(strs, ""))
+
+            which += 1
+            if which >= limit_rows
+                break
+            end
+        end
+
+        if !isempty(fields) && which != length(fields)
+            front[end] = "..."
+        end
+
+        out = front                 # 1-indexed
+        for (i, val) in enumerate(out)
+            if i > 1
+                val = out[i] = " " * val
+            else
+                val = out[i] = "(" * val
+            end
+            if i < length(out)
+                out[i] = val * ","
+            else
+                out[i] = val * ")"
+            end
+        end
+        return join(out, "\n")
+
+    end
+
 end
 
 end  # module AwkwardArray

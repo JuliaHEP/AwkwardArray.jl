@@ -21,6 +21,8 @@ using Test
 
         @inferred layout[2]
         @inferred layout[2:4]
+
+        @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, 4.4, 5.5]
     end
 
     begin
@@ -93,6 +95,8 @@ using Test
         end
         @test tmp == 0.0
         @test layout == AwkwardArray.PrimitiveArray(Vector{Float64}())
+
+        @test AwkwardArray.to_vector(layout) == []
     end
 
     begin
@@ -133,6 +137,8 @@ using Test
         @inferred layout[1]
         @inferred layout[1][1]
         @inferred layout[1:2]
+
+        @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
     end
 
     begin
@@ -248,6 +254,8 @@ using Test
         @inferred layout[1]
         @inferred layout[1][1]
         @inferred layout[1:2]
+
+        @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
     end
 
     begin
@@ -354,6 +362,8 @@ using Test
         @inferred layout[1]
         @inferred layout[1][1]
         @inferred layout[1:2]
+
+        @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]
     end
 
     begin
@@ -502,6 +512,8 @@ using Test
         @inferred layout[1]
         @inferred layout[1][1]
         @inferred layout[1:2]
+
+        @test AwkwardArray.to_vector(layout) == ["hey", "there", "\$", "¢", "€", "💰"]
     end
 
     begin
@@ -513,13 +525,17 @@ using Test
         @inferred layout[1]
         @inferred layout[1][1]
         @inferred layout[1:2]
+
+        @test AwkwardArray.to_vector(layout) == ["hey", "there", "\$", "¢", "€", "💰"]
     end
 
     begin
-        layout = AwkwardArray.StringRegularArray("heythere", 3)
+        layout = AwkwardArray.StringRegularArray("heyyou", 3)
         @inferred layout[1]
         @inferred layout[1][1]
         @inferred layout[1:2]
+
+        @test AwkwardArray.to_vector(layout) == ["hey", "you"]
     end
 
     begin
@@ -982,6 +998,12 @@ using Test
         @inferred layout[:a][3]
         @inferred layout[:b][3]
         @inferred layout[:b][3][1]
+
+        @test AwkwardArray.to_vector(layout) == [
+            NamedTuple{(:a, :b)}((1, [1.1, 2.2, 3.3])),
+            NamedTuple{(:a, :b)}((2, [])),
+            NamedTuple{(:a, :b)}((3, [4.4, 5.5])),
+        ]
     end
 
     begin
@@ -1268,6 +1290,9 @@ using Test
         @inferred AwkwardArray.slot(layout, 1)[3]
         @inferred AwkwardArray.slot(layout, 2)[3]
         @inferred AwkwardArray.slot(layout, 2)[3][1]
+
+        @test AwkwardArray.to_vector(layout) ==
+              [(1, [1.1, 2.2, 3.3]), (2, []), (3, [4.4, 5.5])]
     end
 
     begin
@@ -1493,6 +1518,8 @@ using Test
         @test layout == AwkwardArray.PrimitiveArray([5.5, 4.4, 4.4, 1.1, 6.6, 7.7, 0.0])
         @test layout.index == [4, 3, 3, 0, 5, 6, 7]
         @test AwkwardArray.is_valid(layout)
+
+        @test AwkwardArray.to_vector(layout) == [5.5, 4.4, 4.4, 1.1, 6.6, 7.7, 0.0]
     end
 
     begin
@@ -1534,6 +1561,9 @@ using Test
         @inferred layout[1]
         @inferred layout[1][1]
         @inferred layout[1:3]
+
+        @test AwkwardArray.to_vector(layout) ==
+              [[4.4, 5.5], [1.1, 2.2, 3.3], [1.1, 2.2, 3.3], [], [6.6, 7.7], []]
     end
 
     begin
@@ -1668,6 +1698,9 @@ using Test
         @test AwkwardArray.is_valid(layout)
 
         @inferred layout[1:5]
+
+        @test AwkwardArray.to_vector(layout, na = nothing) ==
+              [5.5, 4.4, 4.4, nothing, nothing, 1.1, 6.6, nothing, nothing, 7.7, nothing]
     end
 
     begin
@@ -1771,6 +1804,9 @@ using Test
         @test AwkwardArray.is_valid(layout)
 
         @inferred layout[2:5]
+
+        @test AwkwardArray.to_vector(layout, na = nothing) ==
+              [1.1, nothing, nothing, 4.4, 5.5, 6.6, nothing, nothing]
     end
 
     begin
@@ -1924,6 +1960,9 @@ using Test
         @test AwkwardArray.is_valid(layout)
 
         @inferred layout[2:5]
+
+        @test AwkwardArray.to_vector(layout, na = nothing) ==
+              [1.1, nothing, nothing, 4.4, 5.5, 6.6, nothing, nothing]
     end
 
     begin
@@ -2068,6 +2107,8 @@ using Test
         @test length(layout) == 7
         @test layout[7] == 0.0
         @test AwkwardArray.is_valid(layout)
+
+        @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 0.0]
     end
 
     begin
@@ -2204,6 +2245,8 @@ using Test
         @test layout[2:4][2] == 3.3
         @test layout[2:4][3] == AwkwardArray.PrimitiveArray([4.4, 5.5])
         @inferred layout[2:4]
+
+        @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, [4.4, 5.5]]
     end
 
     begin
