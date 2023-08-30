@@ -18,6 +18,9 @@ using Test
             tmp += x
         end
         @test tmp == 16.5
+
+        @inferred layout[2]
+        @inferred layout[2:4]
     end
 
     begin
@@ -126,6 +129,10 @@ using Test
             tmp += length(x)
         end
         @test tmp == 5
+
+        @inferred layout[1]
+        @inferred layout[1][1]
+        @inferred layout[1:2]
     end
 
     begin
@@ -237,6 +244,10 @@ using Test
             tmp += length(x)
         end
         @test tmp == 5
+
+        @inferred layout[1]
+        @inferred layout[1][1]
+        @inferred layout[1:2]
     end
 
     begin
@@ -339,6 +350,10 @@ using Test
         @test layout[1] == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3])
         @test layout[2] == AwkwardArray.PrimitiveArray([4.4, 5.5, 6.6])
         @test layout[end] == AwkwardArray.PrimitiveArray([4.4, 5.5, 6.6])
+
+        @inferred layout[1]
+        @inferred layout[1][1]
+        @inferred layout[1:2]
     end
 
     begin
@@ -480,6 +495,31 @@ using Test
         AwkwardArray.is_valid(AwkwardArray.StringRegularArray("onetwo", 3))
         AwkwardArray.is_valid(AwkwardArray.StringRegularArray(3))
         AwkwardArray.is_valid(AwkwardArray.StringRegularArray())
+    end
+
+    begin
+        layout = AwkwardArray.StringOffsetArray([0, 3, 8, 9, 11, 14, 18], "heythere\$¢€💰")
+        @inferred layout[1]
+        @inferred layout[1][1]
+        @inferred layout[1:2]
+    end
+
+    begin
+        layout = AwkwardArray.StringArray(
+            [0, 3, 8, 9, 11, 14],
+            [3, 8, 9, 11, 14, 18],
+            "heythere\$¢€💰",
+        )
+        @inferred layout[1]
+        @inferred layout[1][1]
+        @inferred layout[1:2]
+    end
+
+    begin
+        layout = AwkwardArray.StringRegularArray("heythere", 3)
+        @inferred layout[1]
+        @inferred layout[1][1]
+        @inferred layout[1:2]
     end
 
     begin
@@ -882,6 +922,7 @@ using Test
                 AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
                 AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
             )),
+            5,
         )
         @test AwkwardArray.is_valid(layout)
         @test length(layout) == 5
@@ -935,6 +976,12 @@ using Test
             end
         end
         @test tmp == 16.5
+
+        @inferred layout[3]
+        @inferred layout[1:3]
+        @inferred layout[:a][3]
+        @inferred layout[:b][3]
+        @inferred layout[:b][3][1]
     end
 
     begin
@@ -1070,14 +1117,12 @@ using Test
 
     begin
         layout = AwkwardArray.RecordArray{
-            NamedTuple{
-                (:a, :b),
-                Tuple{
-                    AwkwardArray.PrimitiveArray{Int64},
-                    AwkwardArray.ListOffsetArray{
-                        AwkwardArray.Index64,
-                        AwkwardArray.PrimitiveArray{Float64},
-                    },
+            (:a, :b),
+            Tuple{
+                AwkwardArray.PrimitiveArray{Int64},
+                AwkwardArray.ListOffsetArray{
+                    AwkwardArray.Index64,
+                    AwkwardArray.PrimitiveArray{Float64},
                 },
             },
         }()
@@ -1121,14 +1166,12 @@ using Test
 
     begin
         layout = AwkwardArray.RecordArray{
-            NamedTuple{
-                (:a, :b),
-                Tuple{
-                    AwkwardArray.PrimitiveArray{Int64},
-                    AwkwardArray.ListOffsetArray{
-                        AwkwardArray.Index64,
-                        AwkwardArray.PrimitiveArray{Float64},
-                    },
+            (:a, :b),
+            Tuple{
+                AwkwardArray.PrimitiveArray{Int64},
+                AwkwardArray.ListOffsetArray{
+                    AwkwardArray.Index64,
+                    AwkwardArray.PrimitiveArray{Float64},
                 },
             },
         }()
@@ -1219,6 +1262,12 @@ using Test
             end
         end
         @test tmp == 16.5
+
+        @inferred layout[3]
+        @inferred layout[1:3]
+        @inferred AwkwardArray.slot(layout, 1)[3]
+        @inferred AwkwardArray.slot(layout, 2)[3]
+        @inferred AwkwardArray.slot(layout, 2)[3][1]
     end
 
     begin
@@ -1481,6 +1530,10 @@ using Test
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7]),
         )
         @test AwkwardArray.is_valid(layout)
+
+        @inferred layout[1]
+        @inferred layout[1][1]
+        @inferred layout[1:3]
     end
 
     begin
@@ -1527,14 +1580,12 @@ using Test
         layout = AwkwardArray.IndexedArray{
             AwkwardArray.Index64,
             AwkwardArray.RecordArray{
-                NamedTuple{
-                    (:a, :b),
-                    Tuple{
-                        AwkwardArray.PrimitiveArray{Int64},
-                        AwkwardArray.ListOffsetArray{
-                            AwkwardArray.Index64,
-                            AwkwardArray.PrimitiveArray{Float64},
-                        },
+                (:a, :b),
+                Tuple{
+                    AwkwardArray.PrimitiveArray{Int64},
+                    AwkwardArray.ListOffsetArray{
+                        AwkwardArray.Index64,
+                        AwkwardArray.PrimitiveArray{Float64},
                     },
                 },
             },
@@ -1615,20 +1666,20 @@ using Test
         @test ismissing(layout[11])
         @test layout.index == [4, 3, 3, -1, -1, 0, 5, -1, -1, 6, -1]
         @test AwkwardArray.is_valid(layout)
+
+        @inferred layout[1:5]
     end
 
     begin
         layout = AwkwardArray.IndexedOptionArray{
             AwkwardArray.Index64,
             AwkwardArray.RecordArray{
-                NamedTuple{
-                    (:a, :b),
-                    Tuple{
-                        AwkwardArray.PrimitiveArray{Int64},
-                        AwkwardArray.ListOffsetArray{
-                            AwkwardArray.Index64,
-                            AwkwardArray.PrimitiveArray{Float64},
-                        },
+                (:a, :b),
+                Tuple{
+                    AwkwardArray.PrimitiveArray{Int64},
+                    AwkwardArray.ListOffsetArray{
+                        AwkwardArray.Index64,
+                        AwkwardArray.PrimitiveArray{Float64},
                     },
                 },
             },
@@ -1718,6 +1769,8 @@ using Test
         @test length(layout) == 8
         @test ismissing(layout[8])
         @test AwkwardArray.is_valid(layout)
+
+        @inferred layout[2:5]
     end
 
     begin
@@ -1869,6 +1922,8 @@ using Test
         @test length(layout) == 8
         @test ismissing(layout[8])
         @test AwkwardArray.is_valid(layout)
+
+        @inferred layout[2:5]
     end
 
     begin
@@ -2040,6 +2095,10 @@ using Test
         @test length(layout) == 5
         @test layout[5] == AwkwardArray.PrimitiveArray([])
         @test AwkwardArray.is_valid(layout)
+
+        @inferred layout[1]
+        @inferred layout[1][1]
+        @inferred layout[2:3]
     end
 
     begin
@@ -2140,6 +2199,11 @@ using Test
         @test tmp == 16.5
 
         @test layout == layout
+
+        @test layout[2:4][1] == 2.2
+        @test layout[2:4][2] == 3.3
+        @test layout[2:4][3] == AwkwardArray.PrimitiveArray([4.4, 5.5])
+        @inferred layout[2:4]
     end
 
     begin
