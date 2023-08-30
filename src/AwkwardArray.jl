@@ -978,9 +978,10 @@ Base.length(layout::RecordArray) = layout.length
 Base.firstindex(layout::RecordArray) = 1
 Base.lastindex(layout::RecordArray) = layout.length
 
-Base.getindex(layout::RecordArray{FIELDS,CONTENTS,BEHAVIOR}, i::Int) where {
-    FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR
-} = Record(layout, i)
+Base.getindex(
+    layout::RecordArray{FIELDS,CONTENTS,BEHAVIOR},
+    i::Int,
+) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} = Record(layout, i)
 
 Base.getindex(
     layout::RecordArray{FIELDS,CONTENTS,BEHAVIOR},
@@ -1005,9 +1006,10 @@ slot(
     f::Symbol,
 ) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} = layout[f]
 
-Base.getindex(layout::Record{FIELDS,CONTENTS}, f::Symbol) where {
-    FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}
-} = layout.array.contents[f][layout.at]
+Base.getindex(
+    layout::Record{FIELDS,CONTENTS},
+    f::Symbol,
+) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}} = layout.array.contents[f][layout.at]
 
 function Base.:(==)(
     layout1::RecordArray{FIELDS,CONTENTS1},
@@ -1107,8 +1109,8 @@ TupleArray{CONTENTS}(;
     behavior = behavior,
 )
 
-struct Tuple{ARRAY<:TupleArray}
-    array::ARRAY
+struct Tuple{CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR}
+    array::TupleArray{CONTENTS,BEHAVIOR}
     at::Int64
 end
 
@@ -1154,7 +1156,10 @@ Base.length(layout::TupleArray) = layout.length
 Base.firstindex(layout::TupleArray) = 1
 Base.lastindex(layout::TupleArray) = layout.length
 
-Base.getindex(layout::TupleArray, i::Int) = Tuple(layout, i)
+Base.getindex(
+    layout::TupleArray{CONTENTS,BEHAVIOR},
+    i::Int,
+) where {CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} = Tuple(layout, i)
 
 Base.getindex(
     layout::TupleArray{CONTENTS,BEHAVIOR},
@@ -1173,7 +1178,10 @@ function slot(
     content[firstindex(content):firstindex(content)+length(layout)-1]
 end
 
-Base.getindex(layout::Tuple, f::Int64) = layout.array.contents[f][layout.at]
+Base.getindex(
+    layout::Tuple{CONTENTS},
+    f::Int64,
+) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = layout.array.contents[f][layout.at]
 
 function Base.:(==)(
     layout1::TupleArray{CONTENTS1},
@@ -1195,14 +1203,12 @@ function Base.:(==)(
 end
 
 function Base.:(==)(
-    layout1::Tuple{ARRAY1},
-    layout2::Tuple{ARRAY2},
+    layout1::Tuple{CONTENTS1},
+    layout2::Tuple{CONTENTS2},
 ) where {
     N,
     CONTENTS1<:Base.Tuple{Vararg{Content,N}},
     CONTENTS2<:Base.Tuple{Vararg{Content,N}},
-    ARRAY1<:TupleArray{CONTENTS1},
-    ARRAY2<:TupleArray{CONTENTS2},
 }
     for i in eachindex(layout1.array.contents)   # same number of indexes by type constraint
         if layout1[i] != layout2[i]              # compare tuple items
