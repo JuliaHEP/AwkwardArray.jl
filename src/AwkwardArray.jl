@@ -1806,8 +1806,12 @@ end
 
 ### UnionArray ###########################################################
 
-struct UnionArray{TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple,BEHAVIOR} <:
-       Content{BEHAVIOR}
+struct UnionArray{
+    TAGS<:Index8,
+    INDEX<:IndexBig,
+    CONTENTS<:Base.Tuple{Vararg{Content}},
+    BEHAVIOR,
+} <: Content{BEHAVIOR}
     tags::TAGS
     index::INDEX
     contents::CONTENTS
@@ -1818,7 +1822,7 @@ struct UnionArray{TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple,BEHAVIOR} <:
         contents::CONTENTS;
         parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
-    ) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} =
+    ) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple{Vararg{Content}}} =
         new{TAGS,INDEX,CONTENTS,behavior}(tags, index, contents, parameters)
 end
 
@@ -1826,16 +1830,16 @@ UnionArray{TAGS,INDEX,CONTENTS}(
     contents::CONTENTS;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} =
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple{Vararg{Content}}} =
     UnionArray(TAGS([]), INDEX([]), contents, parameters = parameters, behavior = behavior)
 
 UnionArray{TAGS,INDEX,CONTENTS}(;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple} = UnionArray(
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple{Vararg{Content}}} = UnionArray(
     TAGS([]),
     INDEX([]),
-    Base.Tuple(x() for x in CONTENTS.parameters),
+    Base.Tuple{Vararg{Content}}(x() for x in CONTENTS.parameters),
     parameters = parameters,
     behavior = behavior,
 )
@@ -1861,8 +1865,8 @@ function copy(
     TAGS2<:Index8,
     INDEX1<:IndexBig,
     INDEX2<:IndexBig,
-    CONTENTS1<:Base.Tuple,
-    CONTENTS2<:Base.Tuple,
+    CONTENTS1<:Base.Tuple{Vararg{Content}},
+    CONTENTS2<:Base.Tuple{Vararg{Content}},
     BEHAVIOR,
 }
     if isa(tags, Unset)
