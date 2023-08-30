@@ -2078,29 +2078,36 @@ end
 
 ### to_vector ############################################################
 
-to_vector(layout::Content; view::Bool = false) =
-    to_vector(layout, firstindex(layout):lastindex(layout), view = view)
+to_vector(layout::Content; view::Bool = false, na::Union{Missing,Nothing} = missing) =
+    to_vector(layout, firstindex(layout):lastindex(layout), view = view, na = na)
 
-to_vector_or_scalar(x::Content; view::Bool = false) = to_vector(x, view = view)
-to_vector_or_scalar(x; view::Bool = false) = x
+to_vector_or_scalar(x::Content; view::Bool = false, na::Union{Missing,Nothing} = missing) =
+    to_vector(x, view = view, na = na)
+to_vector_or_scalar(x; view::Bool = false, na = missing) = x
 
 to_vector(
     record::Record{FIELDS,CONTENTS};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}} = NamedTuple{FIELDS}(
-    to_vector_or_scalar(record.array.contents[f][record.at]) for f in FIELDS
+    to_vector_or_scalar(record.array.contents[f][record.at], view = view, na = na) for
+    f in FIELDS
 )
 
 to_vector(
     tuple::Tuple{CONTENTS};
     view::Bool = false,
-) where {CONTENTS<:Base.Tuple{Vararg{Content}}} =
-    Base.Tuple(to_vector_or_scalar(content[record.at]) for content in tuple.array.contents)
+    na::Union{Missing,Nothing} = missing,
+) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = Base.Tuple(
+    to_vector_or_scalar(content[record.at], view = view, na = na) for
+    content in tuple.array.contents
+)
 
 function to_vector(
     layout::PrimitiveArray{ITEM},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {ITEM}
     if view
         Base.view(layout.data, r)
@@ -2109,7 +2116,12 @@ function to_vector(
     end
 end
 
-function to_vector(layout::EmptyArray, r::UnitRange{Int}; view::Bool = false)
+function to_vector(
+    layout::EmptyArray,
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+)
     Vector{Any}()
 end
 
@@ -2117,6 +2129,7 @@ function to_vector(
     layout::ListOffsetArray{INDEX,CONTENT},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {INDEX<:IndexBig,CONTENT<:Content}
     off = firstindex(layout.content)
     [
@@ -2124,6 +2137,7 @@ function to_vector(
             layout.content,
             (layout.offsets[i]+off):(layout.offsets[i+1]+off-1),
             view = view,
+            na = na,
         ) for i in r
     ]
 end
@@ -2132,6 +2146,7 @@ function to_vector(
     layout::ListArray{INDEX,CONTENT},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {INDEX<:IndexBig,CONTENT<:Content}
     adj = firstindex(layout.starts) - firstindex(layout.stops)
     off = firstindex(layout.content)
@@ -2140,6 +2155,7 @@ function to_vector(
             layout.content,
             (layout.starts[i]+off):(layout.stops[i-adj]+off-1),
             view = view,
+            na = na,
         ) for i in r
     ]
 end
@@ -2148,13 +2164,18 @@ function to_vector(
     layout::RegularArray{CONTENT},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {CONTENT<:Content}
     size = max(0, layout.size)
     one = firstindex(layout)
     off = firstindex(layout.content)
     [
-        to_vector(layout.content, ((i-one)*size+off):((i+1-one)*size+off-1), view = view)
-        for i in r
+        to_vector(
+            layout.content,
+            ((i-one)*size+off):((i+1-one)*size+off-1),
+            view = view,
+            na = na,
+        ) for i in r
     ]
 end
 
@@ -2162,6 +2183,7 @@ function to_vector(
     layout::ListOffsetArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
     off = firstindex(layout.content)
     [
@@ -2174,6 +2196,7 @@ function to_vector(
     layout::ListArray{INDEX,PrimitiveArray{UInt8,BUFFER,:char},:string},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {INDEX<:IndexBig,BUFFER<:AbstractVector{UInt8}}
     adj = firstindex(layout.starts) - firstindex(layout.stops)
     off = firstindex(layout.content)
@@ -2187,6 +2210,7 @@ function to_vector(
     layout::RegularArray{PrimitiveArray{UInt8,BUFFER,:char},:string},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {BUFFER<:AbstractVector{UInt8}}
     size = max(0, layout.size)
     one = firstindex(layout)
@@ -2198,19 +2222,34 @@ function to_vector(
     layout::RecordArray{FIELDS,CONTENTS},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}}
-    contents =
-        NamedTuple{FIELDS}(to_vector(layout.contents[f], r, view = view) for f in FIELDS)
+    contents = NamedTuple{FIELDS}(
+        to_vector(layout.contents[f], r, view = view, na = na) for f in FIELDS
+    )
     [NamedTuple{FIELDS}(contents[f][i] for f in FIELDS) for i in eachindex(r)]
+end
+
+function to_vector(
+    layout::TupleArray{CONTENTS},
+    r::UnitRange{Int};
+    view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
+) where {CONTENTS<:Base.Tuple{Vararg{Content}}}
+    contents = Base.Tuple(
+        to_vector(content, r, view = view, na = na) for content in layout.contents
+    )
+    [Base.Tuple(content[i] for content in contents) for i in eachindex(r)]
 end
 
 function to_vector(
     layout::IndexedArray{INDEX,CONTENT},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {INDEX<:IndexBig,CONTENT<:Content}
     off = firstindex(layout.content)
-    content = to_vector(layout.content, view = view)
+    content = to_vector(layout.content, view = view, na = na)
     [content[layout.index[i]+off] for i in r]
 end
 
@@ -2218,12 +2257,13 @@ function to_vector(
     layout::IndexedOptionArray{INDEX,CONTENT},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {INDEX<:IndexBig,CONTENT<:Content}
     off = firstindex(layout.content)
-    content = to_vector(layout.content, view = view)
+    content = to_vector(layout.content, view = view, na = na)
     [
         if layout.index[i] < 0
-            missing
+            na
         else
             content[layout.index[i]+off]
         end for i in r
@@ -2234,15 +2274,16 @@ function to_vector(
     layout::ByteMaskedArray{INDEX,CONTENT},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {INDEX<:IndexBool,CONTENT<:Content}
     adj = firstindex(layout.mask) - firstindex(layout.content)
     off = firstindex(layout.content)
-    content = to_vector(layout.content, view = view)
+    content = to_vector(layout.content, view = view, na = na)
     [
         if (layout.mask[i] != 0) != layout.valid_when
-            missing
+            na
         else
-            contnet[i-adj]
+            content[i-adj]
         end for i in r
     ]
 end
@@ -2251,15 +2292,16 @@ function to_vector(
     layout::BitMaskedArray{CONTENT},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {CONTENT<:Content}
     adj = firstindex(layout.mask) - firstindex(layout.content)
     off = firstindex(layout.content)
-    content = to_vector(layout.content, view = view)
+    content = to_vector(layout.content, view = view, na = na)
     [
         if (layout.mask[i] != 0) != layout.valid_when
-            missing
+            na
         else
-            contnet[i-adj]
+            content[i-adj]
         end for i in r
     ]
 end
@@ -2268,17 +2310,20 @@ function to_vector(
     layout::UnmaskedArray{CONTENT},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {CONTENT<:Content}
-    to_vector(layout.content, r, view = view)
+    to_vector(layout.content, r, view = view, na = na)
 end
 
 function to_vector(
     layout::UnionArray{TAGS,INDEX,CONTENTS},
     r::UnitRange{Int};
     view::Bool = false,
+    na::Union{Missing,Nothing} = missing,
 ) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple}
     adj = firstindex(layout.tags) - firstindex(layout.index)
-    contents = Base.Tuple(to_vector(content, view = view) for content in layout.contents)
+    contents =
+        Base.Tuple(to_vector(content, view = view, na = na) for content in layout.contents)
     ones = Base.Tuple(firstindex(content) for content in contents)
     one = firstindex(contents)
     [contents[layout.tags[i]+one][layout.index[i-adj]+ones[layout.tags[i]+one]] for i in r]
