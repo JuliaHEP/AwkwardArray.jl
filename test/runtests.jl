@@ -516,7 +516,7 @@ using Test
     end
 
     begin
-        layout = AwkwardArray.StringRegularArray("heythere", 3)
+        layout = AwkwardArray.StringRegularArray("heyyou", 3)
         @inferred layout[1]
         @inferred layout[1][1]
         @inferred layout[1:2]
