@@ -2828,6 +2828,13 @@ function from_buffers(
         end
         out
 
+    elseif class == "EmptyArray"
+        if length != 0
+            error("Form with \"class\": \"EmptyArray\" has length $length")
+        end
+
+        EmptyArray(behavior = behavior)
+
     else
         error("Form is missing its \"class\" property")
 
