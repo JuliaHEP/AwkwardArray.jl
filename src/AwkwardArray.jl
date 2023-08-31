@@ -1,6 +1,6 @@
-# using JSON
-
 module AwkwardArray
+
+import JSON
 
 ### Index ################################################################
 
@@ -568,7 +568,7 @@ end
 function Base.getindex(layout::RegularArray, r::UnitRange{Int})
     size = max(0, layout.size)
     start = (r.start - firstindex(layout)) * size + firstindex(layout.content)
-    stop = (r.stop - 1 - firstindex(layout)) * size + firstindex(layout.content) + 1
+    stop = (r.stop + 1 - firstindex(layout)) * size + firstindex(layout.content) - 1
     copy(layout, content = layout.content[start:stop], zeros_length = r.stop - r.start + 1)
 end
 
@@ -2338,11 +2338,8 @@ Base.show(
     limit_cols::Int = 80,
 ) = print(io, _vertical(data, limit_rows, limit_cols))
 
-Base.show(
-    data::Union{Content,Record,Tuple};
-    limit_rows::Int = 1,
-    limit_cols::Int = 80,
-) = print(stdout, _vertical(data, limit_rows, limit_cols))
+Base.show(data::Union{Content,Record,Tuple}; limit_rows::Int = 1, limit_cols::Int = 80) =
+    print(stdout, _vertical(data, limit_rows, limit_cols))
 
 function _alternate(range::AbstractRange{Int64})
     function generator(channel::Channel{Base.Tuple{Bool,Int64}})
@@ -2692,5 +2689,152 @@ function _vertical(data::Union{Content,Record,Tuple}, limit_rows::Int, limit_col
     end
 
 end
+
+### from_buffers/to_buffers ##############################################
+
+default_buffer_key(form_key::String, attribute::String) = "$form_key-$attribute"
+
+from_buffers(
+    form::String,
+    length::Int,
+    containers::Dict{String,BUFFER};
+    buffer_key::BUFFER_KEY_FUNCTION = default_buffer_key,
+) where {BUFFER<:AbstractVector{UInt8},BUFFER_KEY_FUNCTION<:Function} =
+    from_buffers(JSON.parse(form), length, containers, buffer_key = buffer_key)
+
+function _get_buffer(
+    form_key::Union{Nothing,String},
+    attribute::String,
+    buffer_key::BUFFER_KEY_FUNCTION,
+    containers::Dict{String,BUFFER},
+) where {BUFFER<:AbstractVector{UInt8},BUFFER_KEY_FUNCTION<:Function}
+    if isa(form_key, String)
+        key = buffer_key(form_key, attribute)
+        if !haskey(containers, key)
+            error("no form_key-attribute combination named $(repr(key)) in containers")
+        end
+        containers[key]
+    else
+        error("Form is missing its \"form_key\" property")
+    end
+end
+
+function from_buffers(
+    form::Dict{String,Any},
+    length::Int,
+    containers::Dict{String,BUFFER};
+    buffer_key::BUFFER_KEY_FUNCTION = default_buffer_key,
+) where {BUFFER<:AbstractVector{UInt8},BUFFER_KEY_FUNCTION<:Function}
+    class = get(form, "class", nothing)
+    form_key = get(form, "form_key", nothing)
+
+    raw_parameters = get(form, "parameters", Dict{String,Any}())
+    parameters__array__ = get(raw_parameters, "__array__", nothing)
+    parameters__record__ = get(raw_parameters, "__record__", nothing)
+    parameters__list__ = get(raw_parameters, "__list__", nothing)
+
+    behavior = :default
+    if class == "NumpyArray"
+        if parameters__array__ == "char"
+            behavior = :char
+            delete!(raw_parameters, "__array__")
+        elseif parameters__array__ == "byte"
+            behavior = :byte
+            delete!(raw_parameters, "__array__")
+        end
+    elseif class in [
+        "ListOffsetArray",      # ListType
+        "ListArray",
+        "RegularArray",
+        "ListOffsetArray32",    # Awkward 1.x compatibility
+        "ListOffsetArrayU32",
+        "ListOffsetArray64",
+        "ListArray32",
+        "ListArrayU32",
+        "ListArray64",
+    ]
+        if parameters__array__ == "string"
+            behavior = :string
+            delete!(raw_parameters, "__array__")
+        elseif parameters__array__ == "bytestring"
+            behavior = :bytestring
+            delete!(raw_parameters, "__array__")
+        end
+    end
+
+    parameters = Parameters(pairs(raw_parameters)...)
+
+    if class == "NumpyArray"
+        if !haskey(form, "primitive")
+            error(
+                "Form with \"class\": \"NumpyArray\" is missing its \"primitive\" property",
+            )
+        end
+        buffer = _get_buffer(form_key, "data", buffer_key, containers)
+
+        primitive = form["primitive"]
+        if primitive == "bool"
+            data = reinterpret(Bool, buffer)
+        elseif primitive == "int8"
+            data = reinterpret(Int8, buffer)
+        elseif primitive == "uint8"
+            data = reinterpret(UInt8, buffer)
+        elseif primitive == "int16"
+            data = reinterpret(Int16, buffer)
+        elseif primitive == "uint16"
+            data = reinterpret(UInt16, buffer)
+        elseif primitive == "int32"
+            data = reinterpret(Int32, buffer)
+        elseif primitive == "uint32"
+            data = reinterpret(UInt16, buffer)
+        elseif primitive == "int64"
+            data = reinterpret(Int64, buffer)
+        elseif primitive == "uint64"
+            data = reinterpret(Int64, buffer)
+        elseif primitive == "float16"
+            data = reinterpret(Float16, buffer)
+        elseif primitive == "float32"
+            data = reinterpret(Float32, buffer)
+        elseif primitive == "float64"
+            data = reinterpret(Float64, buffer)
+        elseif primitive == "complex64"
+            data = reinterpret(Complex{Float32}, buffer)
+        elseif primitive == "complex128"
+            data = reinterpret(Complex{Float64}, buffer)
+            # elseif primitive == "datetime64"
+            #     FIXME: Dates.DateTime
+            # elseif primitive == "timedelta64"
+            #     FIXME: Dates.TimePeriod
+        else
+            error(
+                "Form with \"class\": \"NumpyArray\" has an unrecognized \"primitive\": $(repr(primitive))",
+            )
+        end
+
+        inner_shape = Vector{Int64}(get(form, "inner_shape", []))
+        lengths = [length]
+        for size in inner_shape
+            push!(lengths, length * size)
+            length *= size
+        end
+
+        data = view(data, (firstindex(data)):(firstindex(data)+length-1))
+        pop!(lengths)
+
+        out::Content = PrimitiveArray(data, parameters = parameters, behavior = behavior)
+
+        for (size, zeros_length) in zip(reverse(inner_shape), reverse(lengths))
+            out = RegularArray(out, size, zeros_length = zeros_length)
+        end
+        out
+
+    else
+        error("Form is missing its \"class\" property")
+
+    end
+
+end
+
+
 
 end  # module AwkwardArray
