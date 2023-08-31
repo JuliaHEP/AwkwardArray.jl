@@ -10,6 +10,7 @@ const Index32 = AbstractVector{Int32}
 const IndexU32 = AbstractVector{UInt32}
 const Index64 = AbstractVector{Int64}
 const IndexBig = Union{Index32,IndexU32,Index64}
+const IndexBigSigned = Union{Index32,Index64}
 const IndexBool = Union{Index8,AbstractVector{Bool}}
 
 ### Parameters ###########################################################
@@ -1356,7 +1357,8 @@ function Base.append!(layout::OptionType, input)
     layout
 end
 
-struct IndexedOptionArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
+struct IndexedOptionArray{INDEX<:IndexBigSigned,CONTENT<:Content,BEHAVIOR} <:
+       OptionType{BEHAVIOR}
     index::INDEX
     content::CONTENT
     parameters::Parameters
@@ -1365,14 +1367,14 @@ struct IndexedOptionArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: OptionTy
         content::CONTENT;
         parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
-    ) where {INDEX<:IndexBig,CONTENT<:Content} =
+    ) where {INDEX<:IndexBigSigned,CONTENT<:Content} =
         new{INDEX,CONTENT,behavior}(index, content, parameters)
 end
 
 IndexedOptionArray{INDEX,CONTENT}(;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {INDEX<:IndexBig} where {CONTENT<:Content} =
+) where {INDEX<:IndexBigSigned} where {CONTENT<:Content} =
     IndexedOptionArray(INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
 
 function copy(
@@ -1381,7 +1383,13 @@ function copy(
     content::Union{Unset,CONTENT2} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+) where {
+    INDEX1<:IndexBigSigned,
+    INDEX2<:IndexBigSigned,
+    CONTENT1<:Content,
+    CONTENT2<:Content,
+    BEHAVIOR,
+}
     if isa(index, Unset)
         index = layout.index
     end
@@ -3050,6 +3058,56 @@ function from_buffers(
                 behavior = behavior,
             )
         end
+
+    elseif class in ["IndexedArray", "IndexedArray32", "IndexedArrayU32", "IndexedArray64"]
+        if !haskey(form, "index")
+            error("missing \"index\" in \"class\": \"$class\" node")
+        end
+        form_index = form["index"]
+
+        index_buffer = _get_buffer(form_key, "index", buffer_key, containers)
+        index = _get_index(form_index, length, index_buffer)
+
+        next_length = 0
+        for x in index
+            next_length = max(next_length, x + 1)
+        end
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, next_length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        IndexedArray(index, content, parameters = parameters, behavior = behavior)
+
+    elseif class in ["IndexedOptionArray", "IndexedOptionArray32", "IndexedOptionArray64"]
+        if !haskey(form, "index")
+            error("missing \"index\" in \"class\": \"$class\" node")
+        end
+        form_index = form["index"]
+
+        index_buffer = _get_buffer(form_key, "index", buffer_key, containers)
+        index = _get_index(form_index, length, index_buffer)
+
+        next_length = 0
+        for x in index
+            if x >= 0
+                next_length = max(next_length, x + 1)
+            end
+        end
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, next_length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        IndexedOptionArray(index, content, parameters = parameters, behavior = behavior)
 
     else
         error("missing or unrecognized \"class\" property: $(repr(class))")

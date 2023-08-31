@@ -2711,6 +2711,43 @@ using Test
         @test AwkwardArray.to_vector(layout) == [(1, 1.1), (2, 2.2), (3, 3.3)]
     end
 
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "IndexedArray", "index": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            7,
+            Dict{String,Vector{UInt8}}(
+                "node0-index" => Vector{UInt8}(
+                    b"\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.IndexedArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [9.9, 1.1, 1.1, 2.2, 9.9, 2.2, 3.3]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "IndexedOptionArray", "index": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            6,
+            Dict{String,Vector{UInt8}}(
+                "node0-index" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x03\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.IndexedOptionArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout, na = nothing) ==
+              [1.1, 2.2, 3.3, nothing, nothing, 9.9]
+    end
+
 
 
 end   # @testset "AwkwardArray.jl"
