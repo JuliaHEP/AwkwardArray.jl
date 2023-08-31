@@ -2711,12 +2711,29 @@ function _get_buffer(
     if isa(form_key, String)
         key = buffer_key(form_key, attribute)
         if !haskey(containers, key)
-            error("no form_key-attribute combination named $(repr(key)) in containers")
+            error("form_key-attribute $(repr(key)) not found in containers")
         end
         containers[key]
     else
-        error("Form is missing its \"form_key\" property")
+        error("\"form_key\" property missing")
     end
+end
+
+function _get_index(
+    form_snippet::String, length::Int64, buffer::BUFFER
+) where {BUFFER<:AbstractVector{UInt8}}
+    if form_snippet == "i8"
+        data = reinterpret(Int8, buffer)
+    elseif form_snippet == "u8"
+        data = reinterpret(UInt8, buffer)
+    elseif form_snippet == "i32"
+        data = reinterpret(Int32, buffer)
+    elseif form_snippet == "u32"
+        data = reinterpret(UInt32, buffer)
+    elseif form_snippet == "i64"
+        data = reinterpret(Int64, buffer)
+    end
+    view(data, (firstindex(data)):(firstindex(data)+length-1))
 end
 
 function from_buffers(
@@ -2767,7 +2784,7 @@ function from_buffers(
     if class == "NumpyArray"
         if !haskey(form, "primitive")
             error(
-                "Form with \"class\": \"NumpyArray\" is missing its \"primitive\" property",
+                "missing \"primitive\" property in \"class\": \"$class\" node",
             )
         end
         buffer = _get_buffer(form_key, "data", buffer_key, containers)
@@ -2807,7 +2824,7 @@ function from_buffers(
             #     FIXME: Dates.TimePeriod
         else
             error(
-                "Form with \"class\": \"NumpyArray\" has an unrecognized \"primitive\": $(repr(primitive))",
+                "unrecognized \"primitive\": $(repr(primitive)) in \"class\": \"$class\" node",
             )
         end
 
@@ -2830,10 +2847,35 @@ function from_buffers(
 
     elseif class == "EmptyArray"
         if length != 0
-            error("Form with \"class\": \"EmptyArray\" has length $length")
+            error("length is $length (should be 0) in \"class\": \"$class\" node")
         end
 
         EmptyArray(behavior = behavior)
+
+    elseif class in [
+        "ListOffsetArray", "ListOffsetArray32", "ListOffsetArrayU32", "ListOffsetArray64"
+    ]
+        if !haskey(form, "offsets")
+            error("missing \"offsets\" in \"class\": \"$class\" node")
+        end
+        form_offsets = form["offsets"]
+
+        offsets_buffer = _get_buffer(form_key, "offsets", buffer_key, containers)
+        offsets = _get_index(form_offsets, length + 1, offsets_buffer)
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content = from_buffers(
+                form_content,
+                offsets[end],
+                containers;
+                buffer_key = buffer_key,
+            )
+        else
+            error("Form with \"class\": \"$class\" has no (object-typed) \"content\"")
+        end
+
+        ListOffsetArray(offsets, content, parameters = parameters, behavior = behavior)
 
     else
         error("Form is missing its \"class\" property")

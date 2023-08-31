@@ -2548,6 +2548,41 @@ using Test
         @test AwkwardArray.is_valid(layout)
     end
 
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "ListOffsetArray", "offsets": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            3,
+            Dict{String,Vector{UInt8}}(
+                "node0-offsets" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x9a\x99\x99\x99\x99\x99\x11@\x00\x00\x00\x00\x00\x00\x16@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.ListOffsetArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "ListOffsetArray", "offsets": "i64", "content": {"class": "NumpyArray", "primitive": "uint8", "inner_shape": [], "parameters": {"__array__": "char"}, "form_key": "node1"}, "parameters": {"__array__": "string"}, "form_key": "node0"}""",
+            3,
+            Dict{String,Vector{UInt8}}(
+                "node0-offsets" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node1-data" => Vector{UInt8}(
+                    b"onetwothree",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.ListOffsetArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == ["one", "two", "three"]
+    end
 
 
 end   # @testset "AwkwardArray.jl"
