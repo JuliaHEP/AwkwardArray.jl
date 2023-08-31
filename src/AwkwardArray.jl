@@ -3220,13 +3220,63 @@ function from_buffers(
 
         UnmaskedArray(content, parameters = parameters, behavior = behavior)
 
+    elseif class in ["UnionArray", "UnionArray8_32", "UnionArray8_U32", "UnionArray8_64"]
+        if !haskey(form, "tags")
+            error("missing \"tags\" in \"class\": \"$class\" node")
+        end
+        if !haskey(form, "index")
+            error("missing \"index\" in \"class\": \"$class\" node")
+        end
+        form_tags = form["tags"]
+        form_index = form["index"]
+
+        tags_buffer = _get_buffer(form_key, "tags", buffer_key, containers)
+        tags = _get_index(form_tags, length, tags_buffer)
+        index_buffer = _get_buffer(form_key, "index", buffer_key, containers)
+        index = _get_index(form_index, length, index_buffer)
+
+        contents = Vector{Content}()
+        form_contents = get(form, "contents", nothing)
+        if isa(form_contents, Vector)
+            lengths = zeros(Int64, Base.length(form_contents))
+            off = firstindex(tags)
+            adj = firstindex(tags) - firstindex(index)
+            for i in eachindex(tags)
+                tag = tags[i]
+                lengths[tag+off] = max(lengths[tag+off], index[i-adj] + 1)
+            end
+
+            adj2 = firstindex(form_contents) - firstindex(lengths)
+            for (tag, form_content) in enumerate(form_contents)
+                if isa(form_content, Dict{String,Any})
+                    push!(
+                        contents,
+                        from_buffers(
+                            form_content,
+                            lengths[tag-adj2],
+                            containers,
+                            buffer_key = buffer_key,
+                        ),
+                    )
+                else
+                    error("non-object found in \"contents\" in \"class\": \"$class\" node")
+                end
+            end
+        else
+            error("missing (or not array-typed) \"contents\" in \"class\": \"$class\" node")
+        end
+
+        UnionArray(
+            tags,
+            index,
+            Base.Tuple(contents);
+            parameters = parameters,
+            behavior = behavior,
+        )
+
     else
         error("missing or unrecognized \"class\" property: $(repr(class))")
-
     end
-
-end
-
-
+end  # function from_buffers
 
 end  # module AwkwardArray
