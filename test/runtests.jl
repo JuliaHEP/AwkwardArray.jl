@@ -2542,7 +2542,9 @@ using Test
 
     begin
         layout = AwkwardArray.from_buffers(
-            """{"class": "EmptyArray"}""", 0, Dict{String,Vector{UInt8}}()
+            """{"class": "EmptyArray"}""",
+            0,
+            Dict{String,Vector{UInt8}}(),
         )
         @test isa(layout, AwkwardArray.EmptyArray)
         @test AwkwardArray.is_valid(layout)
@@ -2574,9 +2576,7 @@ using Test
                 "node0-offsets" => Vector{UInt8}(
                     b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00\x00\x00\x00\x00",
                 ),
-                "node1-data" => Vector{UInt8}(
-                    b"onetwothree",
-                ),
+                "node1-data" => Vector{UInt8}(b"onetwothree"),
             ),
         )
         @test isa(layout, AwkwardArray.ListOffsetArray)
@@ -2603,6 +2603,26 @@ using Test
         @test isa(layout, AwkwardArray.ListArray)
         @test AwkwardArray.is_valid(layout)
         @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "RegularArray", "size": 3, "content": {"class": "RegularArray", "size": 5, "content": {"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node2"}, "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            2,
+            Dict{String,Vector{UInt8}}(
+                "node2-data" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x07\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\t\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00\x00\x00\x00\x00\x0c\x00\x00\x00\x00\x00\x00\x00\r\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x11\x00\x00\x00\x00\x00\x00\x00\x12\x00\x00\x00\x00\x00\x00\x00\x13\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00\x00\x00\x00\x00\x15\x00\x00\x00\x00\x00\x00\x00\x16\x00\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00\x00\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00\x19\x00\x00\x00\x00\x00\x00\x00\x1a\x00\x00\x00\x00\x00\x00\x00\x1b\x00\x00\x00\x00\x00\x00\x00\x1c\x00\x00\x00\x00\x00\x00\x00\x1d\x00\x00\x00\x00\x00\x00\x00",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.RegularArray)
+        @test isa(layout.content, AwkwardArray.RegularArray)
+        @test isa(layout.content.content, AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [
+            [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11, 12, 13, 14]],
+            [[15, 16, 17, 18, 19], [20, 21, 22, 23, 24], [25, 26, 27, 28, 29]],
+        ]
     end
 
 

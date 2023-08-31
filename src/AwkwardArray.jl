@@ -2720,7 +2720,9 @@ function _get_buffer(
 end
 
 function _get_index(
-    form_snippet::String, length::Int64, buffer::BUFFER
+    form_snippet::String,
+    length::Int64,
+    buffer::BUFFER,
 ) where {BUFFER<:AbstractVector{UInt8}}
     if form_snippet == "i8"
         data = reinterpret(Int8, buffer)
@@ -2732,6 +2734,8 @@ function _get_index(
         data = reinterpret(UInt32, buffer)
     elseif form_snippet == "i64"
         data = reinterpret(Int64, buffer)
+    else
+        error("unrecognized index type in form: $(repr(form_snippet))")
     end
     view(data, (firstindex(data)):(firstindex(data)+length-1))
 end
@@ -2783,9 +2787,7 @@ function from_buffers(
 
     if class == "NumpyArray"
         if !haskey(form, "primitive")
-            error(
-                "missing \"primitive\" property in \"class\": \"$class\" node",
-            )
+            error("missing \"primitive\" property in \"class\": \"$class\" node")
         end
         buffer = _get_buffer(form_key, "data", buffer_key, containers)
 
@@ -2853,7 +2855,10 @@ function from_buffers(
         EmptyArray(behavior = behavior)
 
     elseif class in [
-        "ListOffsetArray", "ListOffsetArray32", "ListOffsetArrayU32", "ListOffsetArray64"
+        "ListOffsetArray",
+        "ListOffsetArray32",
+        "ListOffsetArrayU32",
+        "ListOffsetArray64",
     ]
         if !haskey(form, "offsets")
             error("missing \"offsets\" in \"class\": \"$class\" node")
@@ -2876,7 +2881,7 @@ function from_buffers(
                 buffer_key = buffer_key,
             )
         else
-            error("Form with \"class\": \"$class\" has no (object-typed) \"content\"")
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
         end
 
         ListOffsetArray(offsets, content, parameters = parameters, behavior = behavior)
@@ -2905,20 +2910,42 @@ function from_buffers(
 
         form_content = get(form, "content", nothing)
         if isa(form_content, Dict{String,Any})
-            content = from_buffers(
-                form_content,
-                max_stop,
-                containers;
-                buffer_key = buffer_key,
-            )
+            content =
+                from_buffers(form_content, max_stop, containers; buffer_key = buffer_key)
         else
-            error("Form with \"class\": \"$class\" has no (object-typed) \"content\"")
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
         end
 
         ListArray(starts, stops, content, parameters = parameters, behavior = behavior)
 
+    elseif class == "RegularArray"
+        size = get(form, "size", nothing)
+        if !isa(size, Int)
+            error(
+                "missing (or not int-typed) \"size\" in \"class\": \"$class\" node: $(repr(size))",
+            )
+        end
+
+        next_length = length * size
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, next_length, containers; buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        RegularArray(
+            content,
+            size,
+            zeros_length = length,
+            parameters = parameters,
+            behavior = behavior,
+        )
+
     else
-        error("Form is missing its \"class\" property")
+        error("missing or unrecognized \"class\" property: $(repr(class))")
 
     end
 
