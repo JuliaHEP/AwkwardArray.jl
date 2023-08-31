@@ -1,6 +1,6 @@
-# using JSON
-
 module AwkwardArray
+
+import JSON
 
 ### Index ################################################################
 
@@ -10,6 +10,7 @@ const Index32 = AbstractVector{Int32}
 const IndexU32 = AbstractVector{UInt32}
 const Index64 = AbstractVector{Int64}
 const IndexBig = Union{Index32,IndexU32,Index64}
+const IndexBigSigned = Union{Index32,Index64}
 const IndexBool = Union{Index8,AbstractVector{Bool}}
 
 ### Parameters ###########################################################
@@ -568,7 +569,7 @@ end
 function Base.getindex(layout::RegularArray, r::UnitRange{Int})
     size = max(0, layout.size)
     start = (r.start - firstindex(layout)) * size + firstindex(layout.content)
-    stop = (r.stop - 1 - firstindex(layout)) * size + firstindex(layout.content) + 1
+    stop = (r.stop + 1 - firstindex(layout)) * size + firstindex(layout.content) - 1
     copy(layout, content = layout.content[start:stop], zeros_length = r.stop - r.start + 1)
 end
 
@@ -1356,7 +1357,8 @@ function Base.append!(layout::OptionType, input)
     layout
 end
 
-struct IndexedOptionArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
+struct IndexedOptionArray{INDEX<:IndexBigSigned,CONTENT<:Content,BEHAVIOR} <:
+       OptionType{BEHAVIOR}
     index::INDEX
     content::CONTENT
     parameters::Parameters
@@ -1365,14 +1367,14 @@ struct IndexedOptionArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: OptionTy
         content::CONTENT;
         parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
-    ) where {INDEX<:IndexBig,CONTENT<:Content} =
+    ) where {INDEX<:IndexBigSigned,CONTENT<:Content} =
         new{INDEX,CONTENT,behavior}(index, content, parameters)
 end
 
 IndexedOptionArray{INDEX,CONTENT}(;
     parameters::Parameters = Parameters(),
     behavior::Symbol = :default,
-) where {INDEX<:IndexBig} where {CONTENT<:Content} =
+) where {INDEX<:IndexBigSigned} where {CONTENT<:Content} =
     IndexedOptionArray(INDEX([]), CONTENT(), parameters = parameters, behavior = behavior)
 
 function copy(
@@ -1381,7 +1383,13 @@ function copy(
     content::Union{Unset,CONTENT2} = Unset(),
     parameters::Union{Unset,Parameters} = Unset(),
     behavior::Union{Unset,Symbol} = Unset(),
-) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
+) where {
+    INDEX1<:IndexBigSigned,
+    INDEX2<:IndexBigSigned,
+    CONTENT1<:Content,
+    CONTENT2<:Content,
+    BEHAVIOR,
+}
     if isa(index, Unset)
         index = layout.index
     end
@@ -2338,11 +2346,8 @@ Base.show(
     limit_cols::Int = 80,
 ) = print(io, _vertical(data, limit_rows, limit_cols))
 
-Base.show(
-    data::Union{Content,Record,Tuple};
-    limit_rows::Int = 1,
-    limit_cols::Int = 80,
-) = print(stdout, _vertical(data, limit_rows, limit_cols))
+Base.show(data::Union{Content,Record,Tuple}; limit_rows::Int = 1, limit_cols::Int = 80) =
+    print(stdout, _vertical(data, limit_rows, limit_cols))
 
 function _alternate(range::AbstractRange{Int64})
     function generator(channel::Channel{Base.Tuple{Bool,Int64}})
@@ -2692,5 +2697,586 @@ function _vertical(data::Union{Content,Record,Tuple}, limit_rows::Int, limit_col
     end
 
 end
+
+### from_buffers/to_buffers ##############################################
+
+default_buffer_key(form_key::String, attribute::String) = "$form_key-$attribute"
+
+from_buffers(
+    form::String,
+    length::Int,
+    containers::Dict{String,BUFFER};
+    buffer_key::BUFFER_KEY_FUNCTION = default_buffer_key,
+) where {BUFFER<:AbstractVector{UInt8},BUFFER_KEY_FUNCTION<:Function} =
+    from_buffers(JSON.parse(form), length, containers, buffer_key = buffer_key)
+
+function _get_buffer(
+    form_key::Union{Nothing,String},
+    attribute::String,
+    buffer_key::BUFFER_KEY_FUNCTION,
+    containers::Dict{String,BUFFER},
+) where {BUFFER<:AbstractVector{UInt8},BUFFER_KEY_FUNCTION<:Function}
+    if isa(form_key, String)
+        key = buffer_key(form_key, attribute)
+        if !haskey(containers, key)
+            error("form_key-attribute $(repr(key)) not found in containers")
+        end
+        containers[key]
+    else
+        error("\"form_key\" property missing")
+    end
+end
+
+function _get_index(
+    form_snippet::String,
+    length::Int64,
+    buffer::BUFFER,
+) where {BUFFER<:AbstractVector{UInt8}}
+    if form_snippet == "i8"
+        data = reinterpret(Int8, buffer)
+    elseif form_snippet == "u8"
+        data = reinterpret(UInt8, buffer)
+    elseif form_snippet == "i32"
+        data = reinterpret(Int32, buffer)
+    elseif form_snippet == "u32"
+        data = reinterpret(UInt32, buffer)
+    elseif form_snippet == "i64"
+        data = reinterpret(Int64, buffer)
+    else
+        error("unrecognized index type in form: $(repr(form_snippet))")
+    end
+    view(data, (firstindex(data)):(firstindex(data)+length-1))
+end
+
+function from_buffers(
+    form::Dict{String,Any},
+    length::Int,
+    containers::Dict{String,BUFFER};
+    buffer_key::BUFFER_KEY_FUNCTION = default_buffer_key,
+) where {BUFFER<:AbstractVector{UInt8},BUFFER_KEY_FUNCTION<:Function}
+    class = get(form, "class", nothing)
+    form_key = get(form, "form_key", nothing)
+
+    raw_parameters = get(form, "parameters", Dict{String,Any}())
+    parameters__array__ = get(raw_parameters, "__array__", nothing)
+    parameters__list__ = get(raw_parameters, "__list__", nothing)
+    parameters__record__ = get(raw_parameters, "__record__", nothing)
+
+    behavior = :default
+    if class == "NumpyArray"
+        if parameters__array__ == "char"
+            behavior = :char
+            delete!(raw_parameters, "__array__")
+        elseif parameters__array__ == "byte"
+            behavior = :byte
+            delete!(raw_parameters, "__array__")
+        end
+    elseif class in [
+        "ListOffsetArray",      # ListType
+        "ListArray",
+        "RegularArray",
+        "ListOffsetArray32",    # Awkward 1.x compatibility
+        "ListOffsetArrayU32",
+        "ListOffsetArray64",
+        "ListArray32",
+        "ListArrayU32",
+        "ListArray64",
+    ]
+        if parameters__array__ == "string"
+            behavior = :string
+            delete!(raw_parameters, "__array__")
+        elseif parameters__array__ == "bytestring"
+            behavior = :bytestring
+            delete!(raw_parameters, "__array__")
+        end
+        if !isnothing(parameters__list__)
+            behavior = Symbol(parameters__list__)
+            delete!(raw_parameters, "__list__")
+        end
+    elseif class == "RecordArray"
+        if !isnothing(parameters__record__)
+            behavior = Symbol(parameters__record__)
+            delete!(raw_parameters, "__record__")
+        end
+    end
+
+    parameters = Parameters(pairs(raw_parameters)...)
+
+    if class == "NumpyArray"
+        if !haskey(form, "primitive")
+            error("missing \"primitive\" property in \"class\": \"$class\" node")
+        end
+        buffer = _get_buffer(form_key, "data", buffer_key, containers)
+
+        primitive = form["primitive"]
+        if primitive == "bool"
+            data = reinterpret(Bool, buffer)
+        elseif primitive == "int8"
+            data = reinterpret(Int8, buffer)
+        elseif primitive == "uint8"
+            data = reinterpret(UInt8, buffer)
+        elseif primitive == "int16"
+            data = reinterpret(Int16, buffer)
+        elseif primitive == "uint16"
+            data = reinterpret(UInt16, buffer)
+        elseif primitive == "int32"
+            data = reinterpret(Int32, buffer)
+        elseif primitive == "uint32"
+            data = reinterpret(UInt16, buffer)
+        elseif primitive == "int64"
+            data = reinterpret(Int64, buffer)
+        elseif primitive == "uint64"
+            data = reinterpret(Int64, buffer)
+        elseif primitive == "float16"
+            data = reinterpret(Float16, buffer)
+        elseif primitive == "float32"
+            data = reinterpret(Float32, buffer)
+        elseif primitive == "float64"
+            data = reinterpret(Float64, buffer)
+        elseif primitive == "complex64"
+            data = reinterpret(Complex{Float32}, buffer)
+        elseif primitive == "complex128"
+            data = reinterpret(Complex{Float64}, buffer)
+            # elseif primitive == "datetime64"
+            #     FIXME: Dates.DateTime
+            # elseif primitive == "timedelta64"
+            #     FIXME: Dates.TimePeriod
+        else
+            error(
+                "unrecognized \"primitive\": $(repr(primitive)) in \"class\": \"$class\" node",
+            )
+        end
+
+        inner_shape = Vector{Int64}(get(form, "inner_shape", []))
+        lengths = [length]
+        for size in inner_shape
+            push!(lengths, length * size)
+            length *= size
+        end
+
+        data = view(data, (firstindex(data)):(firstindex(data)+length-1))
+        pop!(lengths)
+
+        out::Content = PrimitiveArray(data, parameters = parameters, behavior = behavior)
+
+        for (size, zeros_length) in zip(reverse(inner_shape), reverse(lengths))
+            out = RegularArray(out, size, zeros_length = zeros_length)
+        end
+        out
+
+    elseif class == "EmptyArray"
+        if length != 0
+            error("length is $length (should be 0) in \"class\": \"$class\" node")
+        end
+
+        EmptyArray(behavior = behavior)
+
+    elseif class in [
+        "ListOffsetArray",
+        "ListOffsetArray32",
+        "ListOffsetArrayU32",
+        "ListOffsetArray64",
+    ]
+        if !haskey(form, "offsets")
+            error("missing \"offsets\" in \"class\": \"$class\" node")
+        end
+        form_offsets = form["offsets"]
+
+        offsets_buffer = _get_buffer(form_key, "offsets", buffer_key, containers)
+        offsets = _get_index(form_offsets, length + 1, offsets_buffer)
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content = from_buffers(
+                form_content,
+                if Base.length(offsets) == 1
+                    0
+                else
+                    offsets[end]
+                end,
+                containers,
+                buffer_key = buffer_key,
+            )
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        ListOffsetArray(offsets, content, parameters = parameters, behavior = behavior)
+
+    elseif class in ["ListArray", "ListArray32", "ListArrayU32", "ListArray64"]
+        if !haskey(form, "starts")
+            error("missing \"starts\" in \"class\": \"$class\" node")
+        end
+        if !haskey(form, "stops")
+            error("missing \"stops\" in \"class\": \"$class\" node")
+        end
+        form_starts = form["starts"]
+        form_stops = form["stops"]
+
+        starts_buffer = _get_buffer(form_key, "starts", buffer_key, containers)
+        starts = _get_index(form_starts, length, starts_buffer)
+        stops_buffer = _get_buffer(form_key, "stops", buffer_key, containers)
+        stops = _get_index(form_stops, length, stops_buffer)
+
+        max_stop = 0
+        for (start, stop) in zip(starts, stops)
+            if start != stop
+                max_stop = max(max_stop, stop)
+            end
+        end
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, max_stop, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        ListArray(starts, stops, content, parameters = parameters, behavior = behavior)
+
+    elseif class == "RegularArray"
+        size = get(form, "size", nothing)
+        if !isa(size, Int)
+            error(
+                "missing (or not int-typed) \"size\" in \"class\": \"$class\" node: $(repr(size))",
+            )
+        end
+
+        next_length = length * size
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, next_length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        RegularArray(
+            content,
+            size,
+            zeros_length = length,
+            parameters = parameters,
+            behavior = behavior,
+        )
+
+    elseif class == "RecordArray"
+        is_tuple = true
+        fields = Vector{Symbol}()
+        contents = Vector{Content}()
+
+        if haskey(form, "fields")               # new serialization (Awkward 2.x)
+            form_contents = get(form, "contents", nothing)
+            if isa(form_contents, Vector)
+                for form_content in form_contents
+                    if isa(form_content, Dict{String,Any})
+                        push!(
+                            contents,
+                            from_buffers(
+                                form_content,
+                                length,
+                                containers,
+                                buffer_key = buffer_key,
+                            ),
+                        )
+                    else
+                        error(
+                            "non-object found in \"contents\" in \"class\": \"$class\" node",
+                        )
+                    end
+                end
+            else
+                error(
+                    "missing (or not array-typed) \"contents\" in \"class\": \"$class\" node",
+                )
+            end
+
+            form_fields = form["fields"]
+            if !isnothing(form_fields)
+                is_tuple = false
+                for field in form["fields"]
+                    push!(fields, Symbol(field))
+                end
+                if Base.length(fields) != Base.length(contents)
+                    error(
+                        "different number of \"fields\" and \"contents\" in \"class\": \"$class\" node",
+                    )
+                end
+            end
+
+        else
+            form_contents = get(form, "contents", nothing)
+            if isa(form_contents, Dict)         # old Record serialization (Awkward 1.x)
+                is_tuple = false
+                for (field, form_content) in form_contents
+                    if isa(form_content, Dict{String,Any})
+                        push!(
+                            contents,
+                            from_buffers(
+                                form_content,
+                                length,
+                                containers,
+                                buffer_key = buffer_key,
+                            ),
+                        )
+                        push!(fields, Symbol(field))
+                    else
+                        error(
+                            "non-object found in \"contents\" in old-style \"class\": \"$class\" node",
+                        )
+                    end
+                end
+            elseif isa(form_contents, Vector)   # old or new Tuple serialization
+                for form_content in form_contents
+                    if isa(form_content, Dict{String,Any})
+                        push!(
+                            contents,
+                            from_buffers(
+                                form_content,
+                                length,
+                                containers,
+                                buffer_key = buffer_key,
+                            ),
+                        )
+                    else
+                        error(
+                            "non-object found in \"contents\" in old-style \"class\": \"$class\" node",
+                        )
+                    end
+                end
+            else
+                error(
+                    "missing (or not array/object-typed) \"contents\" in old-style \"class\": \"$class\" node",
+                )
+            end
+        end
+
+        if is_tuple
+            TupleArray(
+                Base.Tuple(contents),
+                length,
+                parameters = parameters,
+                behavior = behavior,
+            )
+        else
+            RecordArray(
+                NamedTuple{Base.Tuple(fields)}(Base.Tuple(contents)),
+                length,
+                parameters = parameters,
+                behavior = behavior,
+            )
+        end
+
+    elseif class in ["IndexedArray", "IndexedArray32", "IndexedArrayU32", "IndexedArray64"]
+        if !haskey(form, "index")
+            error("missing \"index\" in \"class\": \"$class\" node")
+        end
+        form_index = form["index"]
+
+        index_buffer = _get_buffer(form_key, "index", buffer_key, containers)
+        index = _get_index(form_index, length, index_buffer)
+
+        next_length = 0
+        for x in index
+            next_length = max(next_length, x + 1)
+        end
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, next_length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        IndexedArray(index, content, parameters = parameters, behavior = behavior)
+
+    elseif class in ["IndexedOptionArray", "IndexedOptionArray32", "IndexedOptionArray64"]
+        if !haskey(form, "index")
+            error("missing \"index\" in \"class\": \"$class\" node")
+        end
+        form_index = form["index"]
+
+        index_buffer = _get_buffer(form_key, "index", buffer_key, containers)
+        index = _get_index(form_index, length, index_buffer)
+
+        next_length = 0
+        for x in index
+            if x >= 0
+                next_length = max(next_length, x + 1)
+            end
+        end
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, next_length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        IndexedOptionArray(index, content, parameters = parameters, behavior = behavior)
+
+    elseif class == "ByteMaskedArray"
+        if !haskey(form, "mask")
+            error("missing \"mask\" in \"class\": \"$class\" node")
+        end
+        form_mask = form["mask"]
+
+        mask_buffer = _get_buffer(form_key, "mask", buffer_key, containers)
+        mask = _get_index(form_mask, length, mask_buffer)
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        valid_when = get(form, "valid_when", nothing)
+        if valid_when != false && valid_when != true
+            error(
+                "missing (or not boolean-typed) \"valid_when\" in \"class\": \"$class\" node",
+            )
+        end
+
+        ByteMaskedArray(
+            mask,
+            content,
+            valid_when = valid_when,
+            parameters = parameters,
+            behavior = behavior,
+        )
+
+    elseif class == "BitMaskedArray"
+        if !haskey(form, "mask")
+            error("missing \"mask\" in \"class\": \"$class\" node")
+        end
+        form_mask = form["mask"]
+
+        excess_length = Int64(ceil(length / 8.0))
+
+        mask_buffer = _get_buffer(form_key, "mask", buffer_key, containers)
+        raw_mask = _get_index(form_mask, excess_length, mask_buffer)
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        valid_when = get(form, "valid_when", nothing)
+        if valid_when != false && valid_when != true
+            error(
+                "missing (or not boolean-typed) \"valid_when\" in \"class\": \"$class\" node",
+            )
+        end
+
+        lsb_order = get(form, "lsb_order", nothing)
+        if lsb_order != false && lsb_order != true
+            error(
+                "missing (or not boolean-typed) \"lsb_order\" in \"class\": \"$class\" node",
+            )
+        end
+
+        mask = falses(length)
+        unsafe_copyto!(
+            reinterpret(Ptr{UInt8}, pointer(mask.chunks)),
+            pointer(raw_mask),
+            excess_length,
+        )
+
+        if !lsb_order
+            mask.len = excess_length * 8
+
+            off = firstindex(mask)
+            for i = 0:8:((excess_length-1)*8)
+                mask[(i+off):(i+off+7)] = reverse(mask[(i+off):(i+off+7)])
+            end
+
+            mask.len = length
+        end
+
+        BitMaskedArray(
+            mask,
+            content,
+            valid_when = valid_when,
+            parameters = parameters,
+            behavior = behavior,
+        )
+
+    elseif class == "UnmaskedArray"
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        UnmaskedArray(content, parameters = parameters, behavior = behavior)
+
+    elseif class in ["UnionArray", "UnionArray8_32", "UnionArray8_U32", "UnionArray8_64"]
+        if !haskey(form, "tags")
+            error("missing \"tags\" in \"class\": \"$class\" node")
+        end
+        if !haskey(form, "index")
+            error("missing \"index\" in \"class\": \"$class\" node")
+        end
+        form_tags = form["tags"]
+        form_index = form["index"]
+
+        tags_buffer = _get_buffer(form_key, "tags", buffer_key, containers)
+        tags = _get_index(form_tags, length, tags_buffer)
+        index_buffer = _get_buffer(form_key, "index", buffer_key, containers)
+        index = _get_index(form_index, length, index_buffer)
+
+        contents = Vector{Content}()
+        form_contents = get(form, "contents", nothing)
+        if isa(form_contents, Vector)
+            lengths = zeros(Int64, Base.length(form_contents))
+            off = firstindex(tags)
+            adj = firstindex(tags) - firstindex(index)
+            for i in eachindex(tags)
+                tag = tags[i]
+                lengths[tag+off] = max(lengths[tag+off], index[i-adj] + 1)
+            end
+
+            adj2 = firstindex(form_contents) - firstindex(lengths)
+            for (tag, form_content) in enumerate(form_contents)
+                if isa(form_content, Dict{String,Any})
+                    push!(
+                        contents,
+                        from_buffers(
+                            form_content,
+                            lengths[tag-adj2],
+                            containers,
+                            buffer_key = buffer_key,
+                        ),
+                    )
+                else
+                    error("non-object found in \"contents\" in \"class\": \"$class\" node")
+                end
+            end
+        else
+            error("missing (or not array-typed) \"contents\" in \"class\": \"$class\" node")
+        end
+
+        UnionArray(
+            tags,
+            index,
+            Base.Tuple(contents);
+            parameters = parameters,
+            behavior = behavior,
+        )
+
+    else
+        error("missing or unrecognized \"class\" property: $(repr(class))")
+    end
+end  # function from_buffers
 
 end  # module AwkwardArray
