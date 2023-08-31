@@ -2780,6 +2780,23 @@ using Test
               [1.1, 2.2, 3.3, nothing, nothing, 9.9, 1.1, 2.2, 3.3, nothing, nothing, 9.9]
     end
 
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "UnmaskedArray", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            6,
+            Dict{String,Vector{UInt8}}(
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.UnmaskedArray)
+        @test isa(layout.content, AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout, na = nothing) ==
+              [1.1, 2.2, 3.3, 99999, 99999, 9.9]
+    end
+
 
 
 end   # @testset "AwkwardArray.jl"

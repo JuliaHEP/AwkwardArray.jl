@@ -3209,6 +3209,17 @@ function from_buffers(
             behavior = behavior,
         )
 
+    elseif class == "UnmaskedArray"
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        UnmaskedArray(content, parameters = parameters, behavior = behavior)
+
     else
         error("missing or unrecognized \"class\" property: $(repr(class))")
 
