@@ -2759,8 +2759,8 @@ function from_buffers(
 
     raw_parameters = get(form, "parameters", Dict{String,Any}())
     parameters__array__ = get(raw_parameters, "__array__", nothing)
-    parameters__record__ = get(raw_parameters, "__record__", nothing)
     parameters__list__ = get(raw_parameters, "__list__", nothing)
+    parameters__record__ = get(raw_parameters, "__record__", nothing)
 
     behavior = :default
     if class == "NumpyArray"
@@ -2788,6 +2788,15 @@ function from_buffers(
         elseif parameters__array__ == "bytestring"
             behavior = :bytestring
             delete!(raw_parameters, "__array__")
+        end
+        if !isnothing(parameters__list__)
+            behavior = Symbol(parameters__list__)
+            delete!(raw_parameters, "__list__")
+        end
+    elseif class == "RecordArray"
+        if !isnothing(parameters__record__)
+            behavior = Symbol(parameters__record__)
+            delete!(raw_parameters, "__record__")
         end
     end
 
