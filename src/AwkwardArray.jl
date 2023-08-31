@@ -3109,6 +3109,38 @@ function from_buffers(
 
         IndexedOptionArray(index, content, parameters = parameters, behavior = behavior)
 
+    elseif class == "ByteMaskedArray"
+        if !haskey(form, "mask")
+            error("missing \"mask\" in \"class\": \"$class\" node")
+        end
+        form_mask = form["mask"]
+
+        mask_buffer = _get_buffer(form_key, "mask", buffer_key, containers)
+        mask = _get_index(form_mask, length, mask_buffer)
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        valid_when = get(form, "valid_when", nothing)
+        if valid_when != 0 && valid_when != 1
+            error(
+                "missing (or not boolean-typed) \"valid_when\" in \"class\": \"$class\" node",
+            )
+        end
+
+        ByteMaskedArray(
+            mask,
+            content,
+            valid_when = valid_when,
+            parameters = parameters,
+            behavior = behavior,
+        )
+
     else
         error("missing or unrecognized \"class\" property: $(repr(class))")
 

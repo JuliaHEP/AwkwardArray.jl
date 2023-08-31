@@ -2731,18 +2731,16 @@ using Test
 
     begin
         layout = AwkwardArray.from_buffers(
-            """{"class": "IndexedOptionArray", "index": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            """{"class": "ByteMaskedArray", "mask": "i8", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "valid_when": false, "parameters": {}, "form_key": "node0"}""",
             6,
             Dict{String,Vector{UInt8}}(
-                "node0-index" => Vector{UInt8}(
-                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x03\x00\x00\x00\x00\x00\x00\x00",
-                ),
+                "node0-mask" => Vector{UInt8}(b"\x00\x00\x00\x01\x01\x00"),
                 "node1-data" => Vector{UInt8}(
-                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
                 ),
             ),
         )
-        @test isa(layout, AwkwardArray.IndexedOptionArray)
+        @test isa(layout, AwkwardArray.ByteMaskedArray)
         @test AwkwardArray.is_valid(layout)
         @test AwkwardArray.to_vector(layout, na = nothing) ==
               [1.1, 2.2, 3.3, nothing, nothing, 9.9]
