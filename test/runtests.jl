@@ -2746,6 +2746,40 @@ using Test
               [1.1, 2.2, 3.3, nothing, nothing, 9.9]
     end
 
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "BitMaskedArray", "mask": "u8", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "valid_when": false, "lsb_order": true, "parameters": {}, "form_key": "node0"}""",
+            12,
+            Dict{String,Vector{UInt8}}(
+                "node0-mask" => Vector{UInt8}(b"\x18\x06"),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.BitMaskedArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout, na = nothing) ==
+              [1.1, 2.2, 3.3, nothing, nothing, 9.9, 1.1, 2.2, 3.3, nothing, nothing, 9.9]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "BitMaskedArray", "mask": "u8", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "valid_when": false, "lsb_order": false, "parameters": {}, "form_key": "node0"}""",
+            12,
+            Dict{String,Vector{UInt8}}(
+                "node0-mask" => Vector{UInt8}(b"\x18`"),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.BitMaskedArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout, na = nothing) ==
+              [1.1, 2.2, 3.3, nothing, nothing, 9.9, 1.1, 2.2, 3.3, nothing, nothing, 9.9]
+    end
+
 
 
 end   # @testset "AwkwardArray.jl"

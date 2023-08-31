@@ -3136,13 +3136,72 @@ function from_buffers(
         end
 
         valid_when = get(form, "valid_when", nothing)
-        if valid_when != 0 && valid_when != 1
+        if valid_when != false && valid_when != true
             error(
                 "missing (or not boolean-typed) \"valid_when\" in \"class\": \"$class\" node",
             )
         end
 
         ByteMaskedArray(
+            mask,
+            content,
+            valid_when = valid_when,
+            parameters = parameters,
+            behavior = behavior,
+        )
+
+    elseif class == "BitMaskedArray"
+        if !haskey(form, "mask")
+            error("missing \"mask\" in \"class\": \"$class\" node")
+        end
+        form_mask = form["mask"]
+
+        excess_length = Int64(ceil(length / 8.0))
+
+        mask_buffer = _get_buffer(form_key, "mask", buffer_key, containers)
+        raw_mask = _get_index(form_mask, excess_length, mask_buffer)
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content =
+                from_buffers(form_content, length, containers, buffer_key = buffer_key)
+        else
+            error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
+        end
+
+        valid_when = get(form, "valid_when", nothing)
+        if valid_when != false && valid_when != true
+            error(
+                "missing (or not boolean-typed) \"valid_when\" in \"class\": \"$class\" node",
+            )
+        end
+
+        lsb_order = get(form, "lsb_order", nothing)
+        if lsb_order != false && lsb_order != true
+            error(
+                "missing (or not boolean-typed) \"lsb_order\" in \"class\": \"$class\" node",
+            )
+        end
+
+        mask = falses(length)
+        unsafe_copyto!(
+            reinterpret(Ptr{UInt8}, pointer(mask.chunks)),
+            pointer(raw_mask),
+            excess_length,
+        )
+
+        if !lsb_order
+            mask.len = excess_length * 8
+
+            off = firstindex(mask)
+            for i = 0:8:((excess_length-1)*8)
+                mask[(i+off):(i+off+7)] = reverse(mask[(i+off):(i+off+7)])
+            end
+
+            mask.len = length
+        end
+
+        BitMaskedArray(
             mask,
             content,
             valid_when = valid_when,
