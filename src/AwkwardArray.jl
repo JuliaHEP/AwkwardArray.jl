@@ -2877,7 +2877,7 @@ function from_buffers(
                 else
                     offsets[end]
                 end,
-                containers;
+                containers,
                 buffer_key = buffer_key,
             )
         else
@@ -2911,7 +2911,7 @@ function from_buffers(
         form_content = get(form, "content", nothing)
         if isa(form_content, Dict{String,Any})
             content =
-                from_buffers(form_content, max_stop, containers; buffer_key = buffer_key)
+                from_buffers(form_content, max_stop, containers, buffer_key = buffer_key)
         else
             error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
         end
@@ -2931,7 +2931,7 @@ function from_buffers(
         form_content = get(form, "content", nothing)
         if isa(form_content, Dict{String,Any})
             content =
-                from_buffers(form_content, next_length, containers; buffer_key = buffer_key)
+                from_buffers(form_content, next_length, containers, buffer_key = buffer_key)
         else
             error("missing (or not object-typed) \"content\" in \"class\": \"$class\" node")
         end
@@ -2943,6 +2943,113 @@ function from_buffers(
             parameters = parameters,
             behavior = behavior,
         )
+
+    elseif class == "RecordArray"
+        is_tuple = true
+        fields = Vector{Symbol}()
+        contents = Vector{Content}()
+
+        if haskey(form, "fields")               # new serialization (Awkward 2.x)
+            form_contents = get(form, "contents", nothing)
+            if isa(form_contents, Vector)
+                for form_content in form_contents
+                    if isa(form_content, Dict{String,Any})
+                        push!(
+                            contents,
+                            from_buffers(
+                                form_content,
+                                length,
+                                containers,
+                                buffer_key = buffer_key,
+                            ),
+                        )
+                    else
+                        error(
+                            "non-object found in \"contents\" in \"class\": \"$class\" node",
+                        )
+                    end
+                end
+            else
+                error(
+                    "missing (or not array-typed) \"contents\" in \"class\": \"$class\" node",
+                )
+            end
+
+            form_fields = form["fields"]
+            if !isnothing(form_fields)
+                is_tuple = false
+                for field in form["fields"]
+                    push!(fields, Symbol(field))
+                end
+                if Base.length(fields) != Base.length(contents)
+                    error(
+                        "different number of \"fields\" and \"contents\" in \"class\": \"$class\" node",
+                    )
+                end
+            end
+
+        else
+            form_contents = get(form, "contents", nothing)
+            if isa(form_contents, Dict)         # old Record serialization (Awkward 1.x)
+                is_tuple = false
+                for (field, form_content) in form_contents
+                    if isa(form_content, Dict{String,Any})
+                        push!(
+                            contents,
+                            from_buffers(
+                                form_content,
+                                length,
+                                containers,
+                                buffer_key = buffer_key,
+                            ),
+                        )
+                        push!(fields, Symbol(field))
+                    else
+                        error(
+                            "non-object found in \"contents\" in old-style \"class\": \"$class\" node",
+                        )
+                    end
+                end
+            elseif isa(form_contents, Vector)   # old or new Tuple serialization
+                for form_content in form_contents
+                    if isa(form_content, Dict{String,Any})
+                        push!(
+                            contents,
+                            from_buffers(
+                                form_content,
+                                length,
+                                containers,
+                                buffer_key = buffer_key,
+                            ),
+                        )
+                    else
+                        error(
+                            "non-object found in \"contents\" in old-style \"class\": \"$class\" node",
+                        )
+                    end
+                end
+            else
+                error(
+                    "missing (or not array/object-typed) \"contents\" in old-style \"class\": \"$class\" node",
+                )
+            end
+        end
+
+        if is_tuple
+            TupleArray(
+                Base.Tuple(contents),
+                length,
+                parameters = parameters,
+                behavior = behavior,
+            )
+        else
+            RecordArray(
+                NamedTuple{Base.Tuple(fields)}(Base.Tuple(contents)),
+                length,
+                parameters = parameters,
+                behavior = behavior,
+            )
+        end
 
     else
         error("missing or unrecognized \"class\" property: $(repr(class))")
