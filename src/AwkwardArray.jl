@@ -2867,7 +2867,11 @@ function from_buffers(
         if isa(form_content, Dict{String,Any})
             content = from_buffers(
                 form_content,
-                offsets[end],
+                if Base.length(offsets) == 1
+                    0
+                else
+                    offsets[end]
+                end,
                 containers;
                 buffer_key = buffer_key,
             )
@@ -2876,6 +2880,42 @@ function from_buffers(
         end
 
         ListOffsetArray(offsets, content, parameters = parameters, behavior = behavior)
+
+    elseif class in ["ListArray", "ListArray32", "ListArrayU32", "ListArray64"]
+        if !haskey(form, "starts")
+            error("missing \"starts\" in \"class\": \"$class\" node")
+        end
+        if !haskey(form, "stops")
+            error("missing \"stops\" in \"class\": \"$class\" node")
+        end
+        form_starts = form["starts"]
+        form_stops = form["stops"]
+
+        starts_buffer = _get_buffer(form_key, "starts", buffer_key, containers)
+        starts = _get_index(form_starts, length, starts_buffer)
+        stops_buffer = _get_buffer(form_key, "stops", buffer_key, containers)
+        stops = _get_index(form_stops, length, stops_buffer)
+
+        max_stop = 0
+        for (start, stop) in zip(starts, stops)
+            if start != stop
+                max_stop = max(max_stop, stop)
+            end
+        end
+
+        form_content = get(form, "content", nothing)
+        if isa(form_content, Dict{String,Any})
+            content = from_buffers(
+                form_content,
+                max_stop,
+                containers;
+                buffer_key = buffer_key,
+            )
+        else
+            error("Form with \"class\": \"$class\" has no (object-typed) \"content\"")
+        end
+
+        ListArray(starts, stops, content, parameters = parameters, behavior = behavior)
 
     else
         error("Form is missing its \"class\" property")

@@ -2584,5 +2584,26 @@ using Test
         @test AwkwardArray.to_vector(layout) == ["one", "two", "three"]
     end
 
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "ListArray", "starts": "i64", "stops": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            3,
+            Dict{String,Vector{UInt8}}(
+                "node0-starts" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node0-stops" => Vector{UInt8}(
+                    b"\x03\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x9a\x99\x99\x99\x99\x99\x11@\x00\x00\x00\x00\x00\x00\x16@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.ListArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+    end
+
 
 end   # @testset "AwkwardArray.jl"
