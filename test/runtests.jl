@@ -367,6 +367,45 @@ using Test
     end
 
     begin
+        layout = AwkwardArray.RegularArray(AwkwardArray.PrimitiveArray(0:29), 5)
+        @test AwkwardArray.is_valid(layout)
+        @test length(layout) == 6
+        @test AwkwardArray.to_vector(layout[1]) == [0, 1, 2, 3, 4]
+        @test AwkwardArray.to_vector(layout[2]) == [5, 6, 7, 8, 9]
+        @test AwkwardArray.to_vector(layout) == [
+            [0, 1, 2, 3, 4],
+            [5, 6, 7, 8, 9],
+            [10, 11, 12, 13, 14],
+            [15, 16, 17, 18, 19],
+            [20, 21, 22, 23, 24],
+            [25, 26, 27, 28, 29],
+        ]
+        @test AwkwardArray.to_vector(layout[1:6]) == [
+            [0, 1, 2, 3, 4],
+            [5, 6, 7, 8, 9],
+            [10, 11, 12, 13, 14],
+            [15, 16, 17, 18, 19],
+            [20, 21, 22, 23, 24],
+            [25, 26, 27, 28, 29],
+        ]
+        @test AwkwardArray.to_vector(layout[2:6]) == [
+            [5, 6, 7, 8, 9],
+            [10, 11, 12, 13, 14],
+            [15, 16, 17, 18, 19],
+            [20, 21, 22, 23, 24],
+            [25, 26, 27, 28, 29],
+        ]
+        @test AwkwardArray.to_vector(layout[2:5]) == [
+            [5, 6, 7, 8, 9],
+            [10, 11, 12, 13, 14],
+            [15, 16, 17, 18, 19],
+            [20, 21, 22, 23, 24],
+        ]
+        @test AwkwardArray.to_vector(layout[3:5]) ==
+              [[10, 11, 12, 13, 14], [15, 16, 17, 18, 19], [20, 21, 22, 23, 24]]
+    end
+
+    begin
         layout = AwkwardArray.RegularArray(
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
             2,
@@ -377,15 +416,15 @@ using Test
         @test layout[2] == AwkwardArray.PrimitiveArray([3.3, 4.4])
         @test layout[3] == AwkwardArray.PrimitiveArray([5.5, 6.6])
         @test layout[end] == AwkwardArray.PrimitiveArray([5.5, 6.6])
-        @test layout[1:3] == AwkwardArray.RegularArray(
+        @test layout[1:2] == AwkwardArray.RegularArray(
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4]),
             2,
         )
-        @test layout[2:4] == AwkwardArray.RegularArray(
+        @test layout[2:3] == AwkwardArray.RegularArray(
             AwkwardArray.PrimitiveArray([3.3, 4.4, 5.5, 6.6]),
             2,
         )
-        @test layout[2:3] ==
+        @test layout[2:2] ==
               AwkwardArray.RegularArray(AwkwardArray.PrimitiveArray([3.3, 4.4]), 2)
     end
 
@@ -2446,6 +2485,344 @@ using Test
             ),
         )
 
+    end
+
+    ### from_buffers/to_buffers ##############################################
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+            5,
+            Dict{String,Vector{UInt8}}(
+                "node0-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x9a\x99\x99\x99\x99\x99\x11@\x00\x00\x00\x00\x00\x00\x16@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, 4.4, 5.5]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {"what": "ever"}, "form_key": "node0"}""",
+            5,
+            Dict{String,Vector{UInt8}}(
+                "node0-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x9a\x99\x99\x99\x99\x99\x11@\x00\x00\x00\x00\x00\x00\x16@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, 4.4, 5.5]
+        @test AwkwardArray.get_parameter(layout, "what") == "ever"
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "NumpyArray", "primitive": "int64", "inner_shape": [3, 5], "parameters": {}, "form_key": "node0"}""",
+            2,
+            Dict{String,Vector{UInt8}}(
+                "node0-data" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x07\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\t\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00\x00\x00\x00\x00\x0c\x00\x00\x00\x00\x00\x00\x00\r\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x11\x00\x00\x00\x00\x00\x00\x00\x12\x00\x00\x00\x00\x00\x00\x00\x13\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00\x00\x00\x00\x00\x15\x00\x00\x00\x00\x00\x00\x00\x16\x00\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00\x00\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00\x19\x00\x00\x00\x00\x00\x00\x00\x1a\x00\x00\x00\x00\x00\x00\x00\x1b\x00\x00\x00\x00\x00\x00\x00\x1c\x00\x00\x00\x00\x00\x00\x00\x1d\x00\x00\x00\x00\x00\x00\x00",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.RegularArray)
+        @test isa(layout.content, AwkwardArray.RegularArray)
+        @test isa(layout.content.content, AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [
+            [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11, 12, 13, 14]],
+            [[15, 16, 17, 18, 19], [20, 21, 22, 23, 24], [25, 26, 27, 28, 29]],
+        ]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "EmptyArray"}""",
+            0,
+            Dict{String,Vector{UInt8}}(),
+        )
+        @test isa(layout, AwkwardArray.EmptyArray)
+        @test AwkwardArray.is_valid(layout)
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "ListOffsetArray", "offsets": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            3,
+            Dict{String,Vector{UInt8}}(
+                "node0-offsets" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x9a\x99\x99\x99\x99\x99\x11@\x00\x00\x00\x00\x00\x00\x16@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.ListOffsetArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "ListOffsetArray", "offsets": "i64", "content": {"class": "NumpyArray", "primitive": "uint8", "inner_shape": [], "parameters": {"__array__": "char"}, "form_key": "node1"}, "parameters": {"__array__": "string"}, "form_key": "node0"}""",
+            3,
+            Dict{String,Vector{UInt8}}(
+                "node0-offsets" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node1-data" => Vector{UInt8}(b"onetwothree"),
+            ),
+        )
+        @test isa(layout, AwkwardArray.ListOffsetArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == ["one", "two", "three"]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "ListArray", "starts": "i64", "stops": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            3,
+            Dict{String,Vector{UInt8}}(
+                "node0-starts" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node0-stops" => Vector{UInt8}(
+                    b"\x03\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x9a\x99\x99\x99\x99\x99\x11@\x00\x00\x00\x00\x00\x00\x16@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.ListArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "RegularArray", "size": 3, "content": {"class": "RegularArray", "size": 5, "content": {"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node2"}, "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            2,
+            Dict{String,Vector{UInt8}}(
+                "node2-data" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x07\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\t\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00\x00\x00\x00\x00\x0c\x00\x00\x00\x00\x00\x00\x00\r\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x11\x00\x00\x00\x00\x00\x00\x00\x12\x00\x00\x00\x00\x00\x00\x00\x13\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00\x00\x00\x00\x00\x15\x00\x00\x00\x00\x00\x00\x00\x16\x00\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00\x00\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00\x19\x00\x00\x00\x00\x00\x00\x00\x1a\x00\x00\x00\x00\x00\x00\x00\x1b\x00\x00\x00\x00\x00\x00\x00\x1c\x00\x00\x00\x00\x00\x00\x00\x1d\x00\x00\x00\x00\x00\x00\x00",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.RegularArray)
+        @test isa(layout.content, AwkwardArray.RegularArray)
+        @test isa(layout.content.content, AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [
+            [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11, 12, 13, 14]],
+            [[15, 16, 17, 18, 19], [20, 21, 22, 23, 24], [25, 26, 27, 28, 29]],
+        ]
+    end
+
+    begin
+        # new style (Awkward 2.x)
+        layout = AwkwardArray.from_buffers(
+            """{"class": "RecordArray", "fields": ["x", "y"], "contents": [{"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node2"}], "parameters": {}, "form_key": "node0"}""",
+            3,
+            Dict{String,Vector{UInt8}}(
+                "node1-data" => Vector{UInt8}(
+                    b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node2-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.RecordArray)
+        @test isa(layout.contents[:x], AwkwardArray.PrimitiveArray)
+        @test isa(layout.contents[:y], AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) ==
+              [(x = 1, y = 1.1), (x = 2, y = 2.2), (x = 3, y = 3.3)]
+    end
+
+    begin
+        # old style (Awkward 1.x)
+        layout = AwkwardArray.from_buffers(
+            """{"class": "RecordArray", "contents": {"x": {"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "y": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node2"}}, "parameters": {}, "form_key": "node0"}""",
+            3,
+            Dict{String,Vector{UInt8}}(
+                "node1-data" => Vector{UInt8}(
+                    b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node2-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.RecordArray)
+        @test isa(layout.contents[:x], AwkwardArray.PrimitiveArray)
+        @test isa(layout.contents[:y], AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) ==
+              [(x = 1, y = 1.1), (x = 2, y = 2.2), (x = 3, y = 3.3)]
+    end
+
+    begin
+        # new style (Awkward 2.x)
+        layout = AwkwardArray.from_buffers(
+            """{"class": "RecordArray", "fields": null, "contents": [{"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node2"}], "parameters": {}, "form_key": "node0"}""",
+            3,
+            Dict{String,Vector{UInt8}}(
+                "node1-data" => Vector{UInt8}(
+                    b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node2-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.TupleArray)
+        @test isa(layout.contents[1], AwkwardArray.PrimitiveArray)
+        @test isa(layout.contents[2], AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [(1, 1.1), (2, 2.2), (3, 3.3)]
+    end
+
+    begin
+        # old style (Awkward 1.x)
+        layout = AwkwardArray.from_buffers(
+            """{"class": "RecordArray", "contents": [{"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node2"}], "parameters": {}, "form_key": "node0"}""",
+            3,
+            Dict{String,Vector{UInt8}}(
+                "node1-data" => Vector{UInt8}(
+                    b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node2-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.TupleArray)
+        @test isa(layout.contents[1], AwkwardArray.PrimitiveArray)
+        @test isa(layout.contents[2], AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [(1, 1.1), (2, 2.2), (3, 3.3)]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "IndexedArray", "index": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            7,
+            Dict{String,Vector{UInt8}}(
+                "node0-index" => Vector{UInt8}(
+                    b"\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.IndexedArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [9.9, 1.1, 1.1, 2.2, 9.9, 2.2, 3.3]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "ByteMaskedArray", "mask": "i8", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "valid_when": false, "parameters": {}, "form_key": "node0"}""",
+            6,
+            Dict{String,Vector{UInt8}}(
+                "node0-mask" => Vector{UInt8}(b"\x00\x00\x00\x01\x01\x00"),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.ByteMaskedArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout, na = nothing) ==
+              [1.1, 2.2, 3.3, nothing, nothing, 9.9]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "BitMaskedArray", "mask": "u8", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "valid_when": false, "lsb_order": true, "parameters": {}, "form_key": "node0"}""",
+            12,
+            Dict{String,Vector{UInt8}}(
+                "node0-mask" => Vector{UInt8}(b"\x18\x06"),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.BitMaskedArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout, na = nothing) ==
+              [1.1, 2.2, 3.3, nothing, nothing, 9.9, 1.1, 2.2, 3.3, nothing, nothing, 9.9]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "BitMaskedArray", "mask": "u8", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "valid_when": false, "lsb_order": false, "parameters": {}, "form_key": "node0"}""",
+            12,
+            Dict{String,Vector{UInt8}}(
+                "node0-mask" => Vector{UInt8}(b"\x18`"),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.BitMaskedArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout, na = nothing) ==
+              [1.1, 2.2, 3.3, nothing, nothing, 9.9, 1.1, 2.2, 3.3, nothing, nothing, 9.9]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "UnmaskedArray", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+            6,
+            Dict{String,Vector{UInt8}}(
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+                ),
+            ),
+        )
+        @test isa(layout, AwkwardArray.UnmaskedArray)
+        @test isa(layout.content, AwkwardArray.PrimitiveArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, 99999, 99999, 9.9]
+    end
+
+    begin
+        layout = AwkwardArray.from_buffers(
+            """{"class": "UnionArray", "tags": "i8", "index": "i64", "contents": [{"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, {"class": "ListOffsetArray", "offsets": "i64", "content": {"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node3"}, "parameters": {}, "form_key": "node2"}, {"class": "ListOffsetArray", "offsets": "i64", "content": {"class": "NumpyArray", "primitive": "uint8", "inner_shape": [], "parameters": {"__array__": "char"}, "form_key": "node5"}, "parameters": {"__array__": "string"}, "form_key": "node4"}], "parameters": {}, "form_key": "node0"}""",
+            4,
+            Dict{String,Vector{UInt8}}(
+                "node0-tags" => Vector{UInt8}(b"\x00\x00\x01\x02"),
+                "node0-index" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node1-data" => Vector{UInt8}(
+                    b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@",
+                ),
+                "node2-offsets" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node3-data" => Vector{UInt8}(
+                    b"\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node4-offsets" => Vector{UInt8}(
+                    b"\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00",
+                ),
+                "node5-data" => Vector{UInt8}(b"five"),
+            ),
+        )
+        @test isa(layout, AwkwardArray.UnionArray)
+        @test AwkwardArray.is_valid(layout)
+        @test AwkwardArray.to_vector(layout) == [1.1, 2.2, [3, 4], "five"]
     end
 
 end   # @testset "AwkwardArray.jl"
