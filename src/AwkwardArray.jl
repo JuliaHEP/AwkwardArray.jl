@@ -236,6 +236,63 @@ function push_dummy!(layout::PrimitiveArray{ITEM}) where {ITEM}
     push!(layout, zero(ITEM))
 end
 
+function _to_buffers!(
+    layout::PrimitiveArray{ITEM,BUFFER},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {ITEM,BUFFER<:AbstractVector{ITEM}}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    if ITEM == Bool
+        primitive = "bool"
+    elseif ITEM == Int8
+        primitive = "int8"
+    elseif ITEM == UInt8
+        primitive = "uint8"
+    elseif ITEM == Int16
+        primitive = "int16"
+    elseif ITEM == UInt16
+        primitive = "uint16"
+    elseif ITEM == Int32
+        primitive = "int32"
+    elseif ITEM == UInt32
+        primitive = "uint32"
+    elseif ITEM == Int64
+        primitive = "int64"
+    elseif ITEM == UInt64
+        primitive = "uint64"
+    elseif ITEM == Float16
+        primitive = "float16"
+    elseif ITEM == Float32
+        primitive = "float32"
+    elseif ITEM == Float64
+        primitive = "float64"
+    elseif ITEM == Complex{Float32}
+        primitive = "complex64"
+    elseif ITEM == Complex{Float64}
+        primitive = "complex128"
+        # elseif ITEM <: Dates.DateTime     # FIXME
+        #     primitive = "datetime64"
+        # elseif ITEM <: Dates.TimePeriod   # FIXME
+        #     primitive = "timedelta64"
+    else
+        error(
+            "PrimitiveArray has an ITEM type that can't be serialized in the to_buffers protocol: $ITEM",
+        )
+    end
+
+    containers["$form_key-data"] = reinterpret(UInt8, layout.data)
+
+    Dict{String,Any}(
+        "class" => "NumpyArray",
+        "primitive" => primitive,
+        "inner_shape" => Vector{Int64}(),
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
+end
+
 ### EmptyArray ###########################################################
 
 struct EmptyArray{BEHAVIOR} <: LeafType{BEHAVIOR}
@@ -2698,7 +2755,7 @@ function _vertical(data::Union{Content,Record,Tuple}, limit_rows::Int, limit_col
 
 end
 
-### from_buffers/to_buffers ##############################################
+### from_buffers #########################################################
 
 default_buffer_key(form_key::String, attribute::String) = "$form_key-$attribute"
 
@@ -3278,5 +3335,41 @@ function from_buffers(
         error("missing or unrecognized \"class\" property: $(repr(class))")
     end
 end  # function from_buffers
+
+### to_buffers ###########################################################
+
+function to_buffers(layout::Content)
+    containers = Dict{String,AbstractVector{UInt8}}()
+    number = Vector{Int64}([0])
+    form = _to_buffers!(layout, number, containers)
+    (JSON.json(form), length(layout), containers)
+end
+
+function _to_buffers_parameters(layout::CONTENT) where {BEHAVIOR,CONTENT<:Content{BEHAVIOR}}
+    out = Dict{String,Any}()
+    for k in keys(layout.parameters)
+        out[k] = get_parameter(layout.parameters, key)
+    end
+    if isa(layout, PrimitiveArray)
+        if BEHAVIOR == :char
+            out["__array__"] = "char"
+        elseif BEHAVIOR == :byte
+            out["__array__"] = "byte"
+        end
+    elseif isa(layout, ListType)
+        if BEHAVIOR == :string
+            out["__array__"] = "string"
+        elseif BEHAVIOR == :bytestring
+            out["__array__"] = "bytestring"
+        elseif BEHAVIOR != :default
+            out["__list__"] = String(BEHAVIOR)
+        end
+    elseif isa(layout, RecordArray)
+        if BEHAVIOR != :default
+            out["__record__"] = String(BEHAVIOR)
+        end
+    end
+    out
+end
 
 end  # module AwkwardArray
