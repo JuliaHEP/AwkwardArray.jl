@@ -2843,5 +2843,256 @@ using Test
         )
     end
 
+    # begin
+    #     layout = AwkwardArray.PrimitiveArray(
+    #         [1.1, 2.2, 3.3, 4.4, 5.5],
+    #         parameters = AwkwardArray.Parameters("what" => "ever"),
+    #     )
+    #     form, len, containers = AwkwardArray.to_buffers(layout)
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {"what": "ever"}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 5
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node0-data" => Vector{UInt8}(
+    #             b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x9a\x99\x99\x99\x99\x99\x11@\x00\x00\x00\x00\x00\x00\x16@",
+    #         ),
+    #     )
+    # end
+
+    # begin
+    #     layout = AwkwardArray.EmptyArray()
+    #     form, len, containers = AwkwardArray.to_buffers(layout)
+    #     @test JSON.parse(form) == JSON.parse("""{"class": "EmptyArray"}""")
+    #     @test len == 0
+    #     @test containers == Dict{String,Vector{UInt8}}()
+    # end
+
+    # begin
+    #     layout = AwkwardArray.from_iter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    #     form, len, containers = AwkwardArray.to_buffers(layout)
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "ListOffsetArray", "offsets": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 3
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node0-offsets" => Vector{UInt8}(
+    #             b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node1-data" => Vector{UInt8}(
+    #             b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x9a\x99\x99\x99\x99\x99\x11@\x00\x00\x00\x00\x00\x00\x16@",
+    #         ),
+    #     )
+    # end
+
+    # begin
+    #     layout = AwkwardArray.from_iter(["one", "two", "three"])
+    #     form, len, containers = AwkwardArray.to_buffers(layout)
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "ListOffsetArray", "offsets": "i64", "content": {"class": "NumpyArray", "primitive": "uint8", "inner_shape": [], "parameters": {"__array__": "char"}, "form_key": "node1"}, "parameters": {"__array__": "string"}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 3
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node0-offsets" => Vector{UInt8}(
+    #             b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node1-data" => Vector{UInt8}(b"onetwothree"),
+    #     )
+    # end
+
+    # begin
+    #     layout = AwkwardArray.ListArray(
+    #         [0, 3, 3],
+    #         [3, 3, 5],
+    #         AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+    #     )
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "ListArray", "starts": "i64", "stops": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 3
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node0-starts" => Vector{UInt8}(
+    #             b"\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node0-stops" => Vector{UInt8}(
+    #             b"\x03\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node1-data" => Vector{UInt8}(
+    #             b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x9a\x99\x99\x99\x99\x99\x11@\x00\x00\x00\x00\x00\x00\x16@",
+    #         ),
+    #     )
+    # end
+
+    # begin
+    #     layout = AwkwardArray.RegularArray(
+    #         AwkwardArray.RegularArray(AwkwardArray.PrimitiveArray(0:29), 5),
+    #         3,
+    #     )
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "RegularArray", "size": 3, "content": {"class": "RegularArray", "size": 5, "content": {"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node2"}, "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 2
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node2-data" => Vector{UInt8}(
+    #             b"\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x07\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\t\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00\x00\x00\x00\x00\x0c\x00\x00\x00\x00\x00\x00\x00\r\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x11\x00\x00\x00\x00\x00\x00\x00\x12\x00\x00\x00\x00\x00\x00\x00\x13\x00\x00\x00\x00\x00\x00\x00\x14\x00\x00\x00\x00\x00\x00\x00\x15\x00\x00\x00\x00\x00\x00\x00\x16\x00\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00\x00\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00\x19\x00\x00\x00\x00\x00\x00\x00\x1a\x00\x00\x00\x00\x00\x00\x00\x1b\x00\x00\x00\x00\x00\x00\x00\x1c\x00\x00\x00\x00\x00\x00\x00\x1d\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #     )
+    # end
+
+    # begin
+    #     layout =
+    #         AwkwardArray.from_iter([(x = 1, y = 1.1), (x = 2, y = 2.2), (x = 3, y = 3.3)])
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "RecordArray", "fields": ["x", "y"], "contents": [{"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node2"}], "parameters": {}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 3
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node1-data" => Vector{UInt8}(
+    #             b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node2-data" => Vector{UInt8}(
+    #             b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@",
+    #         ),
+    #     )
+    # end
+
+    # begin
+    #     layout = Awkward.from_iter([(1, 1.1), (2, 2.2), (3, 3.3)])
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "RecordArray", "fields": null, "contents": [{"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node2"}], "parameters": {}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 3
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node1-data" => Vector{UInt8}(
+    #             b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node2-data" => Vector{UInt8}(
+    #             b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@",
+    #         ),
+    #     )
+    # end
+
+    # begin
+    #     layout = AwkwardArray.IndexedArray(
+    #         [3, 0, 0, 1, 3, 1, 2],
+    #         AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 9.9]),
+    #     )
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "IndexedArray", "index": "i64", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 7
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node0-index" => Vector{UInt8}(
+    #             b"\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node1-data" => Vector{UInt8}(
+    #             b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+    #         ),
+    #     )
+    # end
+
+    # begin
+    #     layout = AwkwardArray.ByteMaskedArray(
+    #         [false, false, false, true, true, false],
+    #         AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 99999, 99999, 9.9]),
+    #         valid_when = false,
+    #     )
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "ByteMaskedArray", "mask": "i8", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "valid_when": false, "parameters": {}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 6
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node0-mask" => Vector{UInt8}(b"\x00\x00\x00\x01\x01\x00"),
+    #         "node1-data" => Vector{UInt8}(
+    #             b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+    #         ),
+    #     )
+    # end
+
+    # begin
+    #     layout = AwkwardArray.ByteMaskedArray(
+    #         BitVector([
+    #             false,
+    #             false,
+    #             false,
+    #             true,
+    #             true,
+    #             false,
+    #             false,
+    #             false,
+    #             false,
+    #             true,
+    #             true,
+    #             false,
+    #         ]),
+    #         AwkwardArray.PrimitiveArray([
+    #             1.1,
+    #             2.2,
+    #             3.3,
+    #             99999,
+    #             99999,
+    #             9.9,
+    #             1.1,
+    #             2.2,
+    #             3.3,
+    #             99999,
+    #             99999,
+    #             9.9,
+    #         ]),
+    #         valid_when = false,
+    #     )
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "BitMaskedArray", "mask": "u8", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "valid_when": false, "lsb_order": true, "parameters": {}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 12
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node0-mask" => Vector{UInt8}(b"\x18\x06"),
+    #         "node1-data" => Vector{UInt8}(
+    #             b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+    #         ),
+    #     )
+    # end
+
+    # begin
+    #     layout = AwkwardArray.UnmaskedArray(
+    #         AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 99999, 99999, 9.9]),
+    #     )
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "UnmaskedArray", "content": {"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, "parameters": {}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 6
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node1-data" => Vector{UInt8}(
+    #             b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@ffffff\n@\x00\x00\x00\x00\xf0i\xf8@\x00\x00\x00\x00\xf0i\xf8@\xcd\xcc\xcc\xcc\xcc\xcc#@",
+    #         ),
+    #     )
+    # end
+
+    # begin
+    #     layout = AwkwardArray.from_iter([1.1, 2.2, [3, 4], "five"])
+    #     @test JSON.parse(form) == JSON.parse(
+    #         """{"class": "UnionArray", "tags": "i8", "index": "i64", "contents": [{"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node1"}, {"class": "ListOffsetArray", "offsets": "i64", "content": {"class": "NumpyArray", "primitive": "int64", "inner_shape": [], "parameters": {}, "form_key": "node3"}, "parameters": {}, "form_key": "node2"}, {"class": "ListOffsetArray", "offsets": "i64", "content": {"class": "NumpyArray", "primitive": "uint8", "inner_shape": [], "parameters": {"__array__": "char"}, "form_key": "node5"}, "parameters": {"__array__": "string"}, "form_key": "node4"}], "parameters": {}, "form_key": "node0"}""",
+    #     )
+    #     @test len == 4
+    #     @test containers == Dict{String,Vector{UInt8}}(
+    #         "node0-tags" => Vector{UInt8}(b"\x00\x00\x01\x02"),
+    #         "node0-index" => Vector{UInt8}(
+    #             b"\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node1-data" => Vector{UInt8}(
+    #             b"\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@",
+    #         ),
+    #         "node2-offsets" => Vector{UInt8}(
+    #             b"\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node3-data" => Vector{UInt8}(
+    #             b"\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node4-offsets" => Vector{UInt8}(
+    #             b"\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00",
+    #         ),
+    #         "node5-data" => Vector{UInt8}(b"five"),
+    #     )
+    # end
 
 end   # @testset "AwkwardArray.jl"
