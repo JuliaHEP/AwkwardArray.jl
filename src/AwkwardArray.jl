@@ -324,6 +324,16 @@ function Base.push!(layout::EmptyArray, input)
     error("attempting to fill $(typeof(layout)) with data")
 end
 
+function _to_buffers!(
+    layout::EmptyArray,
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+)
+    number[begin] += 1
+
+    Dict{String,Any}("class" => "EmptyArray")
+end
+
 ### ListOffsetArray ######################################################
 
 abstract type ListType{BEHAVIOR} <: Content{BEHAVIOR} end
@@ -412,6 +422,25 @@ end
 
 function push_dummy!(layout::ListOffsetArray)
     end_list!(layout)
+end
+
+function _to_buffers!(
+    layout::ListOffsetArray{INDEX,CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {INDEX<:IndexBig,CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-offsets"] = reinterpret(UInt8, layout.offsets)
+
+    Dict{String,Any}(
+        "class" => "ListOffsetArray",
+        "offsets" => _to_buffers_index(INDEX),
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
 end
 
 ### ListArray ############################################################
@@ -2099,6 +2128,9 @@ function layout_for(ItemType)
         TupleArray{Base.Tuple{contents...}}
 
     elseif Missing <: ItemType
+        if ItemType == Any
+            error("cannot produce an AwkwardArray layout for $ItemType (too generic)")
+        end
         OtherTypes = [x for x in Base.uniontypes(ItemType) if x != Missing]
         if length(OtherTypes) == 0
             IndexedOptionArray{Vector{Int64},EmptyArray}
@@ -2123,6 +2155,11 @@ function layout_for(ItemType)
     else
         OtherTypes = Base.uniontypes(ItemType)
         if length(OtherTypes) > 1
+            if length(OtherTypes) > 127
+                error(
+                    "cannot produce a UnionArray with more than 127 possible types: $(length(OtherTypes)) detected",
+                )
+            end
             contents = [layout_for(x) for x in OtherTypes]
             UnionArray{Index8,Vector{Int64},Base.Tuple{contents...}}
         else
@@ -3348,7 +3385,7 @@ end
 function _to_buffers_parameters(layout::CONTENT) where {BEHAVIOR,CONTENT<:Content{BEHAVIOR}}
     out = Dict{String,Any}()
     for k in keys(layout.parameters)
-        out[k] = get_parameter(layout.parameters, key)
+        out[k] = get_parameter(layout.parameters, k)
     end
     if isa(layout, PrimitiveArray)
         if BEHAVIOR == :char
@@ -3370,6 +3407,24 @@ function _to_buffers_parameters(layout::CONTENT) where {BEHAVIOR,CONTENT<:Conten
         end
     end
     out
+end
+
+function _to_buffers_index(IndexType::DataType)
+    if IndexType <: Index8
+        "i8"
+    elseif IndexType <: AbstractVector{Bool}
+        "i8"
+    elseif IndexType <: IndexU8
+        "u8"
+    elseif IndexType <: Index32
+        "i32"
+    elseif IndexType <: IndexU32
+        "u32"
+    elseif IndexType <: Index64
+        "i64"
+    else
+        error("unexpected INDEX type in to_buffers: $IndexType")
+    end
 end
 
 end  # module AwkwardArray
