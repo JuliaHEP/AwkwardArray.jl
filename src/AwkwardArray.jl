@@ -236,6 +236,63 @@ function push_dummy!(layout::PrimitiveArray{ITEM}) where {ITEM}
     push!(layout, zero(ITEM))
 end
 
+function _to_buffers!(
+    layout::PrimitiveArray{ITEM,BUFFER},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {ITEM,BUFFER<:AbstractVector{ITEM}}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    if ITEM == Bool
+        primitive = "bool"
+    elseif ITEM == Int8
+        primitive = "int8"
+    elseif ITEM == UInt8
+        primitive = "uint8"
+    elseif ITEM == Int16
+        primitive = "int16"
+    elseif ITEM == UInt16
+        primitive = "uint16"
+    elseif ITEM == Int32
+        primitive = "int32"
+    elseif ITEM == UInt32
+        primitive = "uint32"
+    elseif ITEM == Int64
+        primitive = "int64"
+    elseif ITEM == UInt64
+        primitive = "uint64"
+    elseif ITEM == Float16
+        primitive = "float16"
+    elseif ITEM == Float32
+        primitive = "float32"
+    elseif ITEM == Float64
+        primitive = "float64"
+    elseif ITEM == Complex{Float32}
+        primitive = "complex64"
+    elseif ITEM == Complex{Float64}
+        primitive = "complex128"
+        # elseif ITEM <: Dates.DateTime     # FIXME
+        #     primitive = "datetime64"
+        # elseif ITEM <: Dates.TimePeriod   # FIXME
+        #     primitive = "timedelta64"
+    else
+        error(
+            "PrimitiveArray has an ITEM type that can't be serialized in the to_buffers protocol: $ITEM",
+        )
+    end
+
+    containers["$form_key-data"] = reinterpret(UInt8, layout.data)
+
+    Dict{String,Any}(
+        "class" => "NumpyArray",
+        "primitive" => primitive,
+        "inner_shape" => Vector{Int64}(),
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
+end
+
 ### EmptyArray ###########################################################
 
 struct EmptyArray{BEHAVIOR} <: LeafType{BEHAVIOR}
@@ -265,6 +322,16 @@ end
 
 function Base.push!(layout::EmptyArray, input)
     error("attempting to fill $(typeof(layout)) with data")
+end
+
+function _to_buffers!(
+    layout::EmptyArray,
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+)
+    number[begin] += 1
+
+    Dict{String,Any}("class" => "EmptyArray")
 end
 
 ### ListOffsetArray ######################################################
@@ -355,6 +422,25 @@ end
 
 function push_dummy!(layout::ListOffsetArray)
     end_list!(layout)
+end
+
+function _to_buffers!(
+    layout::ListOffsetArray{INDEX,CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {INDEX<:IndexBig,CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-offsets"] = reinterpret(UInt8, layout.offsets)
+
+    Dict{String,Any}(
+        "class" => "ListOffsetArray",
+        "offsets" => _to_buffers_index(INDEX),
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
 end
 
 ### ListArray ############################################################
@@ -461,6 +547,27 @@ end
 
 function push_dummy!(layout::ListArray)
     end_list!(layout)
+end
+
+function _to_buffers!(
+    layout::ListArray{INDEX,CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {INDEX<:IndexBig,CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-starts"] = reinterpret(UInt8, layout.starts)
+    containers["$form_key-stops"] = reinterpret(UInt8, layout.stops)
+
+    Dict{String,Any}(
+        "class" => "ListArray",
+        "starts" => _to_buffers_index(INDEX),
+        "stops" => _to_buffers_index(INDEX),
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
 end
 
 ### RegularArray #########################################################
@@ -593,6 +700,22 @@ function push_dummy!(layout::RegularArray)
         push_dummy!(layout.content)
     end
     end_list!(layout)
+end
+
+function _to_buffers!(
+    layout::RegularArray{CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    Dict{String,Any}(
+        "class" => "RegularArray",
+        "size" => layout.size,
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+    )
 end
 
 ### ListType with behavior = :string #####################################
@@ -1070,6 +1193,21 @@ function push_dummy!(layout::RecordArray)
     end_record!(layout)
 end
 
+function _to_buffers!(
+    layout::RecordArray{FIELDS,CONTENTS},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}}
+    number[begin] += 1
+
+    Dict{String,Any}(
+        "class" => "RecordArray",
+        "fields" => [String(x) for x in FIELDS],
+        "contents" => [_to_buffers!(x, number, containers) for x in layout.contents],
+        "parameters" => _to_buffers_parameters(layout),
+    )
+end
+
 ### TupleArray ###########################################################
 
 mutable struct TupleArray{CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} <:
@@ -1243,6 +1381,21 @@ function push_dummy!(layout::TupleArray)
     end_tuple!(layout)
 end
 
+function _to_buffers!(
+    layout::TupleArray{CONTENTS},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}}
+    number[begin] += 1
+
+    Dict{String,Any}(
+        "class" => "RecordArray",
+        "fields" => nothing,
+        "contents" => [_to_buffers!(x, number, containers) for x in layout.contents],
+        "parameters" => _to_buffers_parameters(layout),
+    )
+end
+
 ### IndexedArray #########################################################
 
 struct IndexedArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: Content{BEHAVIOR}
@@ -1340,6 +1493,25 @@ function push_dummy!(layout::IndexedArray)
     push_dummy!(layout.content)
     push!(layout.index, tmp)
     layout
+end
+
+function _to_buffers!(
+    layout::IndexedArray{INDEX,CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {INDEX<:IndexBig,CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-index"] = reinterpret(UInt8, layout.index)
+
+    Dict{String,Any}(
+        "class" => "IndexedArray",
+        "index" => _to_buffers_index(INDEX),
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
 end
 
 ### IndexedOptionArray ###################################################
@@ -1473,6 +1645,25 @@ function push_dummy!(layout::IndexedOptionArray)
     push_null!(layout)
 end
 
+function _to_buffers!(
+    layout::IndexedOptionArray{INDEX,CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {INDEX<:IndexBigSigned,CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-index"] = reinterpret(UInt8, layout.index)
+
+    Dict{String,Any}(
+        "class" => "IndexedOptionArray",
+        "index" => _to_buffers_index(INDEX),
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
+end
+
 ### ByteMaskedArray ######################################################
 
 struct ByteMaskedArray{INDEX<:IndexBool,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
@@ -1602,6 +1793,26 @@ end
 
 function push_dummy!(layout::ByteMaskedArray)
     push_null!(layout)
+end
+
+function _to_buffers!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {INDEX<:IndexBool,CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-mask"] = reinterpret(UInt8, layout.mask)
+
+    Dict{String,Any}(
+        "class" => "ByteMaskedArray",
+        "mask" => _to_buffers_index(INDEX),
+        "content" => _to_buffers!(layout.content, number, containers),
+        "valid_when" => layout.valid_when,
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
 end
 
 ### BitMaskedArray #######################################################
@@ -1736,6 +1947,28 @@ function push_dummy!(layout::BitMaskedArray)
     push_null!(layout)
 end
 
+function _to_buffers!(
+    layout::BitMaskedArray{CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    cut = 1:Int64(ceil(length(layout.mask) / 8.0))
+    containers["$form_key-mask"] = reinterpret(UInt8, layout.mask.chunks)[cut]
+
+    Dict{String,Any}(
+        "class" => "BitMaskedArray",
+        "mask" => "u8",
+        "content" => _to_buffers!(layout.content, number, containers),
+        "valid_when" => layout.valid_when,
+        "lsb_order" => true,
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
+end
+
 ### UnmaskedArray ########################################################
 
 struct UnmaskedArray{CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
@@ -1810,6 +2043,20 @@ end
 
 function push_dummy!(layout::UnmaskedArray)
     push_dummy!(layout.content)
+end
+
+function _to_buffers!(
+    layout::UnmaskedArray{CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {CONTENT<:Content}
+    number[begin] += 1
+
+    Dict{String,Any}(
+        "class" => "UnmaskedArray",
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+    )
 end
 
 ### UnionArray ###########################################################
@@ -2014,6 +2261,27 @@ function Base.push!(layout::UnionArray, input)
     end
 end
 
+function _to_buffers!(
+    layout::UnionArray{TAGS,INDEX,CONTENTS},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple{Vararg{Content}}}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-tags"] = reinterpret(UInt8, layout.tags)
+    containers["$form_key-index"] = reinterpret(UInt8, layout.index)
+
+    Dict{String,Any}(
+        "class" => "UnionArray",
+        "tags" => _to_buffers_index(TAGS),
+        "index" => _to_buffers_index(INDEX),
+        "contents" => [_to_buffers!(x, number, containers) for x in layout.contents],
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
+end
+
 ### from_iter ############################################################
 
 function layout_for(ItemType)
@@ -2042,6 +2310,9 @@ function layout_for(ItemType)
         TupleArray{Base.Tuple{contents...}}
 
     elseif Missing <: ItemType
+        if ItemType == Any
+            error("cannot produce an AwkwardArray layout for $ItemType (too generic)")
+        end
         OtherTypes = [x for x in Base.uniontypes(ItemType) if x != Missing]
         if length(OtherTypes) == 0
             IndexedOptionArray{Vector{Int64},EmptyArray}
@@ -2066,6 +2337,11 @@ function layout_for(ItemType)
     else
         OtherTypes = Base.uniontypes(ItemType)
         if length(OtherTypes) > 1
+            if length(OtherTypes) > 127
+                error(
+                    "cannot produce a UnionArray with more than 127 possible types: $(length(OtherTypes)) detected",
+                )
+            end
             contents = [layout_for(x) for x in OtherTypes]
             UnionArray{Index8,Vector{Int64},Base.Tuple{contents...}}
         else
@@ -2698,7 +2974,7 @@ function _vertical(data::Union{Content,Record,Tuple}, limit_rows::Int, limit_col
 
 end
 
-### from_buffers/to_buffers ##############################################
+### from_buffers #########################################################
 
 default_buffer_key(form_key::String, attribute::String) = "$form_key-$attribute"
 
@@ -3278,5 +3554,59 @@ function from_buffers(
         error("missing or unrecognized \"class\" property: $(repr(class))")
     end
 end  # function from_buffers
+
+### to_buffers ###########################################################
+
+function to_buffers(layout::Content)
+    containers = Dict{String,AbstractVector{UInt8}}()
+    number = Vector{Int64}([0])
+    form = _to_buffers!(layout, number, containers)
+    (JSON.json(form), length(layout), containers)
+end
+
+function _to_buffers_parameters(layout::CONTENT) where {BEHAVIOR,CONTENT<:Content{BEHAVIOR}}
+    out = Dict{String,Any}()
+    for k in keys(layout.parameters)
+        out[k] = get_parameter(layout.parameters, k)
+    end
+    if isa(layout, PrimitiveArray)
+        if BEHAVIOR == :char
+            out["__array__"] = "char"
+        elseif BEHAVIOR == :byte
+            out["__array__"] = "byte"
+        end
+    elseif isa(layout, ListType)
+        if BEHAVIOR == :string
+            out["__array__"] = "string"
+        elseif BEHAVIOR == :bytestring
+            out["__array__"] = "bytestring"
+        elseif BEHAVIOR != :default
+            out["__list__"] = String(BEHAVIOR)
+        end
+    elseif isa(layout, RecordArray)
+        if BEHAVIOR != :default
+            out["__record__"] = String(BEHAVIOR)
+        end
+    end
+    out
+end
+
+function _to_buffers_index(IndexType::DataType)
+    if IndexType <: Index8
+        "i8"
+    elseif IndexType <: AbstractVector{Bool}
+        "i8"
+    elseif IndexType <: IndexU8
+        "u8"
+    elseif IndexType <: Index32
+        "i32"
+    elseif IndexType <: IndexU32
+        "u32"
+    elseif IndexType <: Index64
+        "i64"
+    else
+        error("unexpected INDEX type in to_buffers: $IndexType")
+    end
+end
 
 end  # module AwkwardArray
