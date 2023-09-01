@@ -27,9 +27,9 @@ Additionally, [arrow-julia](https://github.com/apache/arrow-julia) provides Juli
 
 ## Reading and writing the same data type
 
-AwkwardArray.jl is a reimplementation of the concept of Awkward Arrays in Julia, taking advantage of Julia's capabilities. Python's Awkward Array has other backends for sending data to JIT-compiled languages—Numba (CPU and GPU) and C++ (with cppyy and ROOT's RDataFrame)—but as read-only views, owned exclusively by Python, for brief excursions only. Creating Awkward Arrays in the JIT-compiled language requires special tools, [ak.ArrayBuilder](https://awkward-array.org/doc/main/reference/generated/ak.ArrayBuilder.html) (discovers data type during iteration) and [LayoutBuilder](https://awkward-array.org/doc/main/user-guide/how-to-use-header-only-layoutbuilder.html) (fills a specified data type; faster).
+AwkwardArray.jl is a reimplementation of the concept of Awkward Arrays in Julia, taking advantage of Julia's capabilities. Python's Awkward Array has other backends for sending data to JIT-compiled languages—Numba (CPU and GPU) and C++ (with cppyy and ROOT's RDataFrame)—but as read-only views, owned exclusively by Python, for brief excursions only. Creating new Awkward Arrays in those JIT-compiled languages requires special tools, [ak.ArrayBuilder](https://awkward-array.org/doc/main/reference/generated/ak.ArrayBuilder.html) (discovers data type during iteration) and [LayoutBuilder](https://awkward-array.org/doc/main/user-guide/how-to-use-header-only-layoutbuilder.html) (fills a specified data type; faster).
 
-In Julia, every Awkward Array is also a LayoutBuilder: they are appendable with the built-in `push!` and `append!` functions.
+In Julia, the array/builder dichotomy can be eliminated. Every Awkward Array is also a LayoutBuilder: they are appendable with the built-in `push!` and `append!` functions.
 
 ```julia
 julia> using AwkwardArray: Index64, ListOffsetArray, PrimitiveArray
@@ -96,7 +96,7 @@ and passed to and from Python. Thus, AwkwardArray.jl is the only JIT-compiled Aw
 
 AwkwardArray.jl accepts any `AbstractVector` for index and data buffers, so that buffers on GPUs, data with units, etc. can be used in place of the usual `Vector` type.
 
-None of AwkwardArray.jl's algorithms assume that these buffers are 1-indexed, so that even [OffsetArrays.jl](https://github.com/JuliaArrays/OffsetArrays.jl) could be used. This is also important because the data _in_ the index buffers are 0-indexed, so that they can be zero-copy exchanged with Python.
+None of AwkwardArray.jl's algorithms assume that these buffers are 1-indexed, so even [OffsetArrays.jl](https://github.com/JuliaArrays/OffsetArrays.jl) could be used as buffers. This is also important because the data _in_ the index buffers are 0-indexed, so that they can be zero-copy exchanged with Python.
 
 ## List of array classes
 
@@ -105,10 +105,10 @@ In Python, we make a distinction between high-level `ak.Array` (for data analyst
 The layout classes (subclasses of `AwkwardArray.Content`) are:
 
 | Julia class | corresponding Python | corresponding Arrow | description |
-|:--|:--|:--|
+|:--|:--|:--|:--|
 | PrimitiveArray | [NumpyArray](https://awkward-array.org/doc/main/reference/generated/ak.contents.NumpyArray.html) | [primitive](https://arrow.apache.org/docs/format/Columnar.html#fixed-size-primitive-layout) | one-dimensional array of booleans, numbers, date-times, or time-differences |
 | EmptyArray | [EmptyArray](https://awkward-array.org/doc/main/reference/generated/ak.contents.EmptyArray.html) | _(none)_ | length-zero array with unknown type (usually derived from untyped sources) |
-| ListOffsetArray | [ListOffsetArray](https://awkward-array.org/doc/main/reference/generated/ak.contents.EmptyArray.html) | [list](https://arrow.apache.org/docs/format/Columnar.html#variable-size-list-layout) | variable-length lists defined by an index of `offsets` |
+| ListOffsetArray | [ListOffsetArray](https://awkward-array.org/doc/main/reference/generated/ak.contents.ListOffsetArray.html) | [list](https://arrow.apache.org/docs/format/Columnar.html#variable-size-list-layout) | variable-length lists defined by an index of `offsets` |
 | ListArray | [ListArray](https://awkward-array.org/doc/main/reference/generated/ak.contents.ListArray.html) | _(none)_ | variable-length lists defined by more general `starts` and `stops` indexes |
 | RegularArray | [RegularArray](https://awkward-array.org/doc/main/reference/generated/ak.contents.RegularArray.html) | [fixed-size](https://arrow.apache.org/docs/format/Columnar.html#fixed-size-list-layout) | lists of uniform `size` |
 | RecordArray | [RecordArray](https://awkward-array.org/doc/main/reference/generated/ak.contents.RecordArray.html) with `fields` | [struct](https://arrow.apache.org/docs/format/Columnar.html#struct-layout) | struct-like records with named fields of different types |
@@ -142,6 +142,8 @@ julia> array[3]
 julia> typeof(array[3])
 String
 ```
+
+Most applications of `behavior` apply to `RecordArrays` (e.g. [Vector](https://github.com/scikit-hep/vector) in Python).
 
 ## List of functions
 
