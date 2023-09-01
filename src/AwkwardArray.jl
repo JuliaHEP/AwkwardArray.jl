@@ -549,6 +549,27 @@ function push_dummy!(layout::ListArray)
     end_list!(layout)
 end
 
+function _to_buffers!(
+    layout::ListArray{INDEX,CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {INDEX<:IndexBig,CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-starts"] = reinterpret(UInt8, layout.starts)
+    containers["$form_key-stops"] = reinterpret(UInt8, layout.stops)
+
+    Dict{String,Any}(
+        "class" => "ListArray",
+        "starts" => _to_buffers_index(INDEX),
+        "stops" => _to_buffers_index(INDEX),
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
+end
+
 ### RegularArray #########################################################
 
 mutable struct RegularArray{CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
