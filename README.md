@@ -96,7 +96,7 @@ AwkwardArray.jl accepts any `AbstractVector` for index and data buffers, so that
 
 None of AwkwardArray.jl's algorithms assume that these buffers are 1-indexed, so even [OffsetArrays.jl](https://github.com/JuliaArrays/OffsetArrays.jl) could be used as buffers. This is also important because the data _in_ the index buffers are 0-indexed, so that they can be zero-copy exchanged with Python.
 
-## List of array classes
+## Array layout classes
 
 In Python, we make a distinction between high-level `ak.Array` (for data analysts) and low-level `Content` memory layouts (for downstream developers). In Julia, it's more advantageous to expose the concrete type details to all users, particularly for defining functions with multiple dispatch. Thus, there is no `ak.Array` equivalent.
 
