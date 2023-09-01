@@ -2261,6 +2261,27 @@ function Base.push!(layout::UnionArray, input)
     end
 end
 
+function _to_buffers!(
+    layout::UnionArray{TAGS,INDEX,CONTENTS},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {TAGS<:Index8,INDEX<:IndexBig,CONTENTS<:Base.Tuple{Vararg{Content}}}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-tags"] = reinterpret(UInt8, layout.tags)
+    containers["$form_key-index"] = reinterpret(UInt8, layout.index)
+
+    Dict{String,Any}(
+        "class" => "UnionArray",
+        "tags" => _to_buffers_index(TAGS),
+        "index" => _to_buffers_index(INDEX),
+        "contents" => [_to_buffers!(x, number, containers) for x in layout.contents],
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
+end
+
 ### from_iter ############################################################
 
 function layout_for(ItemType)
