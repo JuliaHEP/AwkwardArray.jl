@@ -1385,7 +1385,7 @@ function _to_buffers!(
     layout::TupleArray{CONTENTS},
     number::Vector{Int64},
     containers::Dict{String,AbstractVector{UInt8}},
-) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}}
+) where {CONTENTS<:Base.Tuple{Vararg{Content}}}
     number[begin] += 1
 
     Dict{String,Any}(
