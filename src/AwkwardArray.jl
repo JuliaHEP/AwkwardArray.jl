@@ -702,6 +702,22 @@ function push_dummy!(layout::RegularArray)
     end_list!(layout)
 end
 
+function _to_buffers!(
+    layout::RegularArray{CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    Dict{String,Any}(
+        "class" => "RegularArray",
+        "size" => layout.size,
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+    )
+end
+
 ### ListType with behavior = :string #####################################
 
 StringOffsetArray(
@@ -1177,6 +1193,21 @@ function push_dummy!(layout::RecordArray)
     end_record!(layout)
 end
 
+function _to_buffers!(
+    layout::RecordArray{FIELDS,CONTENTS},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}}
+    number[begin] += 1
+
+    Dict{String,Any}(
+        "class" => "RecordArray",
+        "fields" => [String(x) for x in FIELDS],
+        "contents" => [_to_buffers!(x, number, containers) for x in layout.contents],
+        "parameters" => _to_buffers_parameters(layout),
+    )
+end
+
 ### TupleArray ###########################################################
 
 mutable struct TupleArray{CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} <:
@@ -1348,6 +1379,21 @@ function push_dummy!(layout::TupleArray)
         push_dummy!(x)
     end
     end_tuple!(layout)
+end
+
+function _to_buffers!(
+    layout::TupleArray{CONTENTS},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}}
+    number[begin] += 1
+
+    Dict{String,Any}(
+        "class" => "RecordArray",
+        "fields" => nothing,
+        "contents" => [_to_buffers!(x, number, containers) for x in layout.contents],
+        "parameters" => _to_buffers_parameters(layout),
+    )
 end
 
 ### IndexedArray #########################################################
