@@ -1495,6 +1495,25 @@ function push_dummy!(layout::IndexedArray)
     layout
 end
 
+function _to_buffers!(
+    layout::IndexedArray{INDEX,CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {INDEX<:IndexBig,CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-index"] = reinterpret(UInt8, layout.index)
+
+    Dict{String,Any}(
+        "class" => "IndexedArray",
+        "index" => _to_buffers_index(INDEX),
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
+end
+
 ### IndexedOptionArray ###################################################
 
 abstract type OptionType{BEHAVIOR} <: Content{BEHAVIOR} end
@@ -1626,6 +1645,25 @@ function push_dummy!(layout::IndexedOptionArray)
     push_null!(layout)
 end
 
+function _to_buffers!(
+    layout::IndexedOptionArray{INDEX,CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {INDEX<:IndexBigSigned,CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-index"] = reinterpret(UInt8, layout.index)
+
+    Dict{String,Any}(
+        "class" => "IndexedOptionArray",
+        "index" => _to_buffers_index(INDEX),
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
+end
+
 ### ByteMaskedArray ######################################################
 
 struct ByteMaskedArray{INDEX<:IndexBool,CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
@@ -1755,6 +1793,26 @@ end
 
 function push_dummy!(layout::ByteMaskedArray)
     push_null!(layout)
+end
+
+function _to_buffers!(
+    layout::ByteMaskedArray{INDEX,CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {INDEX<:IndexBool,CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    containers["$form_key-mask"] = reinterpret(UInt8, layout.mask)
+
+    Dict{String,Any}(
+        "class" => "ByteMaskedArray",
+        "mask" => _to_buffers_index(INDEX),
+        "content" => _to_buffers!(layout.content, number, containers),
+        "valid_when" => layout.valid_when,
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
 end
 
 ### BitMaskedArray #######################################################
@@ -1889,6 +1947,28 @@ function push_dummy!(layout::BitMaskedArray)
     push_null!(layout)
 end
 
+function _to_buffers!(
+    layout::BitMaskedArray{CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {CONTENT<:Content}
+    form_key = "node$(number[begin])"
+    number[begin] += 1
+
+    cut = 1:Int64(ceil(length(layout.mask) / 8.0))
+    containers["$form_key-mask"] = reinterpret(UInt8, layout.mask.chunks)[cut]
+
+    Dict{String,Any}(
+        "class" => "BitMaskedArray",
+        "mask" => "u8",
+        "content" => _to_buffers!(layout.content, number, containers),
+        "valid_when" => layout.valid_when,
+        "lsb_order" => true,
+        "parameters" => _to_buffers_parameters(layout),
+        "form_key" => form_key,
+    )
+end
+
 ### UnmaskedArray ########################################################
 
 struct UnmaskedArray{CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
@@ -1963,6 +2043,20 @@ end
 
 function push_dummy!(layout::UnmaskedArray)
     push_dummy!(layout.content)
+end
+
+function _to_buffers!(
+    layout::UnmaskedArray{CONTENT},
+    number::Vector{Int64},
+    containers::Dict{String,AbstractVector{UInt8}},
+) where {CONTENT<:Content}
+    number[begin] += 1
+
+    Dict{String,Any}(
+        "class" => "UnmaskedArray",
+        "content" => _to_buffers!(layout.content, number, containers),
+        "parameters" => _to_buffers_parameters(layout),
+    )
 end
 
 ### UnionArray ###########################################################
