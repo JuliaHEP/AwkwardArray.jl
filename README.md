@@ -1,4 +1,4 @@
-![](https://raw.githubusercontent.com/scikit-hep/awkward/main/docs-img/logo/logo-300px.png)
+![](https://raw.githubusercontent.com/jpivarski/AwkwardArray.jl/main/docs/img/logo-500px.png)
 
 **for Julia!**
 
