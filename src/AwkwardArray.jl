@@ -2730,7 +2730,7 @@ function _horizontal(data::Any, limit_cols::Int)
             if occursin(r"^[A-Za-z_][A-Za-z_0-9]*$", key)
                 key_str = key * ": "
             else
-                key_str = repr(key) + ": "
+                key_str = repr(key) * ": "
             end
 
             if limit_cols - (for_comma + length(key_str) + 3) >= 0
@@ -2905,7 +2905,7 @@ function _vertical(data::Union{Content,Record,Tuple}, limit_rows::Int, limit_col
             if occursin(r"^[A-Za-z_][A-Za-z_0-9]*$", key)
                 key_str = key * ": "
             else
-                key_str = repr(key) + ": "
+                key_str = repr(key) * ": "
             end
 
             (_, strs) = _horizontal(data[field], limit_cols - 2 - length(key_str))
