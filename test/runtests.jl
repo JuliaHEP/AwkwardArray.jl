@@ -2,8 +2,8 @@ using AwkwardArray
 using JSON
 using Test
 
-@testset "AwkwardArray.jl" begin
     ### PrimitiveArray #######################################################
+@testset "PrimitiveArray" begin
 
     begin
         layout = AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5])
@@ -82,8 +82,10 @@ using Test
             Vector{Float32}([1.0, 2.0, 3.0, 4.0, 5.0, 3.14, 2.71]),
         )
     end
+end
 
-    ### EmptyArray ###########################################################
+### EmptyArray ###########################################################
+@testset "EmptyArray" begin
 
     begin
         layout = AwkwardArray.EmptyArray()
@@ -111,8 +113,10 @@ using Test
         append!(layout, [])
         append!(layout, Vector{Int64}([]))
     end
+end
 
     ### ListOffsetArray ######################################################
+@testset "ListOffsetArray" begin
 
     begin
         layout = AwkwardArray.ListOffsetArray(
@@ -226,8 +230,10 @@ using Test
             AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9]),
         )
     end
+end
 
     ### ListArray ######################################################
+@testset "ListArray" begin
 
     begin
         layout = AwkwardArray.ListArray(
@@ -346,9 +352,11 @@ using Test
             AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9]),
         )
     end
+end
 
     ### RegularArray #########################################################
 
+@testset "RegularArray" begin
     begin
         layout = AwkwardArray.RegularArray(
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 6.6]),
@@ -532,9 +540,11 @@ using Test
             3,
         )
     end
+end
 
     ### ListType with behavior = :string #####################################
 
+@testset "ListType with behavior = :string" begin
     begin
         AwkwardArray.is_valid(AwkwardArray.StringOffsetArray([0, 3, 3, 6], "onetwo"))
         AwkwardArray.is_valid(AwkwardArray.StringOffsetArray())
@@ -888,8 +898,10 @@ using Test
         )
     end
 
+end
     ### ListType with other parameters #######################################
 
+@testset "ListType with other parameters" begin
     begin
         layout = AwkwardArray.ListOffsetArray(
             [0, 3, 3, 8],
@@ -969,9 +981,11 @@ using Test
         @test AwkwardArray.get_parameter(layout, "__doc__") == "nice list"
         @test !AwkwardArray.has_parameter(layout, "__list__")
     end
+end
 
     ### RecordArray ##########################################################
 
+@testset "RecordArray" begin
     begin
         layout = AwkwardArray.RecordArray(
             NamedTuple{(:a, :b)}((
@@ -1266,9 +1280,10 @@ using Test
             )),
         )
     end
-
+end
     ### TupleArray ##########################################################
 
+@testset "TupleArray" begin
     begin
         layout = AwkwardArray.TupleArray((
             AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
@@ -1522,9 +1537,11 @@ using Test
             ),
         ),)
     end
+end
 
     ### IndexedArray #########################################################
 
+@testset "IndexedArray" begin
     begin
         layout = AwkwardArray.IndexedArray(
             [4, 3, 3, 0],
@@ -1689,9 +1706,11 @@ using Test
             )),
         )
     end
+end
 
     ### IndexedOptionArray ###################################################
 
+@testset "IndexedOptionArray" begin
     begin
         layout = AwkwardArray.IndexedOptionArray(
             [4, 3, 3, -1, -1, 0],
@@ -1804,9 +1823,11 @@ using Test
             ),
         )
     end
+end
 
     ### ByteMaskedArray ######################################################
 
+@testset "ByteMaskedArray" begin
     begin
         layout = AwkwardArray.ByteMaskedArray(
             [false, true, true, false, false],
@@ -1960,9 +1981,11 @@ using Test
             valid_when = true,
         )
     end
+end
 
     ### BitMaskedArray #######################################################
 
+@testset "BitMaskedArray" begin
     begin
         layout = AwkwardArray.BitMaskedArray(
             BitVector([false, true, true, false, false]),
@@ -2115,9 +2138,11 @@ using Test
             valid_when = true,
         )
     end
+end
 
     ### UnmaskedArray ########################################################
 
+@testset "UnmaskedArray" begin
     begin
         layout = AwkwardArray.UnmaskedArray(
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
@@ -2243,9 +2268,10 @@ using Test
             valid_when = true,
         )
     end
-
+end
     ### UnionArray ###########################################################
 
+@testset "UnionArray" begin
     begin
         layout = AwkwardArray.UnionArray(
             Vector{Int8}([0, 0, 0, 1]),
@@ -2409,9 +2435,10 @@ using Test
             ),
         )
     end
-
+end
     ### from_iter ############################################################
 
+@testset "from_iter" begin
     begin
         @test AwkwardArray.is_valid(AwkwardArray.from_iter([1, 2, 3]))
 
@@ -2487,9 +2514,11 @@ using Test
         )
 
     end
+end
 
     ### from_buffers #########################################################
 
+@testset "from_buffers" begin
     begin
         layout = AwkwardArray.from_buffers(
             """{"class": "NumpyArray", "primitive": "float64", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
@@ -3127,5 +3156,4 @@ using Test
             "node5-data" => Vector{UInt8}(b"five"),
         )
     end
-
 end   # @testset "AwkwardArray.jl"
