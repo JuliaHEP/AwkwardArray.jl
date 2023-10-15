@@ -1,7 +1,7 @@
 module AwkwardArray
 
 import JSON
-using Tables
+import Tables
 
 ### Index ################################################################
 
