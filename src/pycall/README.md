@@ -15,12 +15,8 @@ using PyCall
 
 const ak = pyimport("awkward")
 
-py"""
-import awkward as ak
-  def test():
-    print(ak.__version__)
-"""
+test() = println(ak.__version__)
 
-py"test"()
+test()
 2.4.6
 ```
