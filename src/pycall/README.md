@@ -13,7 +13,7 @@ Conda.add("awkward")
 ```julia
 using PyCall
 
-@pyimport awkward
+const ak = pyimport("awkward")
 
 py"""
 import awkward as ak
