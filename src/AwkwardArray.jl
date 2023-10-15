@@ -1,6 +1,7 @@
 module AwkwardArray
 
 import JSON
+using Tables
 
 ### Index ################################################################
 
@@ -2348,6 +2349,19 @@ function layout_for(ItemType)
             error("cannot produce an AwkwardArray layout for $ItemType")
         end
     end
+end
+
+function from_table(input)
+    sch = Tables.schema(input)
+    NT = NamedTuple{sch.names, Base.Tuple{sch.types...}}
+    AwkwardType = layout_for(NT)
+    out = AwkwardType()
+
+    for row in Tables.rows(input)
+        push!(out, NT(row))
+    end
+
+    return out
 end
 
 function from_iter(input)
