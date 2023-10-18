@@ -1,6 +1,7 @@
 using AwkwardArray
 using JSON
 using Test
+using Tables
 
     ### PrimitiveArray #######################################################
 @testset "PrimitiveArray" begin
@@ -3155,5 +3156,14 @@ end
             ),
             "node5-data" => Vector{UInt8}(b"five"),
         )
+    end
+
+    @testset "Tables.jl intergration" begin
+        df = (; x = [[1], [2], [1,2,3]], y = [4.0, 5, 6])
+        awt = AwkwardArray.from_table(df)
+        @test Tables.schema(df) == Tables.schema(awt)
+
+        @test df.x = AwkwardArray.to_vector(awt[:x])
+        @test df.y = AwkwardArray.to_vector(awt[:y])
     end
 end   # @testset "AwkwardArray.jl"
