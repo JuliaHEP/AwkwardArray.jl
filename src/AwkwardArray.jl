@@ -103,7 +103,7 @@ Base.show(io::IO, parameters::Parameters) = print(
 
 struct Unset end
 
-abstract type Content{BEHAVIOR} <: AbstractVector{ITEM where ITEM} end
+abstract type Content{BEHAVIOR} <: AbstractVector{Any} end
 
 parameters_of(content::CONTENT) where {CONTENT<:Content} = content.parameters
 has_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
@@ -211,6 +211,7 @@ Base.length(layout::PrimitiveArray) = length(layout.data)
 Base.firstindex(layout::PrimitiveArray) = firstindex(layout.data)
 Base.lastindex(layout::PrimitiveArray) = lastindex(layout.data)
 
+Base.eltype(layout::PrimitiveArray) = eltype(layout.data)
 Base.getindex(layout::PrimitiveArray, i::Int) = layout.data[i]
 
 Base.getindex(layout::PrimitiveArray, r::UnitRange{Int}) =
@@ -311,11 +312,12 @@ Base.length(layout::EmptyArray) = 0
 Base.firstindex(layout::EmptyArray) = 1
 Base.lastindex(layout::EmptyArray) = 0
 
-Base.getindex(layout::EmptyArray, i::Int) = [][1]  # throw BoundsError
+Base.eltype(layout::EmptyArray) = nothing
+Base.getindex(layout::EmptyArray, i::Int) = throw(BoundsError(layout, i))
 
 function Base.getindex(layout::EmptyArray, r::UnitRange{Int})
     if r.start < r.stop
-        [][1]  # throw BoundsError
+        throw(BoundsError(layout, r))
     else
         layout
     end
@@ -338,6 +340,7 @@ end
 ### ListOffsetArray ######################################################
 
 abstract type ListType{BEHAVIOR} <: Content{BEHAVIOR} end
+Base.eltype(layout::ListType) = Vector{eltype(layout.content)}
 
 struct ListOffsetArray{INDEX<:IndexBig,CONTENT<:Content,BEHAVIOR} <: ListType{BEHAVIOR}
     offsets::INDEX
@@ -2351,19 +2354,6 @@ function layout_for(ItemType)
     end
 end
 
-function from_table(input)
-    sch = Tables.schema(input)
-    NT = NamedTuple{sch.names, Base.Tuple{sch.types...}}
-    AwkwardType = layout_for(NT)
-    out = AwkwardType()
-
-    for row in Tables.rows(input)
-        push!(out, NT(row))
-    end
-
-    return out
-end
-
 function from_iter(input)
     ItemType = eltype(input)
     AwkwardType = layout_for(ItemType)
@@ -3622,5 +3612,7 @@ function _to_buffers_index(IndexType::DataType)
         error("unexpected INDEX type in to_buffers: $IndexType")
     end
 end
+
+include("./tables.jl")
 
 end  # module AwkwardArray
