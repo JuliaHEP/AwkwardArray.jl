@@ -3163,7 +3163,7 @@ end
         awt = AwkwardArray.from_table(df)
         @test Tables.schema(df) == Tables.schema(awt)
 
-        @test df.x = AwkwardArray.to_vector(awt[:x])
-        @test df.y = AwkwardArray.to_vector(awt[:y])
+        @test df.x == AwkwardArray.to_vector(awt[:x])
+        @test df.y == AwkwardArray.to_vector(awt[:y])
     end
 end   # @testset "AwkwardArray.jl"
