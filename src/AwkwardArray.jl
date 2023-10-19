@@ -1,6 +1,7 @@
 module AwkwardArray
 
 import JSON
+import Dates
 
 ### Index ################################################################
 
@@ -272,10 +273,10 @@ function _to_buffers!(
         primitive = "complex64"
     elseif ITEM == Complex{Float64}
         primitive = "complex128"
-        # elseif ITEM <: Dates.DateTime     # FIXME
-        #     primitive = "datetime64"
-        # elseif ITEM <: Dates.TimePeriod   # FIXME
-        #     primitive = "timedelta64"
+    elseif ITEM <: DateTime
+        primitive = "datetime64"
+    elseif ITEM <: TimePeriod
+        primitive = "timedelta64"
     else
         error(
             "PrimitiveArray has an ITEM type that can't be serialized in the to_buffers protocol: $ITEM",
@@ -3113,10 +3114,10 @@ function from_buffers(
             data = reinterpret(Complex{Float32}, buffer)
         elseif primitive == "complex128"
             data = reinterpret(Complex{Float64}, buffer)
-            # elseif primitive == "datetime64"
-            #     FIXME: Dates.DateTime
-            # elseif primitive == "timedelta64"
-            #     FIXME: Dates.TimePeriod
+        elseif primitive == "datetime64"
+            data = reinterpret(DateTime, buffer)
+        elseif primitive == "timedelta64"
+            data = reinterpret(TimePeriod, buffer)
         else
             error(
                 "unrecognized \"primitive\": $(repr(primitive)) in \"class\": \"$class\" node",
