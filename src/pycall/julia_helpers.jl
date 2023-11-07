@@ -18,7 +18,7 @@ function julia_array_to_python(array)
     numpy_arrays = Dict{String, Any}()
 
     for (key, value) in containers
-        numpy_arrays[key] = np.array(value, dtype=np.uint8)
+        numpy_arrays[key] = np.asarray(value, dtype=np.uint8)
     end
 
     ### a bytes-like object is required
