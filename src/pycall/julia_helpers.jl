@@ -1,10 +1,11 @@
 using PyCall
 using AwkwardArray
+using AwkwardArray: PrimitiveArray
 
 const ak = pyimport("awkward")
 const np = pyimport("numpy")
 
-function julia_array_to_numpy(array)
+function julia_array_to_numpy(array::PrimitiveArray)
     py_array = PyObject(array)
     np.array(py_array)
 end
