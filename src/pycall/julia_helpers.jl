@@ -1,7 +1,8 @@
-import Pkg
-
 if !isdefined(Main, :PyCall)
     println("PyCall is not installed. Installing...")
+
+    import Pkg
+
     Pkg.add("PyCall")
 end
     
