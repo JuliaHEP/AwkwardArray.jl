@@ -9,7 +9,7 @@ if !isdefined(Main, :PyCall)
 end
     
 using PyCall
-using AwkwardArray
+@reexport using AwkwardArray
 
 const ak = pyimport("awkward")
 const np = pyimport("numpy")
