@@ -1,4 +1,6 @@
-if !haskey(Pkg.installed(), "PyCall")
+import Pkg
+
+if !haskey(Pkg.installed(), "PyCall") # FIXME: Pkg.installed() is deprecated!
     println("PyCall is not installed. Installing...")
     Pkg.add("PyCall")
 end
