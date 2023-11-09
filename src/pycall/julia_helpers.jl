@@ -1,26 +1,22 @@
 using PyCall
 using AwkwardArray
-using AwkwardArray: PrimitiveArray
 
 const ak = pyimport("awkward")
 const np = pyimport("numpy")
 
-function julia_array_to_numpy(array::PrimitiveArray)
+function _as_numpy(array::AbstractVector{UInt8})
     py_array = PyObject(array)
-    np.array(py_array)
+    np.array(py_array, dtype=np.uint8)
 end
 
-### convert a Julia AwkwardArray to a Python Awkward Array
-### via buffers
 function julia_array_to_python(array)
     form, len, containers = AwkwardArray.to_buffers(array)
     
-    numpy_arrays = Dict{String, Any}()
+    py_buffers = Dict{String, Any}()
 
-    for (key, value) in containers
-        numpy_arrays[key] = np.asarray(value, dtype=np.uint8)
+    for (key, buffer) in containers
+        numpy_arrays[key] = _as_numpy(buffer)
     end
 
-    ### a bytes-like object is required
-    return ak.from_buffers(form, len, numpy_arrays)
+    return ak.from_buffers(form, len, py_buffers)
 end
