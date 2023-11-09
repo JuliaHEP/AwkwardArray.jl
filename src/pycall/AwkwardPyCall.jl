@@ -1,3 +1,5 @@
+module AwkwardPyCall
+
 if !isdefined(Main, :PyCall)
     println("PyCall is not installed. Installing...")
 
