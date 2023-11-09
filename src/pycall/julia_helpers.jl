@@ -6,7 +6,7 @@ const np = pyimport("numpy")
 
 function _as_numpy(array::AbstractVector{UInt8})
     py_array = PyObject(array)
-    np.array(py_array, dtype=np.uint8)
+    np.asarray(py_array, dtype=np.uint8)
 end
 
 function julia_array_to_python(array)
