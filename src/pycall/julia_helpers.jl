@@ -1,3 +1,8 @@
+if !haskey(Pkg.installed(), "PyCall")
+    println("PyCall is not installed. Installing...")
+    Pkg.add("PyCall")
+end
+    
 using PyCall
 using AwkwardArray
 
