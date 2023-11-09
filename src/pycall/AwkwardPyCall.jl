@@ -30,3 +30,5 @@ function julia_array_to_python(array)
 
     return ak.from_buffers(form, len, py_buffers)
 end
+
+end # module
