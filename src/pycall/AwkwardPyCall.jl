@@ -1,6 +1,17 @@
 module AwkwardPyCall
+
 using PyCall
 using JSON
+
+if !isdefined(Main, :PyCall)
+    println("PyCall is not installed. Installing...")
+
+    import Pkg
+
+    Pkg.add("PyCall")
+end
+    
+using PyCall
 using AwkwardArray
 
 function _as_numpy(array::AbstractVector{UInt8})
