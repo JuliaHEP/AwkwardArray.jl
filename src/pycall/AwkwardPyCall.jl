@@ -9,6 +9,7 @@ if !isdefined(Main, :PyCall)
 end
     
 using PyCall
+using JSON
 @reexport using AwkwardArray
 
 const ak = pyimport("awkward")
