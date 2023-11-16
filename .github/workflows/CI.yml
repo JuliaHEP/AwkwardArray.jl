@@ -42,7 +42,7 @@ jobs:
         uses: julia-actions/cache@v1
         with:
           path: ~/.julia
-          key: julia-deps-${{ hashFiles("Project.toml", "Manifest.toml") }}
+          key: julia-deps-${{ hashFiles('**/*.toml') }}
 
       - name: Install Julia dependencies
         run: julia -e 'import Pkg; Pkg.instantiate()'
