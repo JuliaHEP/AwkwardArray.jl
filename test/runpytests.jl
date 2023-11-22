@@ -17,6 +17,9 @@ add_unreleased_AwkwardArray_package()
 
 using AwkwardArray
 
+Pkg.add("JSON")
+using JSON
+
 include("../src/pycall/AwkwardPyCall.jl")
 
 import Main.AwkwardPyCall: ak
