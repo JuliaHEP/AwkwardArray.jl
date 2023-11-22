@@ -1,7 +1,5 @@
 module AwkwardPyCall
-
 using PyCall
-
 using JSON
 
 if !isdefined(Main, :PyCall)
