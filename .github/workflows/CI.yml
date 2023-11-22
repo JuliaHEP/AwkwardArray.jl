@@ -50,9 +50,6 @@ jobs:
       - name: Build Julia package
         uses: julia-actions/julia-buildpkg@v1
 
-      - name: Install PyCall dependencies
-        run: julia -e 'import Pkg; Pkg.add("PyCall"); Pkg.build("PyCall")'
-
       - name: Run Julia tests
         uses: julia-actions/julia-runtest@v1
         with:
@@ -67,6 +64,9 @@ jobs:
         run: |
           python -m pip install -r requirements/pycall.txt
 
+      - name: Install PyCall dependencies
+        run: julia -e 'import Pkg; Pkg.add("PyCall"); Pkg.build("PyCall")'
+  
       - name: Run PyCall tests
         run: julia --project=tests test/runpytests.jl
 
