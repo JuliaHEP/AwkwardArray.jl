@@ -50,25 +50,20 @@ jobs:
       - name: Build Julia package
         uses: julia-actions/julia-buildpkg@v1
 
-      - name: Install PyCall dependencies
-        run: julia -e 'import Pkg; Pkg.add("PyCall"); Pkg.build("PyCall")'
-
       - name: Run Julia tests
         uses: julia-actions/julia-runtest@v1
         with:
           project: .
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.12
-
       - name: Install Python dependencies
         run: |
           python -m pip install -r requirements/pycall.txt
 
-      # - name: Run Python tests
-      #   run: python test/test.py
+      - name: Install PyCall dependencies
+        run: julia -e 'import Pkg; Pkg.add("PyCall"); Pkg.build("PyCall")'
+  
+      - name: Run PyCall tests
+        run: julia --code-coverage --project=tests test/runpytests.jl
 
       - name: Generate and upload code coverage
         uses: julia-actions/julia-processcoverage@v1

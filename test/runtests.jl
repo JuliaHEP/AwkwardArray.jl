@@ -3,7 +3,7 @@ using JSON
 using Test
 using Tables
 
-    ### PrimitiveArray #######################################################
+### PrimitiveArray #######################################################
 @testset "PrimitiveArray" begin
 
     begin
@@ -116,7 +116,7 @@ end
     end
 end
 
-    ### ListOffsetArray ######################################################
+### ListOffsetArray ######################################################
 @testset "ListOffsetArray" begin
 
     begin
@@ -233,7 +233,7 @@ end
     end
 end
 
-    ### ListArray ######################################################
+### ListArray ######################################################
 @testset "ListArray" begin
 
     begin
@@ -355,7 +355,7 @@ end
     end
 end
 
-    ### RegularArray #########################################################
+### RegularArray #########################################################
 
 @testset "RegularArray" begin
     begin
@@ -543,7 +543,7 @@ end
     end
 end
 
-    ### ListType with behavior = :string #####################################
+### ListType with behavior = :string #####################################
 
 @testset "ListType with behavior = :string" begin
     begin
@@ -900,7 +900,7 @@ end
     end
 
 end
-    ### ListType with other parameters #######################################
+### ListType with other parameters #######################################
 
 @testset "ListType with other parameters" begin
     begin
@@ -984,7 +984,7 @@ end
     end
 end
 
-    ### RecordArray ##########################################################
+### RecordArray ##########################################################
 
 @testset "RecordArray" begin
     begin
@@ -1282,7 +1282,7 @@ end
         )
     end
 end
-    ### TupleArray ##########################################################
+### TupleArray ##########################################################
 
 @testset "TupleArray" begin
     begin
@@ -1540,7 +1540,7 @@ end
     end
 end
 
-    ### IndexedArray #########################################################
+### IndexedArray #########################################################
 
 @testset "IndexedArray" begin
     begin
@@ -1709,7 +1709,7 @@ end
     end
 end
 
-    ### IndexedOptionArray ###################################################
+### IndexedOptionArray ###################################################
 
 @testset "IndexedOptionArray" begin
     begin
@@ -1826,7 +1826,7 @@ end
     end
 end
 
-    ### ByteMaskedArray ######################################################
+### ByteMaskedArray ######################################################
 
 @testset "ByteMaskedArray" begin
     begin
@@ -1984,7 +1984,7 @@ end
     end
 end
 
-    ### BitMaskedArray #######################################################
+### BitMaskedArray #######################################################
 
 @testset "BitMaskedArray" begin
     begin
@@ -2141,7 +2141,7 @@ end
     end
 end
 
-    ### UnmaskedArray ########################################################
+### UnmaskedArray ########################################################
 
 @testset "UnmaskedArray" begin
     begin
@@ -2270,7 +2270,7 @@ end
         )
     end
 end
-    ### UnionArray ###########################################################
+### UnionArray ###########################################################
 
 @testset "UnionArray" begin
     begin
@@ -2437,7 +2437,7 @@ end
         )
     end
 end
-    ### from_iter ############################################################
+### from_iter ############################################################
 
 @testset "from_iter" begin
     begin
@@ -2517,7 +2517,7 @@ end
     end
 end
 
-    ### from_buffers #########################################################
+### from_buffers #########################################################
 
 @testset "from_buffers" begin
     begin
@@ -3159,7 +3159,7 @@ end
     end
 
     @testset "Tables.jl intergration" begin
-        df = (; x = [[1], [2], [1,2,3]], y = [4.0, 5, 6])
+        df = (; x = [[1], [2], [1, 2, 3]], y = [4.0, 5, 6])
         awt = AwkwardArray.from_table(df)
         @test Tables.schema(df) == Tables.schema(awt)
 
