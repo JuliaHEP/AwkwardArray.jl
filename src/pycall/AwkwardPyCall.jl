@@ -1,21 +1,8 @@
 module AwkwardPyCall
-
-using Pkg
-
-isinstalled(pkg::String) = any(x -> x.name == pkg && x.is_direct_dep, values(Pkg.dependencies()))
-
-if !isinstalled("PyCall")
-    println("PyCall is not installed. Installing...")
-
-    import Pkg
-
-    Pkg.add("PyCall")
-end
     
 using PyCall
-
 using JSON
-@reexport using AwkwardArray
+using AwkwardArray
 
 const ak = pyimport("awkward")
 const np = pyimport("numpy")
