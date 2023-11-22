@@ -1,0 +1,2 @@
+numpy
+awkward>=2.4
