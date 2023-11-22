@@ -4,11 +4,12 @@ Tables.columnaccess(::Type{RecordArray}) = true
 Tables.columns(x::RecordArray) = x.contents
 Tables.columnnames(x::RecordArray) = keys(x.contents)
 
-Tables.schema(x::RecordArray) = Tables.Schema(Tables.columnnames(x), eltype.(values(Tables.columns(x))))
+Tables.schema(x::RecordArray) =
+    Tables.Schema(Tables.columnnames(x), eltype.(values(Tables.columns(x))))
 
 function from_table(input)
     sch = Tables.schema(input)
-    NT = NamedTuple{sch.names, Base.Tuple{sch.types...}}
+    NT = NamedTuple{sch.names,Base.Tuple{sch.types...}}
     AwkwardType = layout_for(NT)
     out = AwkwardType()
 
@@ -18,4 +19,3 @@ function from_table(input)
 
     return out
 end
-
