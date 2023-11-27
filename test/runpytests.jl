@@ -8,6 +8,9 @@ using AwkwardArray
 Pkg.add("JSON")
 using JSON
 
+Pkg.add("PyCall")
+using PyCall
+
 include("../src/pycall/AwkwardPyCall.jl")
 
 import Main.AwkwardPyCall: julia_array_to_python
