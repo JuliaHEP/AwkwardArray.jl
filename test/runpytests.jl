@@ -3,18 +3,6 @@ using Test
 
 using Pkg
 
-# FIXME: remove after AwkwardArray is released
-function add_unreleased_AwkwardArray_package()
-    # Specify the Git URL of the AwkwardArray package
-    git_url = "https://github.com/JuliaHEP/AwkwardArray.jl"
-
-    # Use Pkg to add the package
-    Pkg.add(PackageSpec(url = git_url))
-end
-
-# Call the function to add the unreleased AwkwardArray package
-add_unreleased_AwkwardArray_package()
-
 using AwkwardArray
 
 Pkg.add("JSON")
