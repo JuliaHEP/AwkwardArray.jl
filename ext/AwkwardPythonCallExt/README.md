@@ -1,22 +1,17 @@
-[PyCall](https://github.com/JuliaPy/PyCall.jl) is currently configured to use the Julia-specific Python distribution
-installed by the [Conda.jl](https://github.com/JuliaPy/Conda.jl) package.
-
-  conda create --name ak-julia
-  conda activate ak-julia
-  conda install -c conda-forge awkward
+[PythonCall](https://github.com/JuliaPy/PythonCall.jl) is currently configured to use the Julia-specific Python distribution
+installed by the [CondaPkg.jl](https://github.com/JuliaPy/CondaPkg.jl) package.
 
 ```julia
-using Conda
-Conda.add("awkward")
+using CondaPkg
+CondaPkg.add("numpy")
+CondaPkg.add("awkward")
 ```
 
 ```julia
-using PyCall
+using PythonCall
 
 const ak = pyimport("awkward")
 
-test() = println(ak.__version__)
-
-test()
-2.4.6
+println(ak.__version__)
+2.5.0
 ```

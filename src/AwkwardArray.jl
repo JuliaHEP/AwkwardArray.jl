@@ -6,9 +6,7 @@ import Tables
 include("./all_implementations.jl")
 include("./tables.jl")
 
-# stub for PyCall Extention
-function julia_array_to_python end
-function python_array_to_julia end
-
+# stub for PythonCall Extention
+function convert end
 
 end  # module AwkwardArray
