@@ -3,7 +3,7 @@ using Test
 
 using Pkg
 
-Pkg.add("AwkwardArray")
+include("../src/AwkwardArray.jl")
 using AwkwardArray
 
 Pkg.add("JSON")
