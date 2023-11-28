@@ -3166,4 +3166,5 @@ end
         @test df.x == AwkwardArray.to_vector(awt[:x])
         @test df.y == AwkwardArray.to_vector(awt[:y])
     end
+
 end   # @testset "AwkwardArray.jl"

@@ -22,8 +22,6 @@ using JSON
 
 include("../src/pycall/AwkwardPyCall.jl")
 
-import Main.AwkwardPyCall: ak
-
 import Main.AwkwardPyCall: julia_array_to_python
 
 # Test julia_array_to_python function
@@ -38,14 +36,16 @@ import Main.AwkwardPyCall: julia_array_to_python
     # Test case 2: Check if the awkward array has the correct layout
     py_array = julia_array_to_python(array)
     @test typeof(py_array) == PyObject
-    @test ak.to_list(py_array) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+    @test pyimport("awkward").to_list(py_array) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+
+
 end
 
 import Main.AwkwardPyCall: python_array_to_julia
 
 # Test python_array_to_julia function
 @testset "python_array_to_julia tests" begin
-    py_array = ak.Array([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    py_array = pyimport("awkward").Array([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 
     # Test case 1: Check if the function returns an awkward array
     @test isa(
