@@ -22,34 +22,32 @@ using JSON
 
 include("../src/pycall/AwkwardPyCall.jl")
 
-import Main.AwkwardPyCall: julia_array_to_python
+import Main.AwkwardPyCall: convert
 
-# Test julia_array_to_python function
-@testset "julia_array_to_python tests" begin
+# Test convert Julia array to Python function
+@testset "convert Julia array to Python tests" begin
     array = AwkwardArray.ListOffsetArray(
         [0, 3, 3, 5],
         AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
     )
     # Test case 1: Check if the function returns an awkward array
-    @test isa(julia_array_to_python(array), PyObject)
+    @test isa(convert(array), PyObject)
 
     # Test case 2: Check if the awkward array has the correct layout
-    py_array = julia_array_to_python(array)
+    py_array = convert(array)
     @test typeof(py_array) == PyObject
     @test pyimport("awkward").to_list(py_array) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
 
 
 end
 
-import Main.AwkwardPyCall: python_array_to_julia
-
-# Test python_array_to_julia function
-@testset "python_array_to_julia tests" begin
+# Test convert Python array to Julia function
+@testset "convert Python array to Julia tests" begin
     py_array = pyimport("awkward").Array([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 
     # Test case 1: Check if the function returns an awkward array
     @test isa(
-        python_array_to_julia(py_array),
+        convert(py_array),
         AwkwardArray.ListOffsetArray{
             SubArray{Int64,1,Vector{Int64},Tuple{UnitRange{Int64}},true},
             AwkwardArray.PrimitiveArray{
@@ -62,7 +60,7 @@ import Main.AwkwardPyCall: python_array_to_julia
     )
 
     # Test case 2: Check if the awkward array has the correct layout
-    array = python_array_to_julia(py_array)
+    array = convert(py_array)
     @test typeof(array) == AwkwardArray.ListOffsetArray{
         SubArray{Int64,1,Vector{Int64},Tuple{UnitRange{Int64}},true},
         AwkwardArray.PrimitiveArray{

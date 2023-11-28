@@ -13,37 +13,29 @@ end
 using PyCall
 using AwkwardArray
 
-function _as_numpy(array::AbstractVector{UInt8})
-    py_array = PyObject(array)
-    pyimport("numpy").asarray(py_array, dtype = pyimport("numpy").uint8)
-end
-
-function julia_array_to_python(array)
-    form, len, containers = AwkwardArray.to_buffers(array)
+function convert(layout::AwkwardArray.Content)::PyObject
+    form, len, containers = AwkwardArray.to_buffers(layout)
 
     py_buffers = Dict{String,Any}()
 
     for (key, buffer) in containers
-        py_buffers[key] = _as_numpy(buffer)
+        py_buffers[key] =
+            pyimport("numpy").asarray(PyObject(buffer), dtype = pyimport("numpy").uint8)
     end
 
-    return pyimport("awkward").from_buffers(form, len, py_buffers)
+    pyimport("awkward").from_buffers(form, len, py_buffers)
 end
 
-function _as_julia(py_buffer)
-    uint8_buffer = reinterpret(UInt8, py_buffer)
-    return uint8_buffer
-end
-
-function python_array_to_julia(py_array)
-    form, len, containers = pyimport("awkward").to_buffers(py_array)
+function convert(array::PyObject)::AwkwardArray.Content
+    form, len, containers = pyimport("awkward").to_buffers(array)
 
     julia_buffers = Dict{String,AbstractVector{UInt8}}()
+
     for (key, buffer) in containers
-        julia_buffers[key] = _as_julia(buffer)
+        julia_buffers[key] = reinterpret(UInt8, buffer)
     end
 
-    return AwkwardArray.from_buffers(form.to_json(), len, julia_buffers)
+    AwkwardArray.from_buffers(form.to_json(), len, julia_buffers)
 end
 
 end # module
