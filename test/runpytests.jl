@@ -3,6 +3,7 @@ using Test
 
 using Pkg
 
+Pkg.add("AwkwardArray")
 using AwkwardArray
 
 Pkg.add("JSON")
