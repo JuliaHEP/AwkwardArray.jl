@@ -3,6 +3,7 @@ using JSON
 using Test
 using Tables
 
+
 ### PrimitiveArray #######################################################
 @testset "PrimitiveArray" begin
 
@@ -3168,3 +3169,5 @@ end
     end
 
 end   # @testset "AwkwardArray.jl"
+
+include("./runpytests.jl")
