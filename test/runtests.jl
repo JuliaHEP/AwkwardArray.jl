@@ -2860,6 +2860,96 @@ end
     ### to_buffers ###########################################################
 
     begin
+        layout = AwkwardArray.PrimitiveArray([true, false, true, false])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "bool", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 4
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\x01\x00\x01\x00",
+            ),
+        )
+    end
+
+    begin
+        layout = AwkwardArray.PrimitiveArray([Int8(-1), Int8(0), Int8(-33), Int8(66)])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "int8", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 4
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\xff\x00\xdf\x42",
+            ),
+        )
+    end
+
+    begin
+        layout = AwkwardArray.PrimitiveArray([Int16(-1), Int16(0), Int16(-33), Int16(66)])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "int16", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 4
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\xff\xff\x00\x00\xdf\xff\x42\x00",
+            ),
+        )
+    end
+
+    begin
+        layout = AwkwardArray.PrimitiveArray([UInt16(1), UInt16(0), UInt16(33), UInt16(66)])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "uint16", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 4
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\x01\x00\x00\x00\x21\x00\x42\x00",
+            ),
+        )
+    end
+
+    begin
+        layout = AwkwardArray.PrimitiveArray([Int32(-1), Int32(0), Int32(-33), Int32(66)])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "int32", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 4
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\xff\xff\xff\xff\x00\x00\x00\x00\xdf\xff\xff\xff\x42\x00\x00\x00",
+            ),
+        )
+    end
+
+    begin
+        layout = AwkwardArray.PrimitiveArray([UInt32(1), UInt32(0), UInt32(33), Int32(66)])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "uint32", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 4
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\x01\x00\x00\x00\x00\x00\x00\x00\x21\x00\x00\x00\x42\x00\x00\x00",
+            ),
+        )
+    end
+
+    begin
         layout = AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5])
         form, len, containers = AwkwardArray.to_buffers(layout)
 
