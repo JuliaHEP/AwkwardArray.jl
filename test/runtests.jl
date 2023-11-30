@@ -3158,8 +3158,32 @@ end
             "node5-data" => Vector{UInt8}(b"five"),
         )
     end
+end
 
-    @testset "Tables.jl intergration" begin
+@testset "Parameters compatible tests" begin
+    begin
+        doc_parameters = AwkwardArray.Parameters("__doc__" => "nice list")
+    
+        nice_list_layout = AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 8],
+            AwkwardArray.PrimitiveArray([0x68, 0x65, 0x79, 0x74, 0x68, 0x65, 0x72, 0x65],),
+            parameters = AwkwardArray.Parameters("__doc__" => "nice list"),
+        )
+
+        not_so_nice_list_layout = AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 8],
+            AwkwardArray.PrimitiveArray([0x68, 0x65, 0x79, 0x74, 0x68, 0x65, 0x72, 0x65],),
+            parameters = AwkwardArray.Parameters("__array__" => "not so nice list"),
+        )
+
+        @test AwkwardArray.compatible(nice_list_layout.parameters, not_so_nice_list_layout.parameters) == false
+        @test AwkwardArray.compatible(doc_parameters, nice_list_layout.parameters) == true
+    end
+
+end # @testset "AwkwardArray.jl"
+
+@testset "Tables.jl intergration" begin
+    begin 
         df = (; x = [[1], [2], [1, 2, 3]], y = [4.0, 5, 6])
         awt = AwkwardArray.from_table(df)
         @test Tables.schema(df) == Tables.schema(awt)
@@ -3167,7 +3191,6 @@ end
         @test df.x == AwkwardArray.to_vector(awt[:x])
         @test df.y == AwkwardArray.to_vector(awt[:y])
     end
-
-end   # @testset "AwkwardArray.jl"
+end # @testset "Tables.jl"
 
 include("./runpytests.jl")
