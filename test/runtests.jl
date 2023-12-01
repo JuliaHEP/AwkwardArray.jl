@@ -2980,6 +2980,20 @@ end
             ),
         )
     end
+    
+    begin
+        layout = AwkwardArray.PrimitiveArray([1+1im, 0+0.2im, -3.3 + 0.1im, 66])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "complex128", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 4
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\x00\x00\x00\x00\x00\x00\xf0\x3f\x00\x00\x00\x00\x00\x00\xf0\x3f\x00\x00\x00\x00\x00\x00\x00\x00\x9a\x99\x99\x99\x99\x99\xc9\x3f\x66\x66\x66\x66\x66\x66\x0a\xc0\x9a\x99\x99\x99\x99\x99\xb9\x3f\x00\x00\x00\x00\x00\x80\x50\x40\x00\x00\x00\x00\x00\x00\x00\x00",
+            ),
+        )
+    end
 
     begin
         layout = AwkwardArray.EmptyArray()
