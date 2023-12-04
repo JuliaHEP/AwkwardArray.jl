@@ -1,7 +1,7 @@
 name = "AwkwardArray"
 uuid = "7d259134-7f60-4bf1-aa00-7452e11bde56"
 authors = ["Jim Pivarski <pivarski@princeton.edu>", "Jerry Ling <jerry.ling@cern.ch>", "and contributors"]
-version = "0.1.2"
+version = "0.1.1"
 
 [deps]
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
