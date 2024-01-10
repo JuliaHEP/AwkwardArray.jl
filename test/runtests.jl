@@ -3264,7 +3264,7 @@ end
     end
 end
 
-@testset "Parameters compatible tests" begin
+@testset "Parameters" begin
     begin
         doc_parameters = AwkwardArray.Parameters("__doc__" => "nice list")
     
@@ -3282,6 +3282,43 @@ end
 
         @test AwkwardArray.compatible(nice_list_layout.parameters, not_so_nice_list_layout.parameters) == false
         @test AwkwardArray.compatible(doc_parameters, nice_list_layout.parameters) == true
+        
+        @test AwkwardArray.has_parameter(nice_list_layout.parameters, "__doc__") == true
+        @test AwkwardArray.has_parameter(nice_list_layout.parameters, "__par__") == false
+        @test AwkwardArray.has_parameter(nice_list_layout.parameters, "nice list") == false
+
+        list_layout = AwkwardArray.ListOffsetArray(
+            [0, 3, 3, 8],
+            AwkwardArray.PrimitiveArray([0x68, 0x65, 0x79, 0x74, 0x68, 0x65, 0x72, 0x65],),
+            parameters = AwkwardArray.Parameters("__list__" => "nice list"),
+        )
+
+        @test AwkwardArray.compatible(list_layout.parameters, list_layout.parameters) == true
+        @test AwkwardArray.compatible(list_layout.parameters, nice_list_layout.parameters) == false
+
+        record_layout = AwkwardArray.RecordArray(
+            NamedTuple{(:a, :b)}((
+                AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            )),
+            5,
+            parameters = AwkwardArray.Parameters("__record__" => "nice record"),
+        )
+
+        @test AwkwardArray.compatible(record_layout.parameters, record_layout.parameters) == true
+        @test AwkwardArray.compatible(record_layout.parameters, nice_list_layout.parameters) == false
+
+        @test AwkwardArray.get_parameter(record_layout.parameters, "__record__") == "nice record"
+        @test AwkwardArray.get_parameter(record_layout.parameters, "__doc__") == nothing
+
+        @test AwkwardArray.length(record_layout.parameters) == 1
+
+        buf = IOBuffer()
+        AwkwardArray.show(buf, nice_list_layout.parameters)
+        out = String(take!(buf))
+
+        @test out == """Parameters("__doc__" => "nice list")"""
+
     end
 
 end # @testset "AwkwardArray.jl"
