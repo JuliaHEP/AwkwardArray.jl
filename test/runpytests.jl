@@ -30,3 +30,15 @@ end
 
     @test array == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
 end
+
+# Test passing Python array to Julia function
+@testset "pass Python array to Julia test" begin
+    function f1(x)
+        x
+    end
+
+    py_array = pyimport("awkward").Array([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+
+    array = f1(py_array)
+    @test array isa AwkwardArray.ListOffsetArray
+end
