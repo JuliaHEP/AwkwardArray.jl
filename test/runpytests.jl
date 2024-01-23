@@ -31,16 +31,10 @@ end
     @test array == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
 end
 
-# Test passing Python array to Julia function
-@testset "pass Python array to Julia test" begin
-    function f1(x)
-        println(typeof(x))
-        println(typeof(convert(x)))
-        pyconvert(Any, x) # FIXME invoke convert when passing Py as an argument?
-    end
-
+# Test pyconvert Python array to Julia 
+@testset "convert Python array to Julia test" begin
     py_array = pyimport("awkward").Array([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 
-    array = f1(py_array)
+    array = pyconvert(Any, py_array)
     @test array isa AwkwardArray.ListOffsetArray
 end
