@@ -34,6 +34,8 @@ end
 # Test passing Python array to Julia function
 @testset "pass Python array to Julia test" begin
     function f1(x)
+        println(typeof(x))
+        println(typeof(convert(x)))
         convert(x) # FIXME invoke convert when passing Py as an argument?
     end
 
