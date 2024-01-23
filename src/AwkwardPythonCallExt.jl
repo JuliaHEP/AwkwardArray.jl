@@ -32,22 +32,6 @@ function AwkwardArray.convert(array::Py)::AwkwardArray.Content
     )
 end
 
-function AwkwardArray.convert(array::PyIterable{Any})::AwkwardArray.Content
-    form, len, _containers = pyimport("awkward").to_buffers(array)
-    containers = pyconvert(Dict, _containers)
-
-    julia_buffers = Dict{String,AbstractVector{UInt8}}()
-    for (key, buffer) in containers
-        julia_buffers[key] = reinterpret(UInt8, buffer)
-    end
-
-    AwkwardArray.from_buffers(
-        pyconvert(String, form.to_json()),
-        pyconvert(Int, len),
-        julia_buffers,
-    )
-end
-
 
 PythonCall.pyconvert_rule_array_nocopy(::Type{AwkwardArray.PrimitiveArray}, x::Py) = AwkwardArray.convert(x)
 PythonCall.pyconvert_rule_array_nocopy(::Type{AwkwardArray.EmptyArray}, x::Py) = AwkwardArray.convert(x)
