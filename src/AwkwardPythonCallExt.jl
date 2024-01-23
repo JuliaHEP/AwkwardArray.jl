@@ -34,79 +34,66 @@ end
 
 # rule functions
 function pyconvert_rule_awkward_array_primitive(::Type{AwkwardArray.PrimitiveArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.PrimitiveArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_empty(::Type{AwkwardArray.EmptyArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.EmptyArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_listoffset(::Type{AwkwardArray.ListOffsetArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.ListOffsetArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_list(::Type{AwkwardArray.ListArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.ListArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 function pyconvert_rule_awkward_array_regular(::Type{AwkwardArray.RegularArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.RegularArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_record(::Type{AwkwardArray.RecordArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.RecordArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_tuple(::Type{AwkwardArray.TupleArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.TupleArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_indexed(::Type{AwkwardArray.IndexedArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.IndexedArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_indexedoption(::Type{AwkwardArray.IndexedOptionArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.IndexedOptionArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_bytemasked(::Type{AwkwardArray.ByteMaskedArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.ByteMaskedArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_bitmasked(::Type{AwkwardArray.BitMaskedArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.BitMaskedArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_unmasked(::Type{AwkwardArray.UnmaskedArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.UnmaskedArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 
 function pyconvert_rule_awkward_array_union(::Type{AwkwardArray.UnionArray}, x::Py)
-    py_arr = pyconvert(AwkwardArray.UnionArray, x)
-    array = AwkwardArray.convert(py_arr)
+    array = AwkwardArray.convert(x)
     return PythonCall.pyconvert_return(array)
 end
 

@@ -36,7 +36,7 @@ end
     function f1(x)
         println(typeof(x))
         println(typeof(convert(x)))
-        convert(x) # FIXME invoke convert when passing Py as an argument?
+        pyconvert(Any, x) # FIXME invoke convert when passing Py as an argument?
     end
 
     py_array = pyimport("awkward").Array([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
