@@ -34,7 +34,7 @@ end
 # Test pyconvert Python Awkwar Array to Julia Awkward Array
 @testset "convert     # PrimitiveArray" begin
     layout = pyimport("awkward").contents.NumpyArray(
-        pyimport("numpy").array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        pyimport("numpy").array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], dtype=pyimport("numpy").float64)
     )
     py_array = pyimport("awkward").Array(layout)
 
@@ -59,11 +59,11 @@ end
 
 @testset "convert     # ListArray" begin
     content = pyimport("awkward").contents.NumpyArray(
-        pyimport("numpy").array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        pyimport("numpy").array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], dtype=pyimport("numpy").float64)
     )
-    starts = pyimport("awkward").index.Index64(pyimport("numpy").array([0, 3, 3, 5, 6]))
-    stops = pyimport("awkward").index.Index64(pyimport("numpy").array([3, 3, 5, 6, 9]))
-    offsets = pyimport("awkward").index.Index64(pyimport("numpy").array([0, 3, 3, 5, 6, 9]))
+    starts = pyimport("awkward").index.Index64(pyimport("numpy").array([0, 3, 3, 5, 6], dtype=pyimport("numpy").int64))
+    stops = pyimport("awkward").index.Index64(pyimport("numpy").array([3, 3, 5, 6, 9], dtype=pyimport("numpy").int64))
+    offsets = pyimport("awkward").index.Index64(pyimport("numpy").array([0, 3, 3, 5, 6, 9], dtype=pyimport("numpy").int64))
     layout = pyimport("awkward").contents.ListArray(starts, stops, content)
 
     py_array = pyimport("awkward").Array(layout)
@@ -74,9 +74,9 @@ end
 
 @testset "convert     # RegularArray" begin
     content = pyimport("awkward").contents.NumpyArray(
-        pyimport("numpy").array([0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        pyimport("numpy").array([0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], dtype=pyimport("numpy").float64)
     )
-    offsets = pyimport("awkward").index.Index64(pyimport("numpy").array([0, 3, 3, 5, 6, 10, 10]))
+    offsets = pyimport("awkward").index.Index64(pyimport("numpy").array([0, 3, 3, 5, 6, 10, 10], dtype=pyimport("numpy").int64))
     listoffsetarray = pyimport("awkward").contents.ListOffsetArray(offsets, content)
     regulararray = pyimport("awkward").contents.RegularArray(listoffsetarray, 2, zeros_length=0)
 
