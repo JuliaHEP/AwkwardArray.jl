@@ -105,7 +105,7 @@ end
 end
 
 @testset "convert     # TupleArray" begin
-    tuplearray = pyimport("awkward").contents.RecordArray([pyimport("awkward").contents.NumpyArray(pyimport("numpy").arange(10))], pybuiltins.None)
+    tuplearray = pyimport("awkward").contents.RecordArray([pyimport("awkward").contents.NumpyArray(pyimport("numpy").arange(10, dtype=pyimport("numpy").int64))], pybuiltins.None)
 
     py_array = pyimport("awkward").Array(tuplearray)
 
@@ -114,7 +114,7 @@ end
 end
 
 @testset "convert     # IndexedArray" begin
-    content = pyimport("awkward").contents.NumpyArray(pyimport("numpy").array([0.0, 1.1, 2.2, 3.3, 4.4]))
+    content = pyimport("awkward").contents.NumpyArray(pyimport("numpy").array([0.0, 1.1, 2.2, 3.3, 4.4], dtype=pyimport("numpy").float64))
 
     ind = pyimport("numpy").array([2, 2, 0, 3, 4], dtype=pyimport("numpy").int32)
     index = pyimport("awkward").index.Index32(ind)
@@ -127,7 +127,7 @@ end
 end
 
 @testset "convert     # IndexedOptionArray" begin
-    content = pyimport("awkward").contents.NumpyArray(pyimport("numpy").array([0.0, 1.1, 2.2, 3.3, 4.4]))
+    content = pyimport("awkward").contents.NumpyArray(pyimport("numpy").array([0.0, 1.1, 2.2, 3.3, 4.4], dtype=pyimport("numpy").float64))
     index = pyimport("awkward").index.Index64(pyimport("numpy").array([2, 2, 0, -1, 4], dtype=pyimport("numpy").int64))
     indexedoptionarray = pyimport("awkward").contents.IndexedOptionArray(index, content)
 
@@ -140,7 +140,7 @@ end
 @testset "convert     # ByteMaskedArray" begin
     layout = pyimport("awkward").contents.ByteMaskedArray(
         pyimport("awkward").index.Index8(pyimport("numpy").array([0, 1, 0, 1, 0], dtype=pyimport("numpy").int8)),
-        pyimport("awkward").contents.NumpyArray(pyimport("numpy").arange(5)),
+        pyimport("awkward").contents.NumpyArray(pyimport("numpy").arange(5, dtype=pyimport("numpy").int64)),
         valid_when=pybuiltins.True,
     )
     py_array = pyimport("awkward").Array(layout)
@@ -178,7 +178,7 @@ end
 @testset "convert     # UnionArray" begin
     layout = pyimport("awkward").contents.unionarray.UnionArray(
         pyimport("awkward").index.Index(pyimport("numpy").array([1, 1, 0, 0, 1, 0, 1], dtype=pyimport("numpy").int8)),
-        pyimport("awkward").index.Index(pyimport("numpy").array([4, 3, 0, 1, 2, 2, 4, 100])),
+        pyimport("awkward").index.Index(pyimport("numpy").array([4, 3, 0, 1, 2, 2, 4, 100], dtype=pyimport("numpy").int64)),
         [
             pyimport("awkward").contents.recordarray.RecordArray(
             [pyimport("awkward").from_iter(["1", "2", "3"], highlevel=pybuiltins.False)], ["nest"]
@@ -186,7 +186,7 @@ end
             pyimport("awkward").contents.recordarray.RecordArray(
             [
                 pyimport("awkward").contents.numpyarray.NumpyArray(
-                    pyimport("numpy").array([1.1, 2.2, 3.3, 4.4, 5.5])
+                    pyimport("numpy").array([1.1, 2.2, 3.3, 4.4, 5.5], dtype=pyimport("numpy").float64)
                 )
             ],
             ["nest"],
