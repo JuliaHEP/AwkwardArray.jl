@@ -32,14 +32,13 @@ end
 end
 
 # Test pyconvert Python Awkwar Array to Julia Awkward Array
-# @testset "convert Python array to Julia test" begin
 @testset "convert     # PrimitiveArray" begin
     layout = pyimport("awkward").contents.NumpyArray(
         pyimport("numpy").array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
     )
     py_array = pyimport("awkward").Array(layout)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.PrimitiveArray, py_array)
     @test array isa AwkwardArray.PrimitiveArray
 end
 
@@ -47,14 +46,14 @@ end
     layout = pyimport("awkward").contents.EmptyArray()
     py_array = pyimport("awkward").Array(layout)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.EmptyArray, py_array)
     @test array isa AwkwardArray.EmptyArray
 end
 
 @testset "convert     # ListOffsetArray" begin
     py_array = pyimport("awkward").Array([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.ListOffsetArray, py_array)
     @test array isa AwkwardArray.ListOffsetArray
 end
 
@@ -150,19 +149,19 @@ end
     @test array isa AwkwardArray.ByteMaskedArray
 end
 
-# @testset "convert     # BitMaskedArray" begin
-#     content = pyimport("awkward").operations.from_iter(
-#         [[0.0, 1.1, 2.2], [3.3, 4.4], [5.5], [6.6, 7.7, 8.8, 9.9]], highlevel=pybuiltins.False
-#     )
-#     mask = pyimport("awkward").index.IndexU8(pyimport("numpy").array([66], dtype=pyimport("numpy").uint8))
-#     maskedarray = pyimport("awkward").contents.BitMaskedArray(
-#         mask, content, valid_when=pybuiltins.False, length=4, lsb_order=pybuiltins.True
-#     )
-#     py_array = pyimport("awkward").Array(maskedarray)
+@testset "convert     # BitMaskedArray" begin
+    content = pyimport("awkward").operations.from_iter(
+        [[0.0, 1.1, 2.2], [3.3, 4.4], [5.5], [6.6, 7.7, 8.8, 9.9]], highlevel=pybuiltins.False
+    )
+    mask = pyimport("awkward").index.IndexU8(pyimport("numpy").array([66], dtype=pyimport("numpy").uint8))
+    maskedarray = pyimport("awkward").contents.BitMaskedArray(
+        mask, content, valid_when=pybuiltins.False, length=4, lsb_order=pybuiltins.True
+    )
+    py_array = pyimport("awkward").Array(maskedarray)
 
-#     array = pyconvert(Any, py_array)
-#     @test array isa AwkwardArray.BitMaskedArray
-# end
+    array = pyconvert(Any, py_array)
+    @test array isa AwkwardArray.BitMaskedArray
+end
 
 @testset "convert     # UnmaskedArray" begin
     unmaskedarray = pyimport("awkward").contents.UnmaskedArray(
@@ -199,5 +198,3 @@ end
     array = pyconvert(Any, py_array)
     @test array isa AwkwardArray.UnionArray
 end
-
-#end
