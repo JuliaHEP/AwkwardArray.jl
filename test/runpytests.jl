@@ -68,7 +68,7 @@ end
 
     py_array = pyimport("awkward").Array(layout)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.ListArray, py_array)
     @test array isa AwkwardArray.ListArray
 end
 
@@ -82,7 +82,7 @@ end
 
     py_array = pyimport("awkward").Array(regulararray)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.RegularArray, py_array)
     @test array isa AwkwardArray.RegularArray
 end
 
@@ -100,7 +100,7 @@ end
 
     py_array = pyimport("awkward").Array(recordarray)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.RecordArray, py_array)
     @test array isa AwkwardArray.RecordArray
 end
 
@@ -109,7 +109,7 @@ end
 
     py_array = pyimport("awkward").Array(tuplearray)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.TupleArray, py_array)
     @test array isa AwkwardArray.TupleArray
 end
 
@@ -122,7 +122,7 @@ end
 
     py_array = pyimport("awkward").Array(indexedarray)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.IndexedArray, py_array)
     @test array isa AwkwardArray.IndexedArray
 end
 
@@ -133,7 +133,7 @@ end
 
     py_array = pyimport("awkward").Array(indexedoptionarray)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.IndexedOptionArray, py_array)
     @test array isa AwkwardArray.IndexedOptionArray
 end
 
@@ -145,7 +145,7 @@ end
     )
     py_array = pyimport("awkward").Array(layout)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.ByteMaskedArray, py_array)
     @test array isa AwkwardArray.ByteMaskedArray
 end
 
@@ -159,7 +159,7 @@ end
     )
     py_array = pyimport("awkward").Array(maskedarray)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.BitMaskedArray, py_array)
     @test array isa AwkwardArray.BitMaskedArray
 end
 
@@ -171,7 +171,7 @@ end
     )
     py_array = pyimport("awkward").Array(unmaskedarray)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.UnmaskedArray, py_array)
     @test array isa AwkwardArray.UnmaskedArray
 end
 
@@ -192,9 +192,9 @@ end
             ["nest"],
             ),
         ],
-        )
+    )
     py_array = pyimport("awkward").Array(layout)
 
-    array = pyconvert(Any, py_array)
+    array = pyconvert(AwkwardArray.UnionArray, py_array)
     @test array isa AwkwardArray.UnionArray
 end
