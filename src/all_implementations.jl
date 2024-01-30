@@ -126,6 +126,7 @@ function Base.iterate(layout::Content, state)
 end
 
 Base.size(layout::Content) = (length(layout),)
+Base.eltype(layout::Content) = (eltype(iterate(layout, 1)))
 
 function Base.:(==)(layout1::Content, layout2::Content)
     if length(layout1) != length(layout2)
