@@ -17,6 +17,6 @@ Base.eltype(::IndexedOptionArray{INDEX,CONTENT}) where {INDEX,CONTENT} = CONTENT
 Base.eltype(::ByteMaskedArray{INDEX,CONTENT}) where {INDEX,CONTENT} = CONTENT
 Base.eltype(::BitMaskedArray{CONTENT}) where {CONTENT} = CONTENT
 Base.eltype(::UnmaskedArray{CONTENT}) where {CONTENT} = CONTENT
-Base.eltype(::UnionArray{TAGS,INDEX,CONTENTS}) where {TAGS,INDEX,CONTENTS} = CONTENTS
+#Base.eltype(::UnionArray{TAGS,INDEX,CONTENTS}) where {TAGS,INDEX,CONTENTS} = CONTENTS
 
 end  # module AwkwardArray
