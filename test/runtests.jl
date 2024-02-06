@@ -2626,13 +2626,13 @@ end
     )
 end
 
-# @testset "from_iter     # 14" begin
-#     @test AwkwardArray.is_valid(
-#         AwkwardArray.from_iter(
-#             Vector{Union{Float64,Vector{Int64}}}([1.1, [1, 2], [3]]),
-#         ),
-#     )
-# end
+@testset "from_iter     # 14" begin
+    @test AwkwardArray.is_valid(
+        AwkwardArray.from_iter(
+            Vector{Union{Float64,Vector{Int64}}}([1.1, [1, 2], [3]]),
+        ),
+    )
+end
 
 # @testset "from_iter     # 15" begin
 #     @test AwkwardArray.is_valid(
@@ -2642,13 +2642,13 @@ end
 #     )
 # end
 
-@testset "from_iter     # 16" begin
-    @test AwkwardArray.is_valid(
-        AwkwardArray.from_iter(
-            Vector{Union{Missing,Float64,Vector{Int64}}}([1.1, [1, 2], missing, [3]]),
-        ),
-    )
-end
+# @testset "from_iter     # 16" begin
+#     @test AwkwardArray.is_valid(
+#         AwkwardArray.from_iter(
+#             Vector{Union{Missing,Float64,Vector{Int64}}}([1.1, [1, 2], missing, [3]]),
+#         ),
+#     )
+# end
 
 @testset "from_iter     # 17" begin
     @test AwkwardArray.is_valid(
