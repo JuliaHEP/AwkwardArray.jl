@@ -2643,6 +2643,9 @@ end
 end
 
 @testset "from_iter     # 16" begin
+    my_vec = Vector{Union{Missing,Float64,Vector{Int64}}}([1.1, [1, 2], missing, [3]])
+    println(my_vec)
+    
     @test AwkwardArray.is_valid(
         AwkwardArray.from_iter(
             Vector{Union{Missing,Float64,Vector{Int64}}}([1.1, [1, 2], missing, [3]]),
