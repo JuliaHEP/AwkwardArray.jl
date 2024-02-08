@@ -2646,10 +2646,10 @@ end
     my_vec = Vector{Union{Missing,Float64,Vector{Int64}}}([1.1, [1, 2], missing, [3]])
     println(my_vec, "eltype ", eltype(my_vec))
 
-    # array = AwkwardArray.from_iter(
-    #     Vector{Union{Missing,Float64,Vector{Int64}}}([1.1, [1, 2], missing, [3]]),
-    # )
-    # println(array)
+    array = AwkwardArray.from_iter(
+        Vector{Union{Missing,Float64,Vector{Int64}}}([1.1, [1, 2], missing, [3]]),
+    )
+    println(array)
 
     # test AwkwardArray.is_valid(
     #     AwkwardArray.from_iter(
