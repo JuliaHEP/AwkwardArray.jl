@@ -2332,6 +2332,12 @@ function layout_for(ItemType)
                 contents = [out]
                 for i = (firstindex(OtherTypes)+1):(lastindex(OtherTypes))
                     println(i, " ", OtherTypes[i])
+                    try
+                        println("Try it first:")
+                        layout_for(OtherTypes[i])
+                    catch err
+                        println("Failed with ", err)
+                    end
                     push!(contents, UnmaskedArray{layout_for(OtherTypes[i])})
                 end
                 UnionArray{Index8,Vector{Int64},Base.Tuple{contents...}}
