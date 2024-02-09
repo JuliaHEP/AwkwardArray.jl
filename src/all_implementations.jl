@@ -2284,7 +2284,6 @@ end
 ### from_iter ############################################################
 
 function layout_for(ItemType)
-    println("layout_for ", ItemType)
 
     if ItemType <: Number   # || ItemType <: Dates.DateTime || ItemType <: Dates.TimePeriod
         PrimitiveArray{ItemType}
@@ -2311,12 +2310,10 @@ function layout_for(ItemType)
         TupleArray{Base.Tuple{contents...}}
 
     elseif Missing <: ItemType
-        println("Missing ", ItemType)
         if ItemType == Any
             error("cannot produce an AwkwardArray layout for $ItemType (too generic)")
         end
         OtherTypes = [x for x in Base.uniontypes(ItemType) if x != Missing]
-        println("OtherTypes ", OtherTypes)
         if length(OtherTypes) == 0
             IndexedOptionArray{Vector{Int64},EmptyArray}
         else
@@ -2331,13 +2328,6 @@ function layout_for(ItemType)
             else
                 contents = [out]
                 for i = (firstindex(OtherTypes)+1):(lastindex(OtherTypes))
-                    println(i, " ", OtherTypes[i])
-                    try
-                        println("Try it first:")
-                        layout_for(OtherTypes[i])
-                    catch err
-                        println("Failed with ", err)
-                    end
                     push!(contents, UnmaskedArray{layout_for(OtherTypes[i])})
                 end
                 UnionArray{Index8,Vector{Int64},Base.Tuple{contents...}}
