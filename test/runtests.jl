@@ -111,7 +111,7 @@ end
 
         @test AwkwardArray.to_vector(layout) == []
 
-        @test eltype(layout) == nothing
+        @test eltype(layout) == Union{Nothing, Float64}
     end
 
     begin
@@ -119,7 +119,7 @@ end
         @test length(layout) == 0
         @test layout == AwkwardArray.EmptyArray()
 
-        @test eltype(layout) == nothing
+        @test eltype(layout) == Union{Nothing, Float64}
     end
 
     begin
@@ -127,7 +127,7 @@ end
         append!(layout, [])
         append!(layout, Vector{Int64}([]))
 
-        @test eltype(layout) == nothing
+        @test eltype(layout) == Union{Nothing, Float64}
     end
 end
 
