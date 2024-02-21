@@ -307,7 +307,7 @@ Base.length(layout::EmptyArray) = 0
 Base.firstindex(layout::EmptyArray) = 1
 Base.lastindex(layout::EmptyArray) = 0
 
-Base.eltype(layout::EmptyArray) = Union{Float64, Nothing}
+Base.eltype(layout::EmptyArray) = Union{}
 Base.getindex(layout::EmptyArray, i::Int) = throw(BoundsError(layout, i))
 
 function Base.getindex(layout::EmptyArray, r::UnitRange{Int})
