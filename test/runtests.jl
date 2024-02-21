@@ -2605,115 +2605,115 @@ end
 end
 ### from_iter ############################################################
 
-@testset "from_iter     # 1" begin
-#    begin
-    @test AwkwardArray.is_valid(AwkwardArray.from_iter([1, 2, 3]))
-end
+@testset "from_iter" begin
+   begin
+        @test AwkwardArray.is_valid(AwkwardArray.from_iter([1, 2, 3]))
+    end
 
-@testset "from_iter     # 2" begin
-    @test AwkwardArray.is_valid(AwkwardArray.from_iter([[1, 2], [3]]))
-end
+    begin
+        @test AwkwardArray.is_valid(AwkwardArray.from_iter([[1, 2], [3]]))
+    end
 
-@testset "from_iter     # 3" begin
-    @test AwkwardArray.is_valid(AwkwardArray.from_iter(["one", "two", "three"]))
-end
+    begin
+        @test AwkwardArray.is_valid(AwkwardArray.from_iter(["one", "two", "three"]))
+    end
 
-@testset "from_iter     # 4" begin
-    @test AwkwardArray.is_valid(AwkwardArray.from_iter(Array([1 2 3; 4 5 6])))
-end
+    begin
+        @test AwkwardArray.is_valid(AwkwardArray.from_iter(Array([1 2 3; 4 5 6])))
+    end
 
-@testset "from_iter     # 5" begin
-    @test AwkwardArray.is_valid(
-        AwkwardArray.from_iter([
-            NamedTuple{(:a, :b)}((1.1, [1, 2])),
-            NamedTuple{(:a, :b)}((2.2, [3])),
-        ]),
-    )
-end
-
-@testset "from_iter     # 6" begin
-    @test AwkwardArray.is_valid(
-        AwkwardArray.from_iter([(1.1, [1, 2]), (2.2, [3]), (3.3, [0])]),
-    )
-end
-
-@testset "from_iter     # 7" begin
-    @test AwkwardArray.is_valid(AwkwardArray.from_iter([1, 2, missing, 3]))
-end
-
-@testset "from_iter     # 8" begin
-    @test AwkwardArray.is_valid(AwkwardArray.from_iter([[1, 2], [3, missing]]))
-end
-
-@testset "from_iter     # 9" begin
-    @test AwkwardArray.is_valid(AwkwardArray.from_iter([[1, 2], missing, [3]]))
-end
-
-@testset "from_iter     # 10" begin
-    @test AwkwardArray.is_valid(
-        AwkwardArray.from_iter(["one", "two", missing, "three"]),
-    )
-end
-
-@testset "from_iter     # 11" begin
-    @test AwkwardArray.is_valid(AwkwardArray.from_iter(Array([1 2 missing; 4 5 6])))
-end
-
-@testset "from_iter     # 12" begin
-    @test AwkwardArray.is_valid(
-        AwkwardArray.from_iter([
-            NamedTuple{(:a, :b)}((1.1, [1, 2])),
-            missing,
-            NamedTuple{(:a, :b)}((2.2, [3])),
-        ]),
-    )
-end
-
-@testset "from_iter     # 13" begin
-    @test AwkwardArray.is_valid(
-        AwkwardArray.from_iter([(1.1, [1, 2]), (2.2, [3]), missing, (3.3, [0])]),
-    )
-end
-
-@testset "from_iter     # 14" begin
-    @test AwkwardArray.is_valid(
-        AwkwardArray.from_iter(
-            Vector{Union{Float64,Vector{Int64}}}([1.1, [1, 2], [3]]),
-        ),
-    )
-end
-
-@testset "from_iter     # 15" begin
-    @test AwkwardArray.is_valid(
-        AwkwardArray.from_iter(
-            Vector{Union{Float64,String,Vector{Int64}}}([1.1, [1, 2], "hello", [3]]),
-        ),
-    )
-end
-
-@testset "from_iter     # 16" begin
-    @test AwkwardArray.is_valid(
-        AwkwardArray.from_iter(
-            Vector{Union{Missing,Float64,Vector{Int64}}}([1.1, [1, 2], missing, [3]]),
-        ),
-    )
-end
-
-@testset "from_iter     # 17" begin
-    @test AwkwardArray.is_valid(
-        AwkwardArray.from_iter(
-            Vector{Union{Missing,Float64,String,Vector{Int64}}}([
-                1.1,
-                [1, 2],
-                "hello",
-                missing,
-                [3],
+    begin
+        @test AwkwardArray.is_valid(
+            AwkwardArray.from_iter([
+                NamedTuple{(:a, :b)}((1.1, [1, 2])),
+                NamedTuple{(:a, :b)}((2.2, [3])),
             ]),
-        ),
-    )
+        )
+    end
 
+    begin
+        @test AwkwardArray.is_valid(
+            AwkwardArray.from_iter([(1.1, [1, 2]), (2.2, [3]), (3.3, [0])]),
+        )
+    end
+
+    begin
+        @test AwkwardArray.is_valid(AwkwardArray.from_iter([1, 2, missing, 3]))
+    end
+
+    begin
+        @test AwkwardArray.is_valid(AwkwardArray.from_iter([[1, 2], [3, missing]]))
+    end
+
+    begin
+        @test AwkwardArray.is_valid(AwkwardArray.from_iter([[1, 2], missing, [3]]))
+    end
+
+    begin
+        @test AwkwardArray.is_valid(
+            AwkwardArray.from_iter(["one", "two", missing, "three"]),
+        )
+    end
+
+    begin
+        @test AwkwardArray.is_valid(AwkwardArray.from_iter(Array([1 2 missing; 4 5 6])))
+    end
+
+    begin
+        @test AwkwardArray.is_valid(
+            AwkwardArray.from_iter([
+                NamedTuple{(:a, :b)}((1.1, [1, 2])),
+                missing,
+                NamedTuple{(:a, :b)}((2.2, [3])),
+            ]),
+        )
+    end
+
+    begin
+        @test AwkwardArray.is_valid(
+            AwkwardArray.from_iter([(1.1, [1, 2]), (2.2, [3]), missing, (3.3, [0])]),
+        )
+    end
+
+    begin
+        @test AwkwardArray.is_valid(
+            AwkwardArray.from_iter(
+                Vector{Union{Float64,Vector{Int64}}}([1.1, [1, 2], [3]]),
+            ),
+        )
+    end
+
+    begin
+        @test AwkwardArray.is_valid(
+            AwkwardArray.from_iter(
+                Vector{Union{Float64,String,Vector{Int64}}}([1.1, [1, 2], "hello", [3]]),
+            ),
+        )
+    end
+
+    begin
+        @test AwkwardArray.is_valid(
+            AwkwardArray.from_iter(
+                Vector{Union{Missing,Float64,Vector{Int64}}}([1.1, [1, 2], missing, [3]]),
+            ),
+        )
+    end
+
+    begin
+        @test AwkwardArray.is_valid(
+            AwkwardArray.from_iter(
+                Vector{Union{Missing,Float64,String,Vector{Int64}}}([
+                    1.1,
+                    [1, 2],
+                    "hello",
+                    missing,
+                    [3],
+                ]),
+            ),
+        )
+
+    end
 end
-#end
 
 ### from_buffers #########################################################
 
