@@ -1447,6 +1447,7 @@ function is_valid(layout::IndexedArray)
     return is_valid(layout.content)
 end
 
+Base.eltype(layout::IndexedArray) = eltype(layout.content)
 Base.length(layout::IndexedArray) = length(layout.index)
 Base.firstindex(layout::IndexedArray) = firstindex(layout.index)
 Base.lastindex(layout::IndexedArray) = lastindex(layout.index)
@@ -1585,6 +1586,7 @@ function is_valid(layout::IndexedOptionArray)
     return is_valid(layout.content)
 end
 
+Base.eltype(layout::IndexedOptionArray) = eltype(layout.content)
 Base.length(layout::IndexedOptionArray) = length(layout.index)
 Base.firstindex(layout::IndexedOptionArray) = firstindex(layout.index)
 Base.lastindex(layout::IndexedOptionArray) = lastindex(layout.index)
@@ -1731,6 +1733,7 @@ function is_valid(layout::ByteMaskedArray)
     return is_valid(layout.content)
 end
 
+Base.eltype(layout::ByteMaskedArray) = eltype(layout.content)
 Base.length(layout::ByteMaskedArray) = length(layout.mask)
 Base.firstindex(layout::ByteMaskedArray) = firstindex(layout.mask)
 Base.lastindex(layout::ByteMaskedArray) = lastindex(layout.mask)
@@ -1884,6 +1887,7 @@ function is_valid(layout::BitMaskedArray)
     return is_valid(layout.content)
 end
 
+Base.eltype(layout::BitMaskedArray) = eltype(layout.content)
 Base.length(layout::BitMaskedArray) = length(layout.mask)
 Base.firstindex(layout::BitMaskedArray) = firstindex(layout.mask)
 Base.lastindex(layout::BitMaskedArray) = lastindex(layout.mask)
@@ -2006,6 +2010,7 @@ end
 
 is_valid(layout::UnmaskedArray) = is_valid(layout.content)
 
+Base.eltype(layout::UnmaskedArray) = eltype(layout.content)
 Base.length(layout::UnmaskedArray) = length(layout.content)
 Base.firstindex(layout::UnmaskedArray) = firstindex(layout.content)
 Base.lastindex(layout::UnmaskedArray) = lastindex(layout.content)

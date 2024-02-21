@@ -1558,6 +1558,8 @@ end
             1,
         )
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1578,6 +1580,8 @@ end
         ),)
 
         @test layout_2 == AwkwardArray.copy(layout_3, length = 2)
+
+        @test eltype(layout_2) == typeof(layout_2[1])
     end
 
     begin
@@ -1624,6 +1628,8 @@ end
                 AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
             ),
         ),)
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1654,6 +1660,8 @@ end
                 AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
             ),
         ),)
+
+        @test eltype(layout) == typeof(layout[1])
     end
 end
 
@@ -1695,6 +1703,8 @@ end
         @test AwkwardArray.is_valid(layout)
 
         @test AwkwardArray.to_vector(layout) == [5.5, 4.4, 4.4, 1.1, 6.6, 7.7, 0.0]
+        
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1739,6 +1749,8 @@ end
 
         @test AwkwardArray.to_vector(layout) ==
               [[4.4, 5.5], [1.1, 2.2, 3.3], [1.1, 2.2, 3.3], [], [6.6, 7.7], []]
+        
+        @test eltype(layout) == Vector{Float64} # FIXME: typeof(layout[1])
     end
 
     begin
@@ -1779,6 +1791,8 @@ end
         @test layout[end][:b] == 0.0
         @test layout.index == [3, 4, 0, 0, 1, 2, 5, 6]
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1823,6 +1837,8 @@ end
                 ),
             )),
         )
+
+        @test eltype(layout) == typeof(layout[1])
     end
 end
 
@@ -1878,7 +1894,9 @@ end
 
         @test AwkwardArray.to_vector(layout, na = nothing) ==
               [5.5, 4.4, 4.4, nothing, nothing, 1.1, 6.6, nothing, nothing, 7.7, nothing]
-    end
+        
+        @test eltype(layout) == typeof(layout.content[1])
+  end
 
     begin
         layout = AwkwardArray.IndexedOptionArray{
@@ -1940,6 +1958,8 @@ end
                 )),
             ),
         )
+
+        @test eltype(layout) == typeof(layout.content[1])
     end
 end
 
@@ -1986,7 +2006,9 @@ end
 
         @test AwkwardArray.to_vector(layout, na = nothing) ==
               [1.1, nothing, nothing, 4.4, 5.5, 6.6, nothing, nothing]
-    end
+
+        @test eltype(layout) == typeof(layout[1])
+end
 
     begin
         layout = AwkwardArray.ByteMaskedArray(
@@ -2019,6 +2041,8 @@ end
         @test length(layout) == 6
         @test ismissing(layout[6])
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{Float64}
     end
 
     begin
@@ -2055,6 +2079,8 @@ end
         @test length(layout) == 8
         @test ismissing(layout[8])
         @test AwkwardArray.is_valid(layout)
+        
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -2098,6 +2124,8 @@ end
             ),
             valid_when = true,
         )
+
+        @test eltype(layout) == Vector{Float64}
     end
 end
 
@@ -2144,6 +2172,8 @@ end
 
         @test AwkwardArray.to_vector(layout, na = nothing) ==
               [1.1, nothing, nothing, 4.4, 5.5, 6.6, nothing, nothing]
+    
+        @test eltype(layout) == typeof(layout.content[1])
     end
 
     begin
@@ -2177,6 +2207,8 @@ end
         @test length(layout) == 6
         @test ismissing(layout[6])
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{Float64}
     end
 
     begin
@@ -2213,6 +2245,8 @@ end
         @test length(layout) == 8
         @test ismissing(layout[8])
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -2255,6 +2289,8 @@ end
             ),
             valid_when = true,
         )
+
+        @test eltype(layout) == Vector{Float64}
     end
 end
 
@@ -2292,6 +2328,8 @@ end
         @test AwkwardArray.is_valid(layout)
 
         @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 0.0]
+
+        @test eltype(layout) == typeof(layout.content[1])
     end
 
     begin
@@ -2323,6 +2361,8 @@ end
         @inferred layout[1]
         @inferred layout[1][1]
         @inferred layout[2:3]
+
+        @test eltype(layout) == Vector{Float64}
     end
 
     begin
@@ -2356,6 +2396,8 @@ end
         @test layout[:a][7] == 0
         @test layout[:b][7] == 0.0
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == typeof(layout.content[1])
     end
 
     begin
@@ -2385,6 +2427,8 @@ end
             ),
             valid_when = true,
         )
+
+        @test eltype(layout) == Vector{Float64}
     end
 end
 ### UnionArray ###########################################################
@@ -2431,6 +2475,8 @@ end
         @inferred layout[2:4]
 
         @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, [4.4, 5.5]]
+
+        @test eltype(layout) == typeof(layout.contents)
     end
 
     begin
@@ -2502,6 +2548,8 @@ end
         )
 
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == typeof(layout.contents)
     end
 
     begin
@@ -2552,6 +2600,7 @@ end
                 ),
             ),
         )
+        @test eltype(layout) == typeof(layout.contents)
     end
 end
 ### from_iter ############################################################
