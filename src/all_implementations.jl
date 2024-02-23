@@ -2289,7 +2289,6 @@ end
 ### from_iter ############################################################
 
 function layout_for(ItemType)
-
     if ItemType <: Number   # || ItemType <: Dates.DateTime || ItemType <: Dates.TimePeriod
         PrimitiveArray{ItemType}
 
