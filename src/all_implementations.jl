@@ -2010,7 +2010,7 @@ end
 
 is_valid(layout::UnmaskedArray) = is_valid(layout.content)
 
-Base.eltype(layout::UnmaskedArray) = eltype(layout.content)
+Base.eltype(layout::UnmaskedArray) = Union{Missing, eltype(layout.content)}
 Base.length(layout::UnmaskedArray) = length(layout.content)
 Base.firstindex(layout::UnmaskedArray) = firstindex(layout.content)
 Base.lastindex(layout::UnmaskedArray) = lastindex(layout.content)
