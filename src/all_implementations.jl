@@ -1586,7 +1586,7 @@ function is_valid(layout::IndexedOptionArray)
     return is_valid(layout.content)
 end
 
-Base.eltype(layout::IndexedOptionArray) = eltype(layout.content)
+Base.eltype(layout::IndexedOptionArray) = Union{Missing, eltype(layout.content)}
 Base.length(layout::IndexedOptionArray) = length(layout.index)
 Base.firstindex(layout::IndexedOptionArray) = firstindex(layout.index)
 Base.lastindex(layout::IndexedOptionArray) = lastindex(layout.index)
