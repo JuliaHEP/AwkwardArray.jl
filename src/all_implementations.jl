@@ -1887,7 +1887,7 @@ function is_valid(layout::BitMaskedArray)
     return is_valid(layout.content)
 end
 
-Base.eltype(layout::BitMaskedArray) = eltype(layout.content)
+Base.eltype(layout::BitMaskedArray) = Union{Missing, eltype(layout.content)}
 Base.length(layout::BitMaskedArray) = length(layout.mask)
 Base.firstindex(layout::BitMaskedArray) = firstindex(layout.mask)
 Base.lastindex(layout::BitMaskedArray) = lastindex(layout.mask)
