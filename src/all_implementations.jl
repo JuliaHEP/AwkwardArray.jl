@@ -1733,7 +1733,7 @@ function is_valid(layout::ByteMaskedArray)
     return is_valid(layout.content)
 end
 
-Base.eltype(layout::ByteMaskedArray) = eltype(layout.content)
+Base.eltype(layout::ByteMaskedArray) = Union{Missing, eltype(layout.content)}
 Base.length(layout::ByteMaskedArray) = length(layout.mask)
 Base.firstindex(layout::ByteMaskedArray) = firstindex(layout.mask)
 Base.lastindex(layout::ByteMaskedArray) = lastindex(layout.mask)
