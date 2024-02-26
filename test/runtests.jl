@@ -2476,7 +2476,7 @@ end
 
         @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, [4.4, 5.5]]
 
-        @test eltype(layout) == typeof(layout.contents)
+        @test eltype(layout) == Union{AwkwardArray.ListOffsetArray{Vector{Int64}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}, :default}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}}
     end
 
     begin
@@ -2549,7 +2549,7 @@ end
 
         @test AwkwardArray.is_valid(layout)
 
-        @test eltype(layout) == typeof(layout.contents)
+        @test eltype(layout) == Union{AwkwardArray.ListOffsetArray{Vector{Int64}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}, :default}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}}
     end
 
     begin
@@ -2600,7 +2600,7 @@ end
                 ),
             ),
         )
-        @test eltype(layout) == typeof(layout.contents)
+        @test eltype(layout) == Union{AwkwardArray.ListOffsetArray{Vector{Int64}, AwkwardArray.PrimitiveArray{Int64, Vector{Int64}, :default}, :default}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}}
     end
 end
 ### from_iter ############################################################

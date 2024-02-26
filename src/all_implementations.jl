@@ -2170,9 +2170,19 @@ function is_valid(layout::UnionArray)
     return true
 end
 
+# import Base.eltype
+
+# function eltype(::UnionArray{TAGS,INDEX,CONTENTS}) where {TAGS,INDEX,CONTENTS}
+#     tuple_types = CONTENTS
+#     return Union{tuple_types...}
+# end
+Base.eltype(layout::UnionArray) = Union{typeof(layout.contents).parameters...}
 Base.length(layout::UnionArray) = length(layout.tags)
 Base.firstindex(layout::UnionArray) = firstindex(layout.tags)
 Base.lastindex(layout::UnionArray) = lastindex(layout.tags)
+
+# Base.iterate(layout::UnionArray) = start(layout.contents), next(layout.contents, lastindex(layout.contents))
+# Base.iterate(layout::UnionArray, state) = state === nothing ? nothing : (layout.contents[state], state == lastindex(layout.contents) ? nothing : state + 1)
 
 function Base.getindex(layout::UnionArray, i::Int)
     adjustment = firstindex(layout.tags) - firstindex(layout.index)
