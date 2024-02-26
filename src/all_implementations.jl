@@ -293,10 +293,17 @@ end
 ### EmptyArray ###########################################################
 
 struct EmptyArray{BEHAVIOR} <: LeafType{BEHAVIOR}
-    EmptyArray(; behavior::Symbol = :default) = new{behavior}()
+    behavior::Symbol
+    
+    function EmptyArray(; behavior::Symbol = :default)
+        new{behavior}(behavior)
+    end
 end
 
-copy(behavior::Union{Unset,Symbol} = Unset()) = EmptyArray(behavior = behavior)
+function copy(behavior::Union{Unset,Symbol} = Unset())
+    behavior = behavior isa Unset ? :default : behavior
+    return EmptyArray(behavior = behavior)
+end
 
 parameters_of(content::EmptyArray) = Parameters()
 has_parameter(content::EmptyArray, key::String) = false

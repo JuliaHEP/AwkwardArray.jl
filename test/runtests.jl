@@ -28,6 +28,7 @@ using Tables
         @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, 4.4, 5.5]
 
         @test eltype(layout) == typeof(layout[1])
+        @test !(layout[1:2] == layout[2:5])
     end
 
     begin
@@ -92,6 +93,15 @@ using Tables
 
         @test eltype(layout) == typeof(layout[1])
     end
+
+    begin
+        # Test with default parameters
+        @test AwkwardArray.PrimitiveArray{Int, Vector{Int}}() == AwkwardArray.PrimitiveArray(Vector{Int}([]))
+        
+        # Test with custom parameters and behavior
+        params = AwkwardArray.Parameters("param1" => 1, "param2" => "abc")
+        @test AwkwardArray.PrimitiveArray{Float64, Vector{Float64}}(parameters=params, behavior=:custom) == AwkwardArray.PrimitiveArray(Vector{Float64}([]), parameters=params, behavior=:custom)
+    end
 end
 
 ### EmptyArray ###########################################################
@@ -128,6 +138,37 @@ end
         append!(layout, Vector{Int64}([]))
 
         @test eltype(layout) == Union{}
+
+        # Test the EmptyArray constructor
+        @test AwkwardArray.EmptyArray().behavior == :default
+        @test AwkwardArray.EmptyArray(behavior=:custom).behavior == :custom
+
+        # Test the copy function
+        @test AwkwardArray.copy().behavior == :default
+        @test AwkwardArray.copy(:custom).behavior == :custom
+
+        # Test the parameters_of function
+        @test AwkwardArray.parameters_of(AwkwardArray.EmptyArray()) == AwkwardArray.Parameters()
+        @test AwkwardArray.parameters_of(AwkwardArray.EmptyArray(behavior=:custom)) == AwkwardArray.Parameters()
+
+        # Test the has_parameter function
+        @test !AwkwardArray.has_parameter(AwkwardArray.EmptyArray(), "key")
+        @test !AwkwardArray.has_parameter(AwkwardArray.EmptyArray(behavior=:custom), "key")
+
+        # Test the get_parameter function
+        @test AwkwardArray.get_parameter(AwkwardArray.EmptyArray(), "key") == nothing
+        @test AwkwardArray.get_parameter(AwkwardArray.EmptyArray(behavior=:custom), "key") == nothing
+
+        # Test the getindex function
+        @test_throws BoundsError getindex(AwkwardArray.EmptyArray(), 1)
+        @test_throws BoundsError getindex(AwkwardArray.EmptyArray(behavior=:custom), 1)
+        @test_throws BoundsError getindex(AwkwardArray.EmptyArray(), 1:5)
+        @test_throws BoundsError getindex(AwkwardArray.EmptyArray(behavior=:custom), 1:5)
+    
+        # Test the push! function
+        @test_throws ErrorException("attempting to fill AwkwardArray.EmptyArray{:default} with data") push!(AwkwardArray.EmptyArray(), 1)
+        @test_throws ErrorException("attempting to fill AwkwardArray.EmptyArray{:custom} with data") push!(AwkwardArray.EmptyArray(behavior=:custom), 1)
+        @test_throws ErrorException("attempting to fill AwkwardArray.EmptyArray{:default} with data") push!(AwkwardArray.EmptyArray(), "data")
     end
 end
 
@@ -257,6 +298,39 @@ end
         )
 
         @test eltype(layout) == Vector{eltype(layout.content)}
+
+        # # Define the :some_function symbol
+        # some_function = :some_function
+        
+        # # Define a dictionary with a function as one of the values
+        # my_dict = Dict(
+        #     :add => (+),
+        #     :subtract => (-),
+        #     :multiply => (*),
+        #     some_function => x -> x^2  # Define a custom function for :some_function
+        # )
+
+        # # Test getindex method for the :some_function symbol
+        # result = layout[my_dict[:some_function]]
+
+        # # Check if the content of the result matches the expected content
+        # @test result.content == AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9])[:some_function]
+    end
+
+    begin
+        # Create a valid ListOffsetArray
+        content = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        layout_valid = AwkwardArray.ListOffsetArray([0, 2, 5, 9], AwkwardArray.PrimitiveArray(content))
+    
+        # Test for a valid ListOffsetArray
+        @test AwkwardArray.is_valid(layout_valid) == true
+    
+        # Create an invalid ListOffsetArray (with negative offset)
+        offsets_invalid = [-1, 2, 5, 9]
+        layout_invalid = AwkwardArray.ListOffsetArray([-1, 2, 5, 9], AwkwardArray.PrimitiveArray(content))
+    
+        # Test for an invalid ListOffsetArray
+        @test AwkwardArray.is_valid(layout_invalid) == false
     end
 end
 
