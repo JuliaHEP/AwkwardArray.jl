@@ -1238,6 +1238,8 @@ end
             3,
         )
 
+        @test eltype(layout[3]) == Tuple{AwkwardArray.PrimitiveArray{Int64, Vector{Int64}, :default}, AwkwardArray.ListOffsetArray{Vector{Int64}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}, :default}}
+
         @test layout[3] == AwkwardArray.Record(
             AwkwardArray.RecordArray(
                 NamedTuple{(:a, :b)}((
