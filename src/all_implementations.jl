@@ -1325,11 +1325,6 @@ Base.getindex(
         contents = Base.Tuple{VALUES}(x[r] for x in layout.contents),
         length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
     )
-# Base.getindex(layout::TupleArray, r::UnitRange{Int},) = copy(
-#         layout,
-#         contents = Base.Tuple(x[r] for x in layout.contents),
-#         length = min(r.stop, layout.length) - max(r.start, 1) + 1,
-#     )
 
 function slot(
     layout::TupleArray{CONTENTS,BEHAVIOR},
