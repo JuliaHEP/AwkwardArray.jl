@@ -52,6 +52,8 @@ using Tables
         @test AwkwardArray.is_valid(layout)
 
         @test eltype(layout) == typeof(layout[1])
+
+        @test AwkwardArray.to_vector(layout[1:2]) == [1.1, 2.2]
     end
 
     begin
