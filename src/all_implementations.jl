@@ -293,10 +293,17 @@ end
 ### EmptyArray ###########################################################
 
 struct EmptyArray{BEHAVIOR} <: LeafType{BEHAVIOR}
-    EmptyArray(; behavior::Symbol = :default) = new{behavior}()
+    behavior::Symbol
+    
+    function EmptyArray(; behavior::Symbol = :default)
+        new{behavior}(behavior)
+    end
 end
 
-copy(behavior::Union{Unset,Symbol} = Unset()) = EmptyArray(behavior = behavior)
+function copy(behavior::Union{Unset,Symbol} = Unset())
+    behavior = behavior isa Unset ? :default : behavior
+    return EmptyArray(behavior = behavior)
+end
 
 parameters_of(content::EmptyArray) = Parameters()
 has_parameter(content::EmptyArray, key::String) = false
@@ -307,7 +314,7 @@ Base.length(layout::EmptyArray) = 0
 Base.firstindex(layout::EmptyArray) = 1
 Base.lastindex(layout::EmptyArray) = 0
 
-Base.eltype(layout::EmptyArray) = nothing
+Base.eltype(layout::EmptyArray) = Union{}
 Base.getindex(layout::EmptyArray, i::Int) = throw(BoundsError(layout, i))
 
 function Base.getindex(layout::EmptyArray, r::UnitRange{Int})
@@ -411,8 +418,11 @@ end
 Base.getindex(layout::ListOffsetArray, r::UnitRange{Int}) =
     copy(layout, offsets = layout.offsets[(r.start):(r.stop+1)])
 
-Base.getindex(layout::ListOffsetArray, f::Symbol) =
+# Define the getindex method for ListOffsetArray
+function Base.getindex(layout::ListOffsetArray, f::Symbol)
+    @assert typeof(layout.content) <: RecordArray "content must be of type RecordArray"
     copy(layout, content = layout.content[f])
+end
 
 function end_list!(layout::ListOffsetArray)
     push!(layout.offsets, length(layout.content))
@@ -533,7 +543,11 @@ function Base.getindex(layout::ListArray, r::UnitRange{Int})
     )
 end
 
-Base.getindex(layout::ListArray, f::Symbol) = copy(layout, content = layout.content[f])
+# Define the getindex method for ListArray
+function Base.getindex(layout::ListArray, f::Symbol)
+    @assert typeof(layout.content) <: RecordArray "content must be of type RecordArray"
+    copy(layout, content = layout.content[f])
+end
 
 function end_list!(layout::ListArray)
     if isempty(layout.stops)
@@ -679,7 +693,10 @@ function Base.getindex(layout::RegularArray, r::UnitRange{Int})
     copy(layout, content = layout.content[start:stop], zeros_length = r.stop - r.start + 1)
 end
 
-Base.getindex(layout::RegularArray, f::Symbol) = copy(layout, content = layout.content[f])
+function Base.getindex(layout::RegularArray, f::Symbol)
+    @assert typeof(layout.content) <: RecordArray "content must be of type RecordArray"
+    copy(layout, content = layout.content[f])
+end
 
 function end_list!(layout::RegularArray)
     if layout.size < 0 && layout.length == 0
@@ -1302,11 +1319,12 @@ Base.getindex(
 Base.getindex(
     layout::TupleArray{CONTENTS,BEHAVIOR},
     r::UnitRange{Int},
-) where {VALUES<:Content,CONTENTS<:Base.Tuple{VALUES},BEHAVIOR} = copy(
-    layout,
-    contents = Base.Tuple{VALUES}(x[r] for x in layout.contents),
-    length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
-)
+) where {VALUES<:Content,CONTENTS<:Base.Tuple{VALUES},BEHAVIOR} = 
+    copy(
+        layout,
+        contents = Base.Tuple{VALUES}(x[r] for x in layout.contents),
+        length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
+    )
 
 function slot(
     layout::TupleArray{CONTENTS,BEHAVIOR},
@@ -1319,7 +1337,8 @@ end
 Base.getindex(
     layout::Tuple{CONTENTS},
     f::Int64,
-) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = layout.array.contents[f][layout.at]
+) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = 
+    layout.array.contents[f][layout.at]
 
 function Base.:(==)(
     layout1::TupleArray{CONTENTS1},
@@ -1447,6 +1466,7 @@ function is_valid(layout::IndexedArray)
     return is_valid(layout.content)
 end
 
+Base.eltype(layout::IndexedArray) = eltype(layout.content)
 Base.length(layout::IndexedArray) = length(layout.index)
 Base.firstindex(layout::IndexedArray) = firstindex(layout.index)
 Base.lastindex(layout::IndexedArray) = lastindex(layout.index)
@@ -1585,6 +1605,7 @@ function is_valid(layout::IndexedOptionArray)
     return is_valid(layout.content)
 end
 
+Base.eltype(layout::IndexedOptionArray) = Union{Missing, eltype(layout.content)}
 Base.length(layout::IndexedOptionArray) = length(layout.index)
 Base.firstindex(layout::IndexedOptionArray) = firstindex(layout.index)
 Base.lastindex(layout::IndexedOptionArray) = lastindex(layout.index)
@@ -1731,6 +1752,7 @@ function is_valid(layout::ByteMaskedArray)
     return is_valid(layout.content)
 end
 
+Base.eltype(layout::ByteMaskedArray) = Union{Missing, eltype(layout.content)}
 Base.length(layout::ByteMaskedArray) = length(layout.mask)
 Base.firstindex(layout::ByteMaskedArray) = firstindex(layout.mask)
 Base.lastindex(layout::ByteMaskedArray) = lastindex(layout.mask)
@@ -1884,6 +1906,7 @@ function is_valid(layout::BitMaskedArray)
     return is_valid(layout.content)
 end
 
+Base.eltype(layout::BitMaskedArray) = Union{Missing, eltype(layout.content)}
 Base.length(layout::BitMaskedArray) = length(layout.mask)
 Base.firstindex(layout::BitMaskedArray) = firstindex(layout.mask)
 Base.lastindex(layout::BitMaskedArray) = lastindex(layout.mask)
@@ -2006,6 +2029,7 @@ end
 
 is_valid(layout::UnmaskedArray) = is_valid(layout.content)
 
+Base.eltype(layout::UnmaskedArray) = Union{Missing, eltype(layout.content)}
 Base.length(layout::UnmaskedArray) = length(layout.content)
 Base.firstindex(layout::UnmaskedArray) = firstindex(layout.content)
 Base.lastindex(layout::UnmaskedArray) = lastindex(layout.content)
@@ -2165,6 +2189,7 @@ function is_valid(layout::UnionArray)
     return true
 end
 
+Base.eltype(layout::UnionArray) = Union{typeof(layout.contents).parameters...}
 Base.length(layout::UnionArray) = length(layout.tags)
 Base.firstindex(layout::UnionArray) = firstindex(layout.tags)
 Base.lastindex(layout::UnionArray) = lastindex(layout.tags)

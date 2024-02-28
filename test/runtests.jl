@@ -26,6 +26,9 @@ using Tables
         @inferred layout[2:4]
 
         @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, 4.4, 5.5]
+
+        @test eltype(layout) == typeof(layout[1])
+        @test !(layout[1:2] == layout[2:5])
     end
 
     begin
@@ -47,6 +50,10 @@ using Tables
         @test length(layout) == 6
         @test layout == AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5, 0.0])
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == typeof(layout[1])
+
+        @test AwkwardArray.to_vector(layout[1:2]) == [1.1, 2.2]
     end
 
     begin
@@ -60,6 +67,8 @@ using Tables
 
         append!(layout, Vector{Int16}([4, 5]))
         @test layout == AwkwardArray.PrimitiveArray(Vector{Int32}([1, 2, 3, 4, 5]))
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -83,6 +92,17 @@ using Tables
         @test layout == AwkwardArray.PrimitiveArray(
             Vector{Float32}([1.0, 2.0, 3.0, 4.0, 5.0, 3.14, 2.71]),
         )
+
+        @test eltype(layout) == typeof(layout[1])
+    end
+
+    begin
+        # Test with default parameters
+        @test AwkwardArray.PrimitiveArray{Int, Vector{Int}}() == AwkwardArray.PrimitiveArray(Vector{Int}([]))
+        
+        # Test with custom parameters and behavior
+        params = AwkwardArray.Parameters("param1" => 1, "param2" => "abc")
+        @test AwkwardArray.PrimitiveArray{Float64, Vector{Float64}}(parameters=params, behavior=:custom) == AwkwardArray.PrimitiveArray(Vector{Float64}([]), parameters=params, behavior=:custom)
     end
 end
 
@@ -102,18 +122,55 @@ end
         @test layout == AwkwardArray.PrimitiveArray(Vector{Float64}())
 
         @test AwkwardArray.to_vector(layout) == []
+
+        @test eltype(layout) == Union{}
     end
 
     begin
         layout = AwkwardArray.EmptyArray()
         @test length(layout) == 0
         @test layout == AwkwardArray.EmptyArray()
+
+        @test eltype(layout) == Union{}
     end
 
     begin
         layout = AwkwardArray.EmptyArray()
         append!(layout, [])
         append!(layout, Vector{Int64}([]))
+
+        @test eltype(layout) == Union{}
+
+        # Test the EmptyArray constructor
+        @test AwkwardArray.EmptyArray().behavior == :default
+        @test AwkwardArray.EmptyArray(behavior=:custom).behavior == :custom
+
+        # Test the copy function
+        @test AwkwardArray.copy().behavior == :default
+        @test AwkwardArray.copy(:custom).behavior == :custom
+
+        # Test the parameters_of function
+        @test AwkwardArray.parameters_of(AwkwardArray.EmptyArray()) == AwkwardArray.Parameters()
+        @test AwkwardArray.parameters_of(AwkwardArray.EmptyArray(behavior=:custom)) == AwkwardArray.Parameters()
+
+        # Test the has_parameter function
+        @test !AwkwardArray.has_parameter(AwkwardArray.EmptyArray(), "key")
+        @test !AwkwardArray.has_parameter(AwkwardArray.EmptyArray(behavior=:custom), "key")
+
+        # Test the get_parameter function
+        @test AwkwardArray.get_parameter(AwkwardArray.EmptyArray(), "key") == nothing
+        @test AwkwardArray.get_parameter(AwkwardArray.EmptyArray(behavior=:custom), "key") == nothing
+
+        # Test the getindex function
+        @test_throws BoundsError getindex(AwkwardArray.EmptyArray(), 1)
+        @test_throws BoundsError getindex(AwkwardArray.EmptyArray(behavior=:custom), 1)
+        @test_throws BoundsError getindex(AwkwardArray.EmptyArray(), 1:5)
+        @test_throws BoundsError getindex(AwkwardArray.EmptyArray(behavior=:custom), 1:5)
+    
+        # Test the push! function
+        @test_throws ErrorException("attempting to fill AwkwardArray.EmptyArray{:default} with data") push!(AwkwardArray.EmptyArray(), 1)
+        @test_throws ErrorException("attempting to fill AwkwardArray.EmptyArray{:custom} with data") push!(AwkwardArray.EmptyArray(behavior=:custom), 1)
+        @test_throws ErrorException("attempting to fill AwkwardArray.EmptyArray{:default} with data") push!(AwkwardArray.EmptyArray(), "data")
     end
 end
 
@@ -146,6 +203,8 @@ end
         @inferred layout[1:2]
 
         @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -154,6 +213,8 @@ end
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test !AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -162,6 +223,8 @@ end
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test !AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -170,6 +233,8 @@ end
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test !AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -202,6 +267,8 @@ end
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -231,6 +298,39 @@ end
             [0, 3, 3, 5, 5, 9],
             AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9]),
         )
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
+    end
+
+    begin
+        content_layout = AwkwardArray.RecordArray(
+            (
+                a = AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                b = AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            )
+        )
+
+        layout = AwkwardArray.ListOffsetArray([1, 2, 5], content_layout)
+
+        @test layout[:a] == [[2], [3, 4, 5]]
+        @test_throws ErrorException getindex(layout, :invalid)
+        @test_throws AssertionError getindex(layout[:a], :invalid)
+    end
+
+    begin
+        # Create a valid ListOffsetArray
+        content = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        layout_valid = AwkwardArray.ListOffsetArray([0, 2, 5, 9], AwkwardArray.PrimitiveArray(content))
+    
+        # Test for a valid ListOffsetArray
+        @test AwkwardArray.is_valid(layout_valid) == true
+    
+        # Create an invalid ListOffsetArray (with negative offset)
+        offsets_invalid = [-1, 2, 5, 9]
+        layout_invalid = AwkwardArray.ListOffsetArray([-1, 2, 5, 9], AwkwardArray.PrimitiveArray(content))
+    
+        # Test for an invalid ListOffsetArray
+        @test AwkwardArray.is_valid(layout_invalid) == false
     end
 end
 
@@ -265,6 +365,19 @@ end
         @inferred layout[1:2]
 
         @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
+    end
+    
+    begin
+        # Create a ListArray with default parameters
+        list_array = AwkwardArray.ListArray{Vector{Int}, AwkwardArray.PrimitiveArray{Float64}, :default}()
+    
+        # Check that the ListArray is created correctly
+        @test length(list_array.starts) == 0
+        @test length(list_array.stops) == 0
+        @test length(list_array.content) == 0
+        @test typeof(list_array.content) == AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}
     end
 
     begin
@@ -274,6 +387,8 @@ end
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test !AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -283,6 +398,8 @@ end
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test !AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -292,6 +409,8 @@ end
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test !AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -326,6 +445,8 @@ end
             AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
         )
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -353,6 +474,24 @@ end
             [3, 3, 5, 5, 9],
             AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9]),
         )
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
+    end
+
+    begin
+        content_layout = AwkwardArray.RecordArray(
+            (
+                a = AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                b = AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            )
+        )
+
+        
+        layout = AwkwardArray.ListArray([1, 2, 5], [2, 5, 5], content_layout)
+
+        @test layout[:a] == [[2], [3, 4, 5], []]
+        @test_throws ErrorException getindex(layout, :invalid)
+        @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 end
 
@@ -375,6 +514,8 @@ end
         @inferred layout[1:2]
 
         @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -414,6 +555,8 @@ end
         ]
         @test AwkwardArray.to_vector(layout[3:5]) ==
               [[10, 11, 12, 13, 14], [15, 16, 17, 18, 19], [20, 21, 22, 23, 24]]
+        
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -437,6 +580,8 @@ end
         )
         @test layout[2:2] ==
               AwkwardArray.RegularArray(AwkwardArray.PrimitiveArray([3.3, 4.4]), 2)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -448,6 +593,8 @@ end
         @test AwkwardArray.is_valid(layout)
         @test length(layout) == 5
         @test layout.size == 0
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -477,6 +624,8 @@ end
             3,
         )
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -508,6 +657,8 @@ end
             2,
         )
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -524,6 +675,8 @@ end
             0,
             zeros_length = 5,
         )
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -541,6 +694,23 @@ end
             AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
             3,
         )
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
+    end
+
+    begin
+        content_layout = AwkwardArray.RecordArray(
+            (
+                a = AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                b = AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            )
+        )
+
+        layout = AwkwardArray.RegularArray(content_layout, 2)
+
+        @test layout[:a] == [[1, 2], [3, 4]]
+        @test_throws ErrorException getindex(layout, :invalid)
+        @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 end
 
@@ -557,6 +727,8 @@ end
         AwkwardArray.is_valid(AwkwardArray.StringRegularArray("onetwo", 3))
         AwkwardArray.is_valid(AwkwardArray.StringRegularArray(3))
         AwkwardArray.is_valid(AwkwardArray.StringRegularArray())
+
+        @test eltype(AwkwardArray.StringRegularArray("onetwo", 3)) == Vector{eltype(AwkwardArray.StringRegularArray("onetwo", 3).content)}
     end
 
     begin
@@ -566,6 +738,8 @@ end
         @inferred layout[1:2]
 
         @test AwkwardArray.to_vector(layout) == ["hey", "there", "\$", "¢", "€", "💰"]
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -579,6 +753,8 @@ end
         @inferred layout[1:2]
 
         @test AwkwardArray.to_vector(layout) == ["hey", "there", "\$", "¢", "€", "💰"]
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -588,6 +764,8 @@ end
         @inferred layout[1:2]
 
         @test AwkwardArray.to_vector(layout) == ["hey", "you"]
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -631,6 +809,8 @@ end
         AwkwardArray.push_dummy!(layout)
         @test Vector(layout) == ["hey", "there", "\$", "¢", "€", "💰", ""]
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -675,6 +855,8 @@ end
         AwkwardArray.push_dummy!(layout)
         @test Vector(layout) == ["hey", "there", "\$", "¢", "€", "💰", ""]
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -695,6 +877,8 @@ end
         AwkwardArray.push_dummy!(layout)
         @test Vector(layout) == ["one", "two", "\0\0\0"]
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -705,6 +889,8 @@ end
 
         append!(layout, ["two", "", "three"])
         @test layout == AwkwardArray.StringOffsetArray([0, 3, 6, 6, 11], "onetwothree")
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -715,6 +901,8 @@ end
 
         append!(layout, ["two", "", "three"])
         @test layout == AwkwardArray.StringArray([0, 3, 6, 6], [3, 6, 6, 11], "onetwothree")
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -725,6 +913,8 @@ end
 
         append!(layout, ["two", "333"])
         @test layout == AwkwardArray.StringRegularArray("onetwo333", 3)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     ### ListType with behavior = :bytestring #################################
@@ -755,6 +945,8 @@ end
         )
         AwkwardArray.is_valid(AwkwardArray.ByteStringRegularArray(3))
         AwkwardArray.is_valid(AwkwardArray.ByteStringRegularArray())
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -796,6 +988,8 @@ end
         AwkwardArray.push_dummy!(layout)
         @test layout[7] == []
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -838,6 +1032,8 @@ end
         AwkwardArray.push_dummy!(layout)
         @test layout[7] == []
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -858,6 +1054,8 @@ end
         AwkwardArray.push_dummy!(layout)
         @test Vector(layout) == [[0x6f, 0x6e, 0x65], [0x74, 0x77, 0x6f], [0x00, 0x00, 0x00]]
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -871,6 +1069,8 @@ end
             [0, 3, 3, 5],
             Vector{UInt8}([0, 1, 2, 3, 4]),
         )
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -885,6 +1085,8 @@ end
             [3, 3, 5],
             Vector{UInt8}([0, 1, 2, 3, 4]),
         )
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -898,6 +1100,8 @@ end
             Vector{UInt8}([0, 1, 2, 3, 4, 5, 6, 7, 8]),
             3,
         )
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
 end
@@ -913,6 +1117,8 @@ end
 
         @test AwkwardArray.get_parameter(layout, "__doc__") == "nice list"
         @test !AwkwardArray.has_parameter(layout, "__list__")
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -925,6 +1131,8 @@ end
 
         @test AwkwardArray.get_parameter(layout, "__doc__") == "nice list"
         @test !AwkwardArray.has_parameter(layout, "__list__")
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -936,6 +1144,8 @@ end
 
         @test AwkwardArray.get_parameter(layout, "__doc__") == "nice list"
         @test !AwkwardArray.has_parameter(layout, "__list__")
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -951,6 +1161,8 @@ end
 
         @test AwkwardArray.get_parameter(layout, "__doc__") == "nice string"
         @test !AwkwardArray.has_parameter(layout, "__list__")
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -967,6 +1179,8 @@ end
 
         @test AwkwardArray.get_parameter(layout, "__doc__") == "nice string"
         @test !AwkwardArray.has_parameter(layout, "__list__")
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 
     begin
@@ -982,6 +1196,8 @@ end
 
         @test AwkwardArray.get_parameter(layout, "__doc__") == "nice list"
         @test !AwkwardArray.has_parameter(layout, "__list__")
+
+        @test eltype(layout) == Vector{eltype(layout.content)}
     end
 end
 
@@ -1012,7 +1228,9 @@ end
             tmp += x[:b]
         end
         @test tmp == 16.5
-    end
+
+        @test eltype(layout) == typeof(layout[1])
+   end
 
     begin
         layout = AwkwardArray.RecordArray(
@@ -1060,6 +1278,8 @@ end
             NamedTuple{(:a, :b)}((2, [])),
             NamedTuple{(:a, :b)}((3, [4.4, 5.5])),
         ]
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1134,6 +1354,8 @@ end
             3,
         )
 
+        @test eltype(layout[3]) == Tuple{AwkwardArray.PrimitiveArray{Int64, Vector{Int64}, :default}, AwkwardArray.ListOffsetArray{Vector{Int64}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}, :default}}
+
         @test layout[3] == AwkwardArray.Record(
             AwkwardArray.RecordArray(
                 NamedTuple{(:a, :b)}((
@@ -1167,6 +1389,8 @@ end
             1,
         )
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1191,6 +1415,8 @@ end
         )
 
         @test layout_2 == AwkwardArray.copy(layout_3, length = 2)
+
+        @test eltype(layout_2) == eltype(layout_3)
     end
 
     begin
@@ -1240,6 +1466,8 @@ end
                 ),
             )),
         )
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1281,6 +1509,8 @@ end
                 ),
             )),
         )
+
+        @test eltype(layout) == typeof(layout[1])
     end
 end
 ### TupleArray ##########################################################
@@ -1306,6 +1536,15 @@ end
             tmp += x[2]
         end
         @test tmp == 16.5
+
+        @test eltype(layout) == typeof(layout[1])
+        
+        # Test getindex with a unit range
+        @test layout[1:2] == AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([1, 2]),
+            AwkwardArray.PrimitiveArray([1.1, 2.2]),
+        ),)
+        # FIXME: MethodError: no method matching to_vector(::Vector{Any}) in test AwkwardArray.to_vector(layout[1:2]) == [(1, 1.1), (2, 2.2)]
     end
 
     begin
@@ -1350,6 +1589,8 @@ end
 
         @test AwkwardArray.to_vector(layout) ==
               [(1, [1.1, 2.2, 3.3]), (2, []), (3, [4.4, 5.5])]
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1442,6 +1683,8 @@ end
             1,
         )
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1462,6 +1705,8 @@ end
         ),)
 
         @test layout_2 == AwkwardArray.copy(layout_3, length = 2)
+
+        @test eltype(layout_2) == typeof(layout_2[1])
     end
 
     begin
@@ -1508,6 +1753,8 @@ end
                 AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
             ),
         ),)
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1538,6 +1785,8 @@ end
                 AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
             ),
         ),)
+
+        @test eltype(layout) == typeof(layout[1])
     end
 end
 
@@ -1579,6 +1828,8 @@ end
         @test AwkwardArray.is_valid(layout)
 
         @test AwkwardArray.to_vector(layout) == [5.5, 4.4, 4.4, 1.1, 6.6, 7.7, 0.0]
+        
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1623,6 +1874,8 @@ end
 
         @test AwkwardArray.to_vector(layout) ==
               [[4.4, 5.5], [1.1, 2.2, 3.3], [1.1, 2.2, 3.3], [], [6.6, 7.7], []]
+        
+        @test eltype(layout) == Vector{Float64} # FIXME: typeof(layout[1])
     end
 
     begin
@@ -1663,6 +1916,8 @@ end
         @test layout[end][:b] == 0.0
         @test layout.index == [3, 4, 0, 0, 1, 2, 5, 6]
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == typeof(layout[1])
     end
 
     begin
@@ -1707,6 +1962,8 @@ end
                 ),
             )),
         )
+
+        @test eltype(layout) == typeof(layout[1])
     end
 end
 
@@ -1762,7 +2019,9 @@ end
 
         @test AwkwardArray.to_vector(layout, na = nothing) ==
               [5.5, 4.4, 4.4, nothing, nothing, 1.1, 6.6, nothing, nothing, 7.7, nothing]
-    end
+        
+        @test eltype(layout) == Union{Missing, Float64}
+  end
 
     begin
         layout = AwkwardArray.IndexedOptionArray{
@@ -1824,6 +2083,8 @@ end
                 )),
             ),
         )
+
+        @test eltype(layout) == Union{Missing, typeof(layout.content[1])}
     end
 end
 
@@ -1870,7 +2131,9 @@ end
 
         @test AwkwardArray.to_vector(layout, na = nothing) ==
               [1.1, nothing, nothing, 4.4, 5.5, 6.6, nothing, nothing]
-    end
+
+        @test eltype(layout) == Union{Missing, typeof(layout[1])}
+end
 
     begin
         layout = AwkwardArray.ByteMaskedArray(
@@ -1903,6 +2166,8 @@ end
         @test length(layout) == 6
         @test ismissing(layout[6])
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Union{Missing, Vector{Float64}}
     end
 
     begin
@@ -1939,6 +2204,8 @@ end
         @test length(layout) == 8
         @test ismissing(layout[8])
         @test AwkwardArray.is_valid(layout)
+        
+        @test eltype(layout) == Union{Missing, typeof(layout[1])}
     end
 
     begin
@@ -1982,6 +2249,8 @@ end
             ),
             valid_when = true,
         )
+
+        @test eltype(layout) == Union{Missing, Vector{Float64}}
     end
 end
 
@@ -2028,6 +2297,8 @@ end
 
         @test AwkwardArray.to_vector(layout, na = nothing) ==
               [1.1, nothing, nothing, 4.4, 5.5, 6.6, nothing, nothing]
+    
+        @test eltype(layout) == Union{Missing, typeof(layout.content[1])}
     end
 
     begin
@@ -2061,6 +2332,8 @@ end
         @test length(layout) == 6
         @test ismissing(layout[6])
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Union{Missing, Vector{Float64}}
     end
 
     begin
@@ -2097,6 +2370,8 @@ end
         @test length(layout) == 8
         @test ismissing(layout[8])
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Union{Missing, typeof(layout[1])}
     end
 
     begin
@@ -2139,6 +2414,8 @@ end
             ),
             valid_when = true,
         )
+
+        @test eltype(layout) == Union{Missing, Vector{Float64}}
     end
 end
 
@@ -2176,6 +2453,8 @@ end
         @test AwkwardArray.is_valid(layout)
 
         @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 0.0]
+
+        @test eltype(layout) == Union{Missing, typeof(layout.content[1])}
     end
 
     begin
@@ -2207,6 +2486,8 @@ end
         @inferred layout[1]
         @inferred layout[1][1]
         @inferred layout[2:3]
+
+        @test eltype(layout) == Union{Missing, Vector{Float64}}
     end
 
     begin
@@ -2240,6 +2521,8 @@ end
         @test layout[:a][7] == 0
         @test layout[:b][7] == 0.0
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Union{Missing, typeof(layout.content[1])}
     end
 
     begin
@@ -2269,6 +2552,8 @@ end
             ),
             valid_when = true,
         )
+
+        @test eltype(layout) == Union{Missing, Vector{Float64}}
     end
 end
 ### UnionArray ###########################################################
@@ -2315,6 +2600,8 @@ end
         @inferred layout[2:4]
 
         @test AwkwardArray.to_vector(layout) == [1.1, 2.2, 3.3, [4.4, 5.5]]
+
+        @test eltype(layout) == Union{AwkwardArray.ListOffsetArray{Vector{Int64}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}, :default}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}}
     end
 
     begin
@@ -2386,6 +2673,8 @@ end
         )
 
         @test AwkwardArray.is_valid(layout)
+
+        @test eltype(layout) == Union{AwkwardArray.ListOffsetArray{Vector{Int64}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}, :default}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}}
     end
 
     begin
@@ -2436,43 +2725,66 @@ end
                 ),
             ),
         )
+        @test eltype(layout) == Union{AwkwardArray.ListOffsetArray{Vector{Int64}, AwkwardArray.PrimitiveArray{Int64, Vector{Int64}, :default}, :default}, AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}}
     end
 end
 ### from_iter ############################################################
 
 @testset "from_iter" begin
-    begin
+   begin
         @test AwkwardArray.is_valid(AwkwardArray.from_iter([1, 2, 3]))
+    end
 
+    begin
         @test AwkwardArray.is_valid(AwkwardArray.from_iter([[1, 2], [3]]))
+    end
 
+    begin
         @test AwkwardArray.is_valid(AwkwardArray.from_iter(["one", "two", "three"]))
+    end
 
+    begin
         @test AwkwardArray.is_valid(AwkwardArray.from_iter(Array([1 2 3; 4 5 6])))
+    end
 
+    begin
         @test AwkwardArray.is_valid(
             AwkwardArray.from_iter([
                 NamedTuple{(:a, :b)}((1.1, [1, 2])),
                 NamedTuple{(:a, :b)}((2.2, [3])),
             ]),
         )
+    end
 
+    begin
         @test AwkwardArray.is_valid(
             AwkwardArray.from_iter([(1.1, [1, 2]), (2.2, [3]), (3.3, [0])]),
         )
+    end
 
+    begin
         @test AwkwardArray.is_valid(AwkwardArray.from_iter([1, 2, missing, 3]))
+    end
 
+    begin
         @test AwkwardArray.is_valid(AwkwardArray.from_iter([[1, 2], [3, missing]]))
+    end
 
+    begin
         @test AwkwardArray.is_valid(AwkwardArray.from_iter([[1, 2], missing, [3]]))
+    end
 
+    begin
         @test AwkwardArray.is_valid(
             AwkwardArray.from_iter(["one", "two", missing, "three"]),
         )
+    end
 
+    begin
         @test AwkwardArray.is_valid(AwkwardArray.from_iter(Array([1 2 missing; 4 5 6])))
+    end
 
+    begin
         @test AwkwardArray.is_valid(
             AwkwardArray.from_iter([
                 NamedTuple{(:a, :b)}((1.1, [1, 2])),
@@ -2480,29 +2792,39 @@ end
                 NamedTuple{(:a, :b)}((2.2, [3])),
             ]),
         )
+    end
 
+    begin
         @test AwkwardArray.is_valid(
             AwkwardArray.from_iter([(1.1, [1, 2]), (2.2, [3]), missing, (3.3, [0])]),
         )
+    end
 
+    begin
         @test AwkwardArray.is_valid(
             AwkwardArray.from_iter(
                 Vector{Union{Float64,Vector{Int64}}}([1.1, [1, 2], [3]]),
             ),
         )
+    end
 
+    begin
         @test AwkwardArray.is_valid(
             AwkwardArray.from_iter(
                 Vector{Union{Float64,String,Vector{Int64}}}([1.1, [1, 2], "hello", [3]]),
             ),
         )
+    end
 
+    begin
         @test AwkwardArray.is_valid(
             AwkwardArray.from_iter(
                 Vector{Union{Missing,Float64,Vector{Int64}}}([1.1, [1, 2], missing, [3]]),
             ),
         )
+    end
 
+    begin
         @test AwkwardArray.is_valid(
             AwkwardArray.from_iter(
                 Vector{Union{Missing,Float64,String,Vector{Int64}}}([
@@ -2935,7 +3257,7 @@ end
     end
 
     begin
-        layout = AwkwardArray.PrimitiveArray([UInt32(1), UInt32(0), UInt32(33), Int32(66)])
+        layout = AwkwardArray.PrimitiveArray([UInt32(1), UInt32(0), UInt32(33), UInt32(66)])
         form, len, containers = AwkwardArray.to_buffers(layout)
 
         @test JSON.parse(form) == JSON.parse(
@@ -2945,6 +3267,56 @@ end
         @test containers == Dict{String,Vector{UInt8}}(
             "node0-data" => Vector{UInt8}(
                 b"\x01\x00\x00\x00\x00\x00\x00\x00\x21\x00\x00\x00\x42\x00\x00\x00",
+            ),
+        )
+    end
+
+    begin
+        layout = AwkwardArray.PrimitiveArray([UInt64(1), UInt64(0), UInt64(33), UInt64(66)])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "uint64", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 4
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x21\x00\x00\x00\x00\x00\x00\x00\x42\x00\x00\x00\x00\x00\x00\x00",
+            ),
+        )
+    end
+
+    begin
+        layout = AwkwardArray.PrimitiveArray([Int128(1), Int128(2), Int128(3), Int128(4), Int128(5)])
+        @test_throws ErrorException AwkwardArray.to_buffers(layout)
+    end
+
+    begin
+        layout = AwkwardArray.PrimitiveArray([Float16(1.1), Float16(2.2), Float16(3.3), Float16(4.4), Float16(5.5)])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "float16", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 5
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\x66\x3c\x66\x40\x9a\x42\x66\x44\x80\x45",
+            ),
+        )
+    end
+
+    begin
+        layout = AwkwardArray.PrimitiveArray([Float32(1.1), Float32(2.2), Float32(3.3), Float32(4.4), Float32(5.5)])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "float32", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 5
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\xcd\xcc\x8c\x3f\xcd\xcc\x0c\x40\x33\x33\x53\x40\xcd\xcc\x8c\x40\x00\x00\xb0\x40",
             ),
         )
     end
@@ -2980,7 +3352,21 @@ end
             ),
         )
     end
-    
+
+    begin
+        layout = AwkwardArray.PrimitiveArray([Complex{Float32}(1,1), Complex{Float32}(0,0.2), Complex{Float32}(-3.3 ,0.1), Complex{Float32}(66,0)])
+        form, len, containers = AwkwardArray.to_buffers(layout)
+        @test JSON.parse(form) == JSON.parse(
+            """{"class": "NumpyArray", "primitive": "complex64", "inner_shape": [], "parameters": {}, "form_key": "node0"}""",
+        )
+        @test len == 4
+        @test containers == Dict{String,Vector{UInt8}}(
+            "node0-data" => Vector{UInt8}(
+                b"\x00\x00\x80\x3f\x00\x00\x80\x3f\x00\x00\x00\x00\xcd\xcc\x4c\x3e\x33\x33\x53\xc0\xcd\xcc\xcc\x3d\x00\x00\x84\x42\x00\x00\x00\x00",
+            ),
+        )
+    end
+
     begin
         layout = AwkwardArray.PrimitiveArray([1+1im, 0+0.2im, -3.3 + 0.1im, 66])
         form, len, containers = AwkwardArray.to_buffers(layout)
