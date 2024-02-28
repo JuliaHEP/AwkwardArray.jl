@@ -1311,20 +1311,10 @@ Base.length(layout::TupleArray) = layout.length
 Base.firstindex(layout::TupleArray) = 1
 Base.lastindex(layout::TupleArray) = layout.length
 
-function Base.getindex(
+Base.getindex(
     layout::TupleArray{CONTENTS,BEHAVIOR},
     i::Int,
-) where {CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR}
-    println("getindex with Int called")
-    println("Contents of layout: ", layout.contents)
-    println("Index: ", i)
-    println("Length: ", layout.length)
-
-    result = Tuple(layout, i)
-
-    println("Result: ", result)
-    return result
-end
+) where {CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} = Tuple(layout, i)
 
 Base.getindex(
     layout::TupleArray{CONTENTS,BEHAVIOR},
