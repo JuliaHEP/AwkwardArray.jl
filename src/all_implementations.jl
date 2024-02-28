@@ -418,8 +418,11 @@ end
 Base.getindex(layout::ListOffsetArray, r::UnitRange{Int}) =
     copy(layout, offsets = layout.offsets[(r.start):(r.stop+1)])
 
-Base.getindex(layout::ListOffsetArray, f::Symbol) =
+# Define the getindex method for ListOffsetArray
+function Base.getindex(layout::ListOffsetArray, f::Symbol)
+    @assert typeof(layout.content) <: RecordArray "content must be of type RecordArray"
     copy(layout, content = layout.content[f])
+end
 
 function end_list!(layout::ListOffsetArray)
     push!(layout.offsets, length(layout.content))
@@ -540,7 +543,11 @@ function Base.getindex(layout::ListArray, r::UnitRange{Int})
     )
 end
 
-Base.getindex(layout::ListArray, f::Symbol) = copy(layout, content = layout.content[f])
+# Define the getindex method for ListArray
+function Base.getindex(layout::ListArray, f::Symbol)
+    @assert typeof(layout.content) <: RecordArray "content must be of type RecordArray"
+    copy(layout, content = layout.content[f])
+end
 
 function end_list!(layout::ListArray)
     if isempty(layout.stops)
@@ -686,7 +693,10 @@ function Base.getindex(layout::RegularArray, r::UnitRange{Int})
     copy(layout, content = layout.content[start:stop], zeros_length = r.stop - r.start + 1)
 end
 
-Base.getindex(layout::RegularArray, f::Symbol) = copy(layout, content = layout.content[f])
+function Base.getindex(layout::RegularArray, f::Symbol)
+    @assert typeof(layout.content) <: RecordArray "content must be of type RecordArray"
+    copy(layout, content = layout.content[f])
+end
 
 function end_list!(layout::RegularArray)
     if layout.size < 0 && layout.length == 0
@@ -1301,19 +1311,35 @@ Base.length(layout::TupleArray) = layout.length
 Base.firstindex(layout::TupleArray) = 1
 Base.lastindex(layout::TupleArray) = layout.length
 
-Base.getindex(
+function Base.getindex(
     layout::TupleArray{CONTENTS,BEHAVIOR},
     i::Int,
-) where {CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} = Tuple(layout, i)
+) where {CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR}
+    println("getindex with Int called")
+    println("Contents of layout: ", layout.contents)
+    println("Index: ", i)
+    println("Length: ", layout.length)
+
+    result = Tuple(layout, i)
+
+    println("Result: ", result)
+    return result
+end
 
 Base.getindex(
     layout::TupleArray{CONTENTS,BEHAVIOR},
     r::UnitRange{Int},
-) where {VALUES<:Content,CONTENTS<:Base.Tuple{VALUES},BEHAVIOR} = copy(
-    layout,
-    contents = Base.Tuple{VALUES}(x[r] for x in layout.contents),
-    length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
-)
+) where {VALUES<:Content,CONTENTS<:Base.Tuple{VALUES},BEHAVIOR} = 
+    copy(
+        layout,
+        contents = Base.Tuple{VALUES}(x[r] for x in layout.contents),
+        length = min(r.stop, layout.length) - max(r.start, 1) + 1,   # unnecessary min/max
+    )
+# Base.getindex(layout::TupleArray, r::UnitRange{Int},) = copy(
+#         layout,
+#         contents = Base.Tuple(x[r] for x in layout.contents),
+#         length = min(r.stop, layout.length) - max(r.start, 1) + 1,
+#     )
 
 function slot(
     layout::TupleArray{CONTENTS,BEHAVIOR},
@@ -1326,7 +1352,8 @@ end
 Base.getindex(
     layout::Tuple{CONTENTS},
     f::Int64,
-) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = layout.array.contents[f][layout.at]
+) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = 
+    layout.array.contents[f][layout.at]
 
 function Base.:(==)(
     layout1::TupleArray{CONTENTS1},

@@ -298,23 +298,21 @@ end
         )
 
         @test eltype(layout) == Vector{eltype(layout.content)}
+    end
 
-        # # Define the :some_function symbol
-        # some_function = :some_function
-        
-        # # Define a dictionary with a function as one of the values
-        # my_dict = Dict(
-        #     :add => (+),
-        #     :subtract => (-),
-        #     :multiply => (*),
-        #     some_function => x -> x^2  # Define a custom function for :some_function
-        # )
+    begin
+        content_layout = AwkwardArray.RecordArray(
+            (
+                a = AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                b = AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            )
+        )
 
-        # # Test getindex method for the :some_function symbol
-        # result = layout[my_dict[:some_function]]
+        layout = AwkwardArray.ListOffsetArray([1, 2, 5], content_layout)
 
-        # # Check if the content of the result matches the expected content
-        # @test result.content == AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5, 6, 7, 8, 9])[:some_function]
+        @test layout[:a] == [[2], [3, 4, 5]]
+        @test_throws ErrorException getindex(layout, :invalid)
+        @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 
     begin
@@ -367,6 +365,17 @@ end
         @test AwkwardArray.to_vector(layout) == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
 
         @test eltype(layout) == Vector{eltype(layout.content)}
+    end
+    
+    begin
+        # Create a ListArray with default parameters
+        list_array = AwkwardArray.ListArray{Vector{Int}, AwkwardArray.PrimitiveArray{Float64}, :default}()
+    
+        # Check that the ListArray is created correctly
+        @test length(list_array.starts) == 0
+        @test length(list_array.stops) == 0
+        @test length(list_array.content) == 0
+        @test typeof(list_array.content) == AwkwardArray.PrimitiveArray{Float64, Vector{Float64}, :default}
     end
 
     begin
@@ -465,6 +474,22 @@ end
         )
 
         @test eltype(layout) == Vector{eltype(layout.content)}
+    end
+
+    begin
+        content_layout = AwkwardArray.RecordArray(
+            (
+                a = AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                b = AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            )
+        )
+
+        
+        layout = AwkwardArray.ListArray([1, 2, 5], [2, 5, 5], content_layout)
+
+        @test layout[:a] == [[2], [3, 4, 5], []]
+        @test_throws ErrorException getindex(layout, :invalid)
+        @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 end
 
@@ -669,6 +694,21 @@ end
         )
 
         @test eltype(layout) == Vector{eltype(layout.content)}
+    end
+
+    begin
+        content_layout = AwkwardArray.RecordArray(
+            (
+                a = AwkwardArray.PrimitiveArray([1, 2, 3, 4, 5]),
+                b = AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
+            )
+        )
+
+        layout = AwkwardArray.RegularArray(content_layout, 2)
+
+        @test layout[:a] == [[1, 2], [3, 4]]
+        @test_throws ErrorException getindex(layout, :invalid)
+        @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 end
 
@@ -1496,6 +1536,13 @@ end
         @test tmp == 16.5
 
         @test eltype(layout) == typeof(layout[1])
+        
+        # Test getindex with a unit range
+        @test layout[1:2] == AwkwardArray.TupleArray((
+            AwkwardArray.PrimitiveArray([1, 2]),
+            AwkwardArray.PrimitiveArray([1.1, 2.2]),
+        ),)
+        # FIXME: MethodError: no method matching to_vector(::Vector{Any}) in test AwkwardArray.to_vector(layout[1:2]) == [(1, 1.1), (2, 2.2)]
     end
 
     begin
