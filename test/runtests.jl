@@ -1645,7 +1645,7 @@ end
         @test layout[2] == layout[2]
         @test layout[3] == layout[3]
 
-        @test layout[3] == AwkwardArray.Tuple(
+        @test layout[3] == AwkwardArray.SlotRecord(
             AwkwardArray.TupleArray((
                 AwkwardArray.PrimitiveArray([1, 2, 3]),
                 AwkwardArray.ListOffsetArray(
@@ -1656,7 +1656,7 @@ end
             3,
         )
 
-        @test layout[3] == AwkwardArray.Tuple(
+        @test layout[3] == AwkwardArray.SlotRecord(
             AwkwardArray.TupleArray((
                 AwkwardArray.PrimitiveArray([3]),
                 AwkwardArray.ListOffsetArray(
@@ -1675,7 +1675,7 @@ end
                 AwkwardArray.PrimitiveArray([1.1, 2.2, 3.3, 4.4, 5.5]),
             ),
         ),)
-        @test layout[4] == AwkwardArray.Tuple(
+        @test layout[4] == AwkwardArray.SlotRecord(
             AwkwardArray.TupleArray((
                 AwkwardArray.PrimitiveArray([0]),
                 AwkwardArray.ListOffsetArray([0, 0], AwkwardArray.PrimitiveArray([])),
