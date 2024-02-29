@@ -11,6 +11,7 @@ using .AwkwardPythonCallExt: convert
 
 Base.eltype(::RecordArray{FIELDS,CONTENTS,BEHAVIOR}) where {FIELDS,CONTENTS,BEHAVIOR} = Record{FIELDS,CONTENTS,BEHAVIOR}
 Base.eltype(::Record{FIELDS,CONTENTS,BEHAVIOR}) where {FIELDS,CONTENTS,BEHAVIOR} = CONTENTS
-Base.eltype(::TupleArray{CONTENTS,BEHAVIOR}) where {CONTENTS,BEHAVIOR} = Tuple{CONTENTS,BEHAVIOR}
+Base.eltype(::TupleArray{CONTENTS,BEHAVIOR}) where {CONTENTS,BEHAVIOR} = SlotRecord{CONTENTS,BEHAVIOR}
+Base.eltype(::SlotRecord{CONTENTS,BEHAVIOR}) where {CONTENTS,BEHAVIOR} = CONTENTS
 
 end  # module AwkwardArray

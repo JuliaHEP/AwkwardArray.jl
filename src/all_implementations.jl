@@ -1264,7 +1264,7 @@ TupleArray{CONTENTS}(;
     behavior = behavior,
 )
 
-struct Tuple{CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR}
+struct SlotRecord{CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR}
     array::TupleArray{CONTENTS,BEHAVIOR}
     at::Int64
 end
@@ -1314,7 +1314,7 @@ Base.lastindex(layout::TupleArray) = layout.length
 Base.getindex(
     layout::TupleArray{CONTENTS,BEHAVIOR},
     i::Int,
-) where {CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} = Tuple(layout, i)
+) where {CONTENTS<:Base.Tuple{Vararg{Content}},BEHAVIOR} = SlotRecord(layout, i)
 
 Base.getindex(
     layout::TupleArray{CONTENTS,BEHAVIOR},
@@ -1335,7 +1335,7 @@ function slot(
 end
 
 Base.getindex(
-    layout::Tuple{CONTENTS},
+    layout::SlotRecord{CONTENTS},
     f::Int64,
 ) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = 
     layout.array.contents[f][layout.at]
@@ -1360,8 +1360,8 @@ function Base.:(==)(
 end
 
 function Base.:(==)(
-    layout1::Tuple{CONTENTS1},
-    layout2::Tuple{CONTENTS2},
+    layout1::SlotRecord{CONTENTS1},
+    layout2::SlotRecord{CONTENTS2},
 ) where {
     N,
     CONTENTS1<:Base.Tuple{Vararg{Content,N}},
