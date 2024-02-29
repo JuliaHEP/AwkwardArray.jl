@@ -2350,7 +2350,7 @@ function layout_for(ItemType)
             if length(OtherTypes) == 1
                 out
             else
-                contents = [out]
+                contents = Any[out]
                 for i = (firstindex(OtherTypes)+1):(lastindex(OtherTypes))
                     push!(contents, UnmaskedArray{layout_for(OtherTypes[i])})
                 end

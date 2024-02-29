@@ -23,8 +23,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
+          - '1.8'
           - '1.9'
-          - 'nightly'
+          # - 'nightly'
         os:
           - ubuntu-latest
         arch:
@@ -59,6 +60,7 @@ jobs:
         uses: julia-actions/julia-processcoverage@v1
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
