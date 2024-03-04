@@ -148,6 +148,53 @@ function Base.append!(layout::Content, input)
     layout
 end
 
+### Form helper functions ################################################
+#
+#
+
+function isprimitive(t::Type)
+    return t <: Integer || t <: AbstractFloat || t <: Bool || t <: Char
+end
+
+function check_primitive_type(ITEM)
+    if ITEM == Bool
+        primitive = "bool"
+    elseif ITEM == Int8
+        primitive = "int8"
+    elseif ITEM == UInt8
+        primitive = "uint8"
+    elseif ITEM == Int16
+        primitive = "int16"
+    elseif ITEM == UInt16
+        primitive = "uint16"
+    elseif ITEM == Int32
+        primitive = "int32"
+    elseif ITEM == UInt32
+        primitive = "uint32"
+    elseif ITEM == Int64
+        primitive = "int64"
+    elseif ITEM == UInt64
+        primitive = "uint64"
+    elseif ITEM == Float16
+        primitive = "float16"
+    elseif ITEM == Float32
+        primitive = "float32"
+    elseif ITEM == Float64
+        primitive = "float64"
+    elseif ITEM == Complex{Float32}
+        primitive = "complex64"
+    elseif ITEM == Complex{Float64}
+        primitive = "complex128"
+    # elseif ITEM <: Dates.DateTime     # FIXME
+    #     primitive = "datetime64"
+    # elseif ITEM <: Dates.TimePeriod   # FIXME
+    #     primitive = "timedelta64"
+    else
+        primitive = "unknown"
+    end
+    return primitive
+end
+
 ### PrimitiveArray #######################################################
 #
 # Note: all Python NumpyArrays have to be converted to 1-dimensional
@@ -241,39 +288,8 @@ function _to_buffers!(
     form_key = "node$(number[begin])"
     number[begin] += 1
 
-    if ITEM == Bool
-        primitive = "bool"
-    elseif ITEM == Int8
-        primitive = "int8"
-    elseif ITEM == UInt8
-        primitive = "uint8"
-    elseif ITEM == Int16
-        primitive = "int16"
-    elseif ITEM == UInt16
-        primitive = "uint16"
-    elseif ITEM == Int32
-        primitive = "int32"
-    elseif ITEM == UInt32
-        primitive = "uint32"
-    elseif ITEM == Int64
-        primitive = "int64"
-    elseif ITEM == UInt64
-        primitive = "uint64"
-    elseif ITEM == Float16
-        primitive = "float16"
-    elseif ITEM == Float32
-        primitive = "float32"
-    elseif ITEM == Float64
-        primitive = "float64"
-    elseif ITEM == Complex{Float32}
-        primitive = "complex64"
-    elseif ITEM == Complex{Float64}
-        primitive = "complex128"
-        # elseif ITEM <: Dates.DateTime     # FIXME
-        #     primitive = "datetime64"
-        # elseif ITEM <: Dates.TimePeriod   # FIXME
-        #     primitive = "timedelta64"
-    else
+    primitive = check_primitive_type(ITEM)
+    if primitive == "unknown"
         error(
             "PrimitiveArray has an ITEM type that can't be serialized in the to_buffers protocol: $ITEM",
         )
