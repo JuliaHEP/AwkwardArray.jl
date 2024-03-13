@@ -1,37 +1,23 @@
-# Use
-#
-#     DOCUMENTER_DEBUG=true julia --color=yes make.jl local [nonstrict] [fixdoctests]
-#
-# for local builds.
 using Documenter, AwkwardArray
 
-# Doctest setup
-DocMeta.setdocmeta!(
-    AwkwardArray,
-    :DocTestSetup,
-    :(using AwkwardArray);
-    recursive=true,
-)
- 
-makedocs(
-    sitename = "AwkwardArray",
-    modules = [AwkwardArray],
+makedocs(;
+    modules=[AwkwardArray],
     format = Documenter.HTML(
-        prettyurls = !("local" in ARGS),
-        canonical = "https://JuliaHEP.github.io/AwkwardArray.jl/stable/"
+        prettyurls = get(ENV, "CI", nothing) == "true",
+        assets=String[],
     ),
-    pages = [
-        "Home" => "index.md",
-        "API" => "api.md",
+    pages=[
+        "Introduction" => "index.md",
+        "Example Usage" => "exampleusage.md",
+        "APIs" => "api.md",
         "LICENSE" => "LICENSE.md",
     ],
-    doctest = ("fixdoctests" in ARGS) ? :fix : true,
-    linkcheck = !("nonstrict" in ARGS),
+    repo="https://github.com/JuliaHEP/AwkwardArray.jl/blob/{commit}{path}#L{line}",
+    sitename="AwkwardArray.jl",
+    authors="Jim Pivarski, Jerry Ling, and contributors",
 )
 
-deploydocs(
-    repo = "github.com/JuliaHEP/AwkwardArray.jl",
-    forcepush = true,
-    push_preview = true,
+deploydocs(;
+    repo="github.com/JuliaHEP/AwkwardArray.jl",
+    push_preview=true
 )
-
