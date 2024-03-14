@@ -23,6 +23,9 @@ with the ability to add metadata and overload behavior at every level. (For inst
 
 Additionally, [arrow-julia](https://github.com/apache/arrow-julia) provides Julia access to the Apache Arrow format, which is also good for in-memory interprocess communication, but the Awkward Array format is a superset of this format to make it easier to represent intermediate calculations.
 
+## Documenttion
+[User Guilde](https://juliahep.github.io/AwkwardArray.jl/dev/)
+
 ## Reading and writing the same data type
 
 AwkwardArray.jl is a reimplementation of the concept of Awkward Arrays in Julia, taking advantage of Julia's capabilities. Python's Awkward Array has other backends for sending data to JIT-compiled languages—Numba (CPU and GPU) and C++ (with cppyy and ROOT's RDataFrame)—but as read-only views, owned exclusively by Python, for brief excursions only. Creating new Awkward Arrays in those JIT-compiled languages requires special tools, [ak.ArrayBuilder](https://awkward-array.org/doc/main/reference/generated/ak.ArrayBuilder.html) (discovers data type during iteration) and [LayoutBuilder](https://awkward-array.org/doc/main/user-guide/how-to-use-header-only-layoutbuilder.html) (fills a specified data type; faster).
