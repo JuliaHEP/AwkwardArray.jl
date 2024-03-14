@@ -2,6 +2,7 @@
 
 **for Julia!**
 
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliahep.github.io/AwkwardArray.jl/dev/)
 [![Build Status](https://github.com/JuliaHEP/AwkwardArray.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaHEP/AwkwardArray.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/JuliaHEP/AwkwardArray.jl/graph/badge.svg?token=eWHsBiyaPd)](https://codecov.io/gh/JuliaHEP/AwkwardArray.jl)
 
