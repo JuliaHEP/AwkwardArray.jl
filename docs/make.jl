@@ -4,7 +4,7 @@ makedocs(;
     modules=[AwkwardArray],
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
-        assets=String["img/logo-300px.png"],
+        assets=String["img/logo-300px.ico"],
     ),
     pages=[
         "Introduction" => "index.md",
