@@ -184,5 +184,3 @@ Finally, all `Content` subclasses can be converted with the following:
 * `AwkwardArray.to_vector`: converts an Awkward Array into Julia data
 * `AwkwardArray.from_buffers`: constructs an Awkward Array from a Form (JSON), length, and buffers for zero-copy passing from Python
 * `AwkwardArray.to_buffers`: deconstructs an Awkward Array into a Form (JSON), length, and buffers for zero-copy passing to Python
-
-_(This will turn into proper documentation, eventually.)_
