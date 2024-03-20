@@ -4,12 +4,12 @@ makedocs(;
     modules=[AwkwardArray],
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
-        assets=String[],
+        assets=String["img/logo-300px.ico"],
     ),
     pages=[
         "Introduction" => "index.md",
         "Example Usage" => "exampleusage.md",
-        "APIs" => "api.md",
+        "Reference Guide" => "api.md",
         "LICENSE" => "LICENSE.md",
     ],
     repo="https://github.com/JuliaHEP/AwkwardArray.jl/blob/{commit}{path}#L{line}",
