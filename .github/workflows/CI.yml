@@ -39,7 +39,7 @@ jobs:
           python -m pip install -r requirements/pycall.txt
 
       - name: Set up Julia
-        uses: julia-actions/setup-julia@v1
+        uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
