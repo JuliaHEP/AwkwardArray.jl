@@ -6,7 +6,7 @@ This package is a complete, one-to-one implementation of the Awkward Array data 
 
 Beyond communication with Python, columnar memory layouts have some advantages: data in an Awkward Array is less fragmented than the equivalent `Vectors` of `Vectors`, `NamedTuples`, `Missing`, and `Union` data of the built-in Julia types. Other, well-established packages provide some of these capabilities: [ArraysOfArrays.jl](https://github.com/JuliaArrays/ArraysOfArrays.jl) does `Vectors` of variable-length `Vectors`, and [StructArrays.jl](https://github.com/JuliaArrays/StructArrays.jl) toggles between array-of-structs/struct-of-arrays like Awkward records do, but Awkward Arrays represent a closure over a large suite of data types:
 
-  * booleans/numbers/dates/times
+  * booleans / numbers / dates / times
   * variable-length and regular-sized lists
   * structs with named (record) and unnamed (tuple) fields
   * missing data in a variety of representations (bit vectors, byte vectors, union-indexes)
