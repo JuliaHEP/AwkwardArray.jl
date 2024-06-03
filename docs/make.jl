@@ -9,6 +9,12 @@ makedocs(;
     pages=[
         "Introduction" => "index.md",
         "Example Usage" => "exampleusage.md",
+        "API" => Any[
+            "Types" => "types.md",
+            "Functions" => "functions.md",
+            "Indexing" => "indexing.md",
+            hide("Internals" => "internals.md"),
+        ],
         "Reference Guide" => "api.md",
         "LICENSE" => "LICENSE.md",
     ],
