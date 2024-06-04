@@ -8,7 +8,7 @@ makedocs(;
     ),
     pages=[
         "Introduction" => "index.md",
-        "Example Usage" => "exampleusage.md",
+        "Converting Arrays" => "exampleusage.md",
         "API" => Any[
             "Types" => "types.md",
             "Functions" => "functions.md",
