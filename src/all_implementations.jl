@@ -381,6 +381,10 @@ by `BEHAVIOR`.
 This allows to create a flexible and hierarchical type system where 
 different kinds of content can be represented, and specific behaviors 
 can be parameterized.
+
+!!! note
+    All Python NumpyArrays have to be converted to 1-dimensional
+    (inner_shape == ()) with RegularArrays when converting to Julia.
 """
 abstract type LeafType{BEHAVIOR} <: Content{BEHAVIOR} end
 
@@ -3339,7 +3343,7 @@ struct BitMaskedArray{CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
     BitMaskedArray(
         mask::BitVector,
         content::CONTENT;
-        valid_when::Bool = false,  # NumPy MaskedArray's convention; note that Arrow's is true
+        valid_when::Bool = false,
         parameters::Parameters = Parameters(),
         behavior::Symbol = :default,
     ) where {CONTENT<:Content} =
@@ -3360,6 +3364,10 @@ end
  - `mask::BitVector`: A `BitVector` indicating which elements are valid or invalid.
  - `content::CONTENT`: The actual data content, constrained to be a subtype of [`Content`](@ref).
  - `valid_when::Bool`: A flag indicating when the mask is valid (by default `false`).
+ 
+!!! note
+    NumPy MaskedArray's convention; note that Arrow's is `true`.
+
  - `parameters::Parameters`: Additional parameters associated with the array, defined elsewhere.
 
 ## Constructor:
@@ -3381,7 +3389,8 @@ new{CONTENT,behavior}(mask, content, valid_when, parameters)
 ```
 creates a new instance of `BitMaskedArray` with the specified type parameters and field values.
 
-*Note:* all Python `BitMaskedArrays` must be converted to `lsb_order = true`.
+!!! note 
+    All Python `BitMaskedArrays` must be converted to `lsb_order = true`.
 """
 struct BitMaskedArray{CONTENT<:Content,BEHAVIOR} <: OptionType{BEHAVIOR}
     mask::BitVector
