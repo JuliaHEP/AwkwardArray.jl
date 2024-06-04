@@ -12,10 +12,10 @@ makedocs(;
         "API" => Any[
             "Types" => "types.md",
             "Functions" => "functions.md",
-            "Indexing" => "indexing.md",
+            hide("Indexing" => "indexing.md"),
             hide("Internals" => "internals.md"),
         ],
-        "Reference Guide" => "api.md",
+        hide("Reference Guide" => "api.md"),
         "LICENSE" => "LICENSE.md",
     ],
     repo="https://github.com/JuliaHEP/AwkwardArray.jl/blob/{commit}{path}#L{line}",

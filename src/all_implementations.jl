@@ -143,7 +143,7 @@ Every `Content` subclass has the following built-in functions:
 * [`Base.firstindex`](@ref), [`Base.lastindex`](@ref) (1-based or inherited from its index)
 * [`Base.getindex`](@ref): select by `Int` (single item), `UnitRange{Int}` (slice), and `Symbol` (record field)
 * [`Base.iterate`](@ref)
-* `Base.(==)` (equality defined by values: a `ListOffsetArray` and a `ListArray` may be considered the same)
+* [`Base.:(==)`](@ref) (equality defined by values: a `ListOffsetArray` and a `ListArray` may be considered the same)
 * [`Base.push!`](@ref)
 * [`Base.append!`](@ref)
 * [`Base.show`](@ref)
@@ -187,17 +187,23 @@ Finally, all `Content` subclasses can be converted with the following:
 abstract type Content{BEHAVIOR} <: AbstractVector{Any} end
 
 """
+    parameters_of(content::CONTENT) where {CONTENT<:Content}
+
 Return a list of all parameters.
 """
 parameters_of(content::CONTENT) where {CONTENT<:Content} = content.parameters
 
 """
+    has_parameter(content::CONTENT, key::String) where {CONTENT<:Content}
+
 Return true if a parameter exists.
 """
 has_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
     has_parameter(content.parameters, key)
 
 """
+    get_parameter(content::CONTENT, key::String) where {CONTENT<:Content}
+
 Return a parameter or raises an error.
 """    
 get_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
@@ -206,6 +212,8 @@ get_parameter(content::CONTENT, key::String) where {CONTENT<:Content} =
 # Iteration
 
 """
+    Base.iterate(layout::Content)
+
 Enable the use of Julia's iteration protocol on instances of `Content` type.
 
 # Examples
@@ -231,12 +239,14 @@ function Base.iterate(layout::Content)
 end
 
 """
+    Base.iterate(layout::Content, state)
+
 Iteration: The iteration continues by repeatedly calling 
 `Base.iterate(layout, state)` with the collection and the current state. 
 This returns the next element and the next state until it returns 
 `nothing`, indicating the end of the iteration.
 
-#Parameters
+# Parameters
 
 `layout::Content`: This specifies that the function operates on an 
 instance of the type [`Content`](@ref).
@@ -259,6 +269,8 @@ Treat instances of `Content` as if they are one-dimensional arrays.
 Base.size(layout::Content) = (length(layout),)
 
 """
+    Base.:(==)(layout1::Content, layout2::Content)
+
 Two `Content` objects are considered equal only if they have the same 
 elements in the same order.
 """
@@ -277,6 +289,8 @@ function Base.:(==)(layout1::Content, layout2::Content)
 end
 
 """
+    Base.append!(layout::Content, input)
+
 Append multiple elements (from another collection) to an instance of Content.
 """
 function Base.append!(layout::Content, input)
@@ -291,6 +305,8 @@ end
 #
 
 """
+    isprimitive(t::Type)
+
 Determine if a given type is one of the fundamental data types in Julia 
 that are typically considered primitive. These include:
 
@@ -304,6 +320,8 @@ function isprimitive(t::Type)
 end
 
 """
+    check_primitive_type(ITEM)
+
 A utility that provides a string representation for various primitive 
 types in Julia. It helps in identifying the type of an `item` and mapping 
 it to a human-readable format. This is useful in scenarios where type 
@@ -355,6 +373,8 @@ end
 #       (inner_shape == ()) with RegularArrays when converting to Julia.
 
 """
+    LeafType{BEHAVIOR} <: Content{BEHAVIOR}
+
 Abstract type `LeafType` inherits from `Content` and is parameterized 
 by `BEHAVIOR`. 
 
@@ -365,6 +385,8 @@ can be parameterized.
 abstract type LeafType{BEHAVIOR} <: Content{BEHAVIOR} end
 
 """
+    PrimitiveArray{ITEM,BUFFER<:AbstractVector{ITEM},BEHAVIOR} <: LeafType{BEHAVIOR}
+
 A specialized array type designed to handle primitive data types with 
 additional parameters and behaviors.
 
