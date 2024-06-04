@@ -9,7 +9,13 @@ makedocs(;
     pages=[
         "Introduction" => "index.md",
         "Example Usage" => "exampleusage.md",
-        "Reference Guide" => "api.md",
+        "API" => Any[
+            "Types" => "types.md",
+            "Functions" => "functions.md",
+            hide("Indexing" => "indexing.md"),
+            hide("Internals" => "internals.md"),
+        ],
+        hide("Reference Guide" => "api.md"),
         "LICENSE" => "LICENSE.md",
     ],
     repo="https://github.com/JuliaHEP/AwkwardArray.jl/blob/{commit}{path}#L{line}",

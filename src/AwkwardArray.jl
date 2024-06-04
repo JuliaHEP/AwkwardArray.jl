@@ -1,3 +1,7 @@
+"""
+Main module for `AwkwardArray.jl` -- an implementation of the Awkward Array data structures in Julia. 
+"""
+
 module AwkwardArray
 
 import JSON
