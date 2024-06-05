@@ -4,10 +4,11 @@ makedocs(;
     modules=[AwkwardArray],
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
-        assets=String["img/logo-300px.ico"],
+        assets=["assets/logo-300px.ico"],
     ),
     pages=[
         "Introduction" => "index.md",
+        "Getting started" => "getting_started.md",
         "Converting Arrays" => "exampleusage.md",
         "API" => Any[
             "Types" => "types.md",
@@ -19,7 +20,7 @@ makedocs(;
         "LICENSE" => "LICENSE.md",
     ],
     repo="https://github.com/JuliaHEP/AwkwardArray.jl/blob/{commit}{path}#L{line}",
-    sitename="AwkwardArray.jl",
+    sitename="Awkward Arrays in Julia",
     authors="Jim Pivarski, Jerry Ling, and contributors",
 )
 
