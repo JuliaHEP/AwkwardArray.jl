@@ -21,7 +21,7 @@ makedocs(;
         "LICENSE" => "LICENSE.md",
     ],
     repo="https://github.com/JuliaHEP/AwkwardArray.jl/blob/{commit}{path}#L{line}",
-    sitename="Awkward Arrays in Julia",
+    sitename="for Julia!",
     authors="Jim Pivarski, Jerry Ling, and contributors",
 )
 
