@@ -6,6 +6,13 @@ Let's assume that both Python and Julia are installed.
 
 It is recommended to use [conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) virtul environment.
 
+!!! note
+    If Julia is not install it is recomended to install it from a conda-forge channel:
+
+    ```python
+    conda install -c conda-forge julia
+    ```
+
 ## Using Julia Awkward Arrays from Python
 
  - To install [Awkward Array](https://github.com/scikit-hep/awkward) Python package:
