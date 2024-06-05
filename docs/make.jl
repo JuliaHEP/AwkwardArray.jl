@@ -17,6 +17,7 @@ makedocs(;
             hide("Internals" => "internals.md"),
         ],
         hide("Reference Guide" => "api.md"),
+        hide("HowTo" => "howto.md"),
         "LICENSE" => "LICENSE.md",
     ],
     repo="https://github.com/JuliaHEP/AwkwardArray.jl/blob/{commit}{path}#L{line}",
