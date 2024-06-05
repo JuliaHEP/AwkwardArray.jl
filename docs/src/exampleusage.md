@@ -25,7 +25,6 @@ installed by the [CondaPkg.jl](https://github.com/JuliaPy/CondaPkg.jl) package.
 
 ```julia
 using CondaPkg
-CondaPkg.add("numpy")
 CondaPkg.add("awkward")
 ```
 
