@@ -984,7 +984,7 @@ end
         parameters::Parameters = Parameters(),
     ) where {INDEX<:IndexBig} where {CONTENT<:Content} where {BEHAVIOR}
 
-Constructor of a [`ListArray`](@ref) with default parameters, initializing the starts, stops and content with default values.
+Constructor of a `ListArray` with default parameters, initializing the starts, stops and content with default values.
 """
 ListArray{INDEX,CONTENT,BEHAVIOR}(;
     parameters::Parameters = Parameters(),
@@ -997,7 +997,7 @@ ListArray{INDEX,CONTENT,BEHAVIOR}(;
         behavior::Symbol = :default,
     ) where {INDEX<:IndexBig} where {CONTENT<:Content}
 
-Constructor of a [`ListArray`](@ref) with default parameters, initializing the starts, stops, content and behavior with default values.
+Constructor of a `ListArray` with default parameters, initializing the starts, stops, content and behavior with default values.
 """
 ListArray{INDEX,CONTENT}(;
     parameters::Parameters = Parameters(),
@@ -1015,7 +1015,7 @@ ListArray{INDEX,CONTENT}(;
         behavior::Union{Unset,Symbol} = Unset(),
     ) where {INDEX1<:IndexBig,INDEX2<:IndexBig,CONTENT1<:Content,CONTENT2<:Content,BEHAVIOR}
 
-Copy of a [`ListArray`](@ref).
+Copy of a `ListArray`.
 """    
 function copy(
     layout::ListArray{INDEX1,CONTENT1,BEHAVIOR};
@@ -1695,7 +1695,16 @@ end
         byte_parameters::Parameters = Parameters(),
     ) where {INDEX<:IndexBig}
 
-[`ListType`](@ref) with `behavior` = `:bytestring`.
+The function that constructs a specialized array type for handling byte strings with specific offsets.
+
+ - `offsets`: This is an array of indices (`INDEX`) which determines where each string starts within the byte array.
+ - `data`: This is a vector of `UInt8` (unsigned 8-bit integers), representing the raw bytes of the strings.
+ - `parameters`: Optional parameters for configuring the `ListOffsetArray`.
+ - `byte_parameters`: Optional parameters specifically for the `PrimitiveArray` holding the byte data.
+ - `INDEX<:` Ensures that offsets is a subtype of `IndexBig`, which typically implies a larger indexing type suitable for big data.
+
+!!! note
+    It is a [`ListType`](@ref) with `behavior` = `:bytestring`.
 """
 ByteStringOffsetArray(
     offsets::INDEX,
@@ -1714,6 +1723,8 @@ ByteStringOffsetArray(
         parameters::Parameters = Parameters(),
         byte_parameters::Parameters = Parameters(),
     )
+
+A default constructor that initializes an empty `ByteStringOffsetArray`.
 """
 ByteStringOffsetArray(;
     parameters::Parameters = Parameters(),
@@ -1733,6 +1744,8 @@ ByteStringOffsetArray(;
         parameters::Parameters = Parameters(),
         byte_parameters::Parameters = Parameters(),
     ) where {INDEX<:IndexBig}
+
+The `ByteStringArray` function constructs a specialized array type for handling byte strings, similar to `ByteStringOffsetArray`, but it uses separate `starts` and `stops` indices rather than a single `offsets` array.
 """
 ByteStringArray(
     starts::INDEX,
@@ -1753,6 +1766,8 @@ ByteStringArray(
         parameters::Parameters = Parameters(),
         byte_parameters::Parameters = Parameters(),
     )
+
+A default constructor that initializes an empty `ByteStringArray`.
 """
 ByteStringArray(;
     parameters::Parameters = Parameters(),
@@ -2854,7 +2869,7 @@ IndexedOptionArray{INDEX,CONTENT}(;
         BEHAVIOR,
     }
 
-Copy of an [`IndexedOptionArray`](@ref), potentially with some modifications to its fields.
+Copy of an `IndexedOptionArray`, potentially with some modifications to its fields.
 """
 function copy(
     layout::IndexedOptionArray{INDEX1,CONTENT1,BEHAVIOR};
