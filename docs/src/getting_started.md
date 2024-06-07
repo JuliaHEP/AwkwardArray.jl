@@ -2,6 +2,9 @@
 
 Let's assume that both Python and Julia are installed.
 
+!!! note
+    If Julia is not install it is recomended to follow its official installation instructions described [here](https://julialang.org/downloads/).
+
 ## Installation
 
 It is recommended to use [conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) virtul environment.
