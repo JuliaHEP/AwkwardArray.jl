@@ -3721,3 +3721,4 @@ end # @testset "AwkwardArray.jl"
 end # @testset "Tables.jl"
 
 include("./runpytests.jl")
+include("./test_106_form_from_type.jl")
