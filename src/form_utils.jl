@@ -44,14 +44,14 @@ function type_to_form(::Type{T}, form_key_id::Int64) where {T}
     form_key = generate_form_key!(form_key_id_ref)
 
     if T <: Union{Int, Float64, Bool}
-        parameters = string(T, "\", ")
+        parameters = string(AwkwardArray.check_primitive_type(T), "\", ")
         if T == Char
             parameters = "uint8\", \"parameters\": { \"__array__\": \"char\" }, "
         end
         return "{\"class\": \"NumpyArray\", \"primitive\": \"" * parameters *
                "\"form_key\": \"" * form_key * "\"}"
     elseif T <: Complex
-        return "{\"class\": \"NumpyArray\", \"primitive\": \"" * string(T) *
+        return "{\"class\": \"NumpyArray\", \"primitive\": \"" * AwkwardArray.check_primitive_type(T) *
                "\", \"form_key\": \"" * form_key * "\"}"
     end
 
