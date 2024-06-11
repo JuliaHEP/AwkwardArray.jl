@@ -30,14 +30,14 @@ function object_type_iterable(obj)
     return iter_result !== nothing
 end
 
-function type_to_form(::Type{T}, form_key_id::Int64) where {T}
-    # Helper function to generate the form key string
-    function generate_form_key!(form_key_id_ref)
-        form_key = "node" * string(form_key_id_ref[])
-        form_key_id_ref[] += 1
-        return form_key
-    end
+# Function to generate form key
+function generate_form_key!(form_key_id_ref::Base.RefValue{Int64})
+    form_key_id = form_key_id_ref[]
+    form_key_id_ref[] += 1
+    return "node$form_key_id"
+end
 
+function type_to_form(::Type{T}, form_key_id::Int64) where {T}
     # Initialize form_key_id reference for mutability
     form_key_id_ref = Ref(form_key_id)
 
