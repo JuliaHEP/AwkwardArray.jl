@@ -68,7 +68,7 @@ function type_to_form(::Type{T}, form_key_id::Int64) where {T}
         
         form_key = "node$(form_key_id)"
         
-        offsets = "offsets_placeholder" # Replace this with the actual logic to get offsets
+        offsets = "i64" # Replace this with the actual logic to get offsets
         
         content = type_to_form(value_type, form_key_id + 1) # Recursive call for value_type
         
