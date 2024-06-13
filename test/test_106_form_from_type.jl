@@ -27,5 +27,6 @@ end
         ref = Ref(id)
         out = AwkwardArray._generate_form_key!(ref)
         @test out == "node1"
+        @test ref[] == 2
     end
 end

@@ -87,8 +87,17 @@ function type_to_form(::Type{T}, form_key_id::Int64) where {T <: String}
            "\"form_key\": \"" * form_key * "\"}"
 end
 
+# Method to handle specific Vector types
+function type_to_form(::Type{Vector{T}}, form_key_id::Int64) where {T}
+    element_type = T
+    content_form = type_to_form(element_type, form_key_id + 1)
+    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"int64\", " *
+           "\"content\": " * content_form * ", " *
+           "\"form_key\": \"node$(form_key_id)\"}"
+end
+
 # Function for handling iterable types
-function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Vector}
+function type_to_form(::Type{T}, form_key_id::Int64) where {T <: AbstractVector}
     value_type = eltype(T)
     form_key = "node$(form_key_id)"
     form_key_id += 1
@@ -115,15 +124,25 @@ function type_to_numpy_like(::Type{T}) where {T}
     return "int64"  # Placeholder implementation
 end
 
-function tree_branches_type(tree)
+# Print forms of all tree brunches
+function tree_branches_type(tree, form_key_id::Int64=0)
+    println("""{"class": "RecordArray", "fields": [""")
+    for name in propertynames(tree)
+        println(""""$name", """)
+    end
+    println("""], "contents": [""")
+
     for name in propertynames(tree)
         branch = getproperty(tree, name)
         branch_type = eltype(branch)
-        println("Is it a primitive type? ", AwkwardArray.isprimitive(branch_type))
+
         if branch_type <: SubArray
-            println(name, " ==>>> ", branch_type.parameters[3])
+            form_type = branch_type.parameters[3]
+            println(type_to_form(form_type, 0), ", ")
         else
-            println(name, " ==> ", branch_type)
+            println(type_to_form(branch_type, 0), ", ")
         end
     end
+    println(" ]")
 end
+
