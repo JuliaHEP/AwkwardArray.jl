@@ -19,7 +19,7 @@ function object_type_iterable(obj)
 end
 
 # Define a dictionary mapping Julia types to NumPy types
-julia_to_numpy = Dict(
+const julia_to_numpy = Dict(
     Int8 => "int8",
     UInt8 => "uint8",
     Int16 => "int16",
@@ -39,7 +39,8 @@ julia_to_numpy = Dict(
 
 # Function to get the corresponding NumPy type
 function julia_to_numpy_type(julia_type::Type)
-    return get(julia_to_numpy, julia_type, "unknown")
+    result = get(julia_to_numpy, julia_type, "unknown")
+    return String(result)
 end
 
 # Function to generate form key
