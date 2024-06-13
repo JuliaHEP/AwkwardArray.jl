@@ -1,22 +1,3 @@
-is_iterable(obj) = try
-    iterate(obj) !== nothing
-catch
-    false
-end
-
-function object_type_iterable(obj)
-    # Get the type of the object
-    T = typeof(obj)
-    
-    # Create an instance of the specified type
-    obj_instance = T()
-    
-    # Attempt to iterate over the object
-    iter_result = iterate(obj_instance)
-    
-    # Return true if iteration succeeds, false otherwise
-    return iter_result !== nothing
-end
 
 # Define a dictionary mapping Julia types to NumPy types
 const julia_to_numpy = Dict(

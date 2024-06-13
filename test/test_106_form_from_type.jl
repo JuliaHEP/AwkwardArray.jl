@@ -5,6 +5,8 @@
     @test AwkwardArray.type_to_form(Int32, 1) == """{"class": "NumpyArray", "primitive": "int32", "form_key": "node1"}"""
     @test AwkwardArray.type_to_form(Int32, 0) == """{"class": "NumpyArray", "primitive": "int32", "form_key": "node0"}"""
     @test AwkwardArray.type_to_form(Int64, 1) == "{\"class\": \"NumpyArray\", \"primitive\": \"int64\", \"form_key\": \"node1\"}"
+    @test AwkwardArray.type_to_form(Char, 1) == "{\"class\": \"NumpyArray\", \"primitive\": \"uint8\", \"parameters\": { \"__array__\": \"char\" }, \"form_key\": \"node1\"}"
+    @test AwkwardArray.type_to_form(String, 1) == "{\"class\": \"ListOffsetArray\", \"offsets\": \"int64\", \"content\": {\"class\": \"NumpyArray\", \"primitive\": \"uint8\", \"parameters\": { \"__array__\": \"char\" }, \"form_key\": \"node2\"},  \"parameters\": { \"__array__\": \"string\" }, \"form_key\": \"node1\"}"
     
     @test AwkwardArray.type_to_form(Vector{Int}, 1) == "{\"class\": \"ListOffsetArray\", \"offsets\": \"int64\", \"content\": {\"class\": \"NumpyArray\", \"primitive\": \"int64\", \"form_key\": \"node2\"}, \"form_key\": \"node1\"}"
     @test AwkwardArray.type_to_form(Vector{Int32}, 1) == """{"class": "ListOffsetArray", "offsets": "int64", "content": {"class": "NumpyArray", "primitive": "int32", "form_key": "node2"}, "form_key": "node1"}"""
