@@ -1,19 +1,7 @@
-using AwkwardArray
-
 is_iterable(obj) = try
     iterate(obj) !== nothing
 catch
     false
-end
-
-# Function to check if a type is iterable
-function is_iterable_type(T::Type)
-    try
-        iterate(T())
-        return true
-    catch
-        return false
-    end
 end
 
 function object_type_iterable(obj)
@@ -30,6 +18,30 @@ function object_type_iterable(obj)
     return iter_result !== nothing
 end
 
+# Define a dictionary mapping Julia types to NumPy types
+julia_to_numpy = Dict(
+    Int8 => "int8",
+    UInt8 => "uint8",
+    Int16 => "int16",
+    UInt16 => "uint16",
+    Int32 => "int32",
+    UInt32 => "uint32",
+    Int64 => "int64",
+    UInt64 => "uint64",
+    Float16 => "float16",
+    Float32 => "float32",
+    Float64 => "float64",
+    Bool => "bool",
+    Complex{Float32} => "complex64",
+    Complex{Float64} => "complex128",
+    String => "str"
+)
+
+# Function to get the corresponding NumPy type
+function julia_to_numpy_type(julia_type::Type)
+    return get(julia_to_numpy, julia_type, "unknown")
+end
+
 # Function to generate form key
 function generate_form_key!(form_key_id_ref::Base.RefValue{Int64})
     form_key_id = form_key_id_ref[]
@@ -37,59 +49,87 @@ function generate_form_key!(form_key_id_ref::Base.RefValue{Int64})
     return "node$form_key_id"
 end
 
+function json_numpy_form(parameters::String, form_key::String)
+    return "{\"class\": \"NumpyArray\", \"primitive\": \"" * parameters *
+    "\"form_key\": \"" * form_key * "\"}"
+end
+
+# Method for handling primitive types
+function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Integer} 
+    form_key = "node$(form_key_id)"
+    form_key_id += 1
+
+    parameters = string(julia_to_numpy_type(T), "\", ")
+
+    return json_numpy_form(parameters, form_key)
+end
+
+function type_to_form(::Type{T}, form_key_id::Int64) where {T <: AbstractFloat}
+    form_key = "node$(form_key_id)"
+    form_key_id += 1
+
+    parameters = string(julia_to_numpy_type(T), "\", ")
+    return json_numpy_form(parameters, form_key)
+end
+
+function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Bool}
+    form_key = "node$(form_key_id)"
+    form_key_id += 1
+
+    parameters = string(julia_to_numpy_type(T), "\", ")
+
+    return json_numpy_form(parameters, form_key)
+end
+
+function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Char}
+    form_key = "node$(form_key_id)"
+    form_key_id += 1
+
+    parameters = "uint8\", \"parameters\": { \"__array__\": \"char\" }, "
+
+    return json_numpy_form(parameters, form_key)
+end
+
+function type_to_form(::Type{T}, form_key_id::Int64) where {T <: String}
+    value_type = eltype(T)
+    form_key = "node$(form_key_id)"
+    form_key_id += 1
+
+    parameters = " \"parameters\": { \"__array__\": \"string\" }, "
+
+    content = type_to_form(value_type, form_key_id)
+
+    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"" * type_to_numpy_like(T) * "\", " *
+           "\"content\":" * content * ", " * parameters *
+           "\"form_key\": \"" * form_key * "\"}"
+end
+
+# Method for handling iterable types
+function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Vector}
+    value_type = eltype(T)
+    form_key = "node$(form_key_id)"
+    form_key_id += 1
+
+    parameters = ""
+    if value_type == Char
+        parameters = " \"parameters\": { \"__array__\": \"string\" }, "
+    end
+
+    content = type_to_form(value_type, form_key_id)
+
+    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"" * type_to_numpy_like(T) * "\", " *
+           "\"content\":" * content * ", " * parameters *
+           "\"form_key\": \"" * form_key * "\"}"
+end
+
+# Fallback method for unsupported types
 function type_to_form(::Type{T}, form_key_id::Int64) where {T}
-    # Initialize form_key_id reference for mutability
-    form_key_id_ref = Ref(form_key_id)
-
-    form_key = generate_form_key!(form_key_id_ref)
-
-    if T <: Union{Int, Float64, Bool}
-        parameters = string(AwkwardArray.check_primitive_type(T), "\", ")
-        if T == Char
-            parameters = "uint8\", \"parameters\": { \"__array__\": \"char\" }, "
-        end
-        return "{\"class\": \"NumpyArray\", \"primitive\": \"" * parameters *
-               "\"form_key\": \"" * form_key * "\"}"
-    elseif T <: Complex
-        return "{\"class\": \"NumpyArray\", \"primitive\": \"" * AwkwardArray.check_primitive_type(T) *
-               "\", \"form_key\": \"" * form_key * "\"}"
-    end
-
-    # Check if the type T is iterable
-    if is_iterable_type(T)
-        parameters = ""
-        
-        # Get the value type of the iterable T
-        value_type = eltype(T)
-        
-        if value_type == Char
-            parameters = " \"parameters\": { \"__array__\": \"string\" }, "
-        end
-        
-        form_key = "node$(form_key_id)"
-        
-        offsets = "i64" # Replace this with the actual logic to get offsets
-        
-        content = type_to_form(value_type, form_key_id + 1) # Recursive call for value_type
-        
-        return "{\"class\": \"ListOffsetArray\", \"offsets\": \"$offsets\", \"content\": $content, $parameters \"form_key\": \"$form_key\"}"
-    else
-        error("Type not supported")
-    end
-    
-    error("Type not supported")
+    error("Type '$T' is not supported yet.")
 end
 
-function type_to_form(::Type{T}) where T <: Union{Int, Float64, String, Bool}
-    return AwkwardArray.check_primitive_type(T)
-end
-
-function type_to_form(::Type{Vector{T}}) where T
-    return Vector{type_to_form(T)}
-end
-
-function type_to_form(::Type{SubArray{T, N, A, I, L}}) where {T, N, A, I, L}
-    return SubArray{type_to_form(T), N, type_to_form(A), I, L}
+# Helper function for type_to_numpy_like (placeholder implementation)
+function type_to_numpy_like(::Type{T}) where {T}
+    return "int64"  # Placeholder implementation
 end
 
 function tree_branches_type(tree)

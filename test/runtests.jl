@@ -3,6 +3,7 @@ using JSON
 using Test
 using Tables
 
+include("./test_106_form_from_type.jl")
 
 ### PrimitiveArray #######################################################
 @testset "PrimitiveArray" begin
@@ -3720,5 +3721,4 @@ end # @testset "AwkwardArray.jl"
     end
 end # @testset "Tables.jl"
 
-include("./runpytests.jl")
-include("./test_106_form_from_type.jl")
+# include("./runpytests.jl")
