@@ -33,11 +33,11 @@ end
 
 function json_numpy_form(parameters::String, form_key::String)
     return "{\"class\": \"NumpyArray\", \"primitive\": \"" * parameters *
-    "\"form_key\": \"" * form_key * "\"}"
+           "\"form_key\": \"" * form_key * "\"}"
 end
 
 # Function for handling primitive types
-function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Integer} 
+function type_to_form(::Type{T}, form_key_id::Int64=0) where {T <: Integer} 
     form_key = "node$(form_key_id)"
     form_key_id += 1
 
@@ -46,7 +46,15 @@ function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Integer}
     return json_numpy_form(parameters, form_key)
 end
 
-function type_to_form(::Type{T}, form_key_id::Int64) where {T <: AbstractFloat}
+function type_to_form(::Type{T}, form_key_id_ref::Base.RefValue{Int64}) where {T <: Integer} 
+    form_key = _generate_form_key!(form_key_id_ref)
+
+    parameters = julia_to_numpy_type(T) * "\", "
+
+    return json_numpy_form(parameters, form_key)
+end
+
+function type_to_form(::Type{T}, form_key_id::Int64=0) where {T <: AbstractFloat}
     form_key = "node$(form_key_id)"
     form_key_id += 1
 
@@ -55,7 +63,15 @@ function type_to_form(::Type{T}, form_key_id::Int64) where {T <: AbstractFloat}
     return json_numpy_form(parameters, form_key)
 end
 
-function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Bool}
+function type_to_form(::Type{T}, form_key_id_ref::Base.RefValue{Int64}) where {T <: AbstractFloat}
+    form_key = _generate_form_key!(form_key_id_ref)
+
+    parameters = julia_to_numpy_type(T) * "\", "
+
+    return json_numpy_form(parameters, form_key)
+end
+
+function type_to_form(::Type{T}, form_key_id::Int64=0) where {T <: Bool}
     form_key = "node$(form_key_id)"
     form_key_id += 1
 
@@ -64,7 +80,15 @@ function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Bool}
     return json_numpy_form(parameters, form_key)
 end
 
-function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Char}
+function type_to_form(::Type{T}, form_key_id_ref::Base.RefValue{Int64}) where {T <: Bool}
+    form_key = _generate_form_key!(form_key_id_ref)
+
+    parameters = julia_to_numpy_type(T) * "\", "
+
+    return json_numpy_form(parameters, form_key)
+end
+
+function type_to_form(::Type{T}, form_key_id::Int64=0) where {T <: Char}
     form_key = "node$(form_key_id)"
     form_key_id += 1
 
@@ -73,7 +97,15 @@ function type_to_form(::Type{T}, form_key_id::Int64) where {T <: Char}
     return json_numpy_form(parameters, form_key)
 end
 
-function type_to_form(::Type{T}, form_key_id::Int64) where {T <: String}
+function type_to_form(::Type{T}, form_key_id_ref::Base.RefValue{Int64}) where {T <: Char}
+    form_key = _generate_form_key!(form_key_id_ref)
+
+    parameters = "uint8\", \"parameters\": { \"__array__\": \"char\" }, "
+
+    return json_numpy_form(parameters, form_key)
+end
+
+function type_to_form(::Type{T}, form_key_id::Int64=0) where {T <: String}
     value_type = eltype(T)
     form_key = "node$(form_key_id)"
     form_key_id += 1
@@ -82,13 +114,28 @@ function type_to_form(::Type{T}, form_key_id::Int64) where {T <: String}
 
     content = type_to_form(value_type, form_key_id)
 
-    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"" * type_to_numpy_like(T) * "\", " *
+    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"" * 
+           type_to_numpy_like(T) * "\", " *
            "\"content\": " * content * ", " * parameters *
            "\"form_key\": \"" * form_key * "\"}"
 end
 
-# Method to handle specific Vector types
-function type_to_form(::Type{Vector{T}}, form_key_id::Int64) where {T}
+function type_to_form(::Type{T}, form_key_id_ref::Base.RefValue{Int64}) where {T <: String}
+    value_type = eltype(T)
+    form_key = _generate_form_key!(form_key_id_ref)
+
+    parameters = " \"parameters\": { \"__array__\": \"string\" }, "
+
+    content = type_to_form(value_type, form_key_id_ref)
+
+    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"" * 
+           type_to_numpy_like(T) * "\", " *
+           "\"content\": " * content * ", " * parameters *
+           "\"form_key\": \"" * form_key * "\"}"
+end
+
+# Function to handle specific Vector types
+function type_to_form(::Type{Vector{T}}, form_key_id::Int64=0) where {T}
     element_type = T
     content_form = type_to_form(element_type, form_key_id + 1)
     return "{\"class\": \"ListOffsetArray\", \"offsets\": \"int64\", " *
@@ -96,8 +143,18 @@ function type_to_form(::Type{Vector{T}}, form_key_id::Int64) where {T}
            "\"form_key\": \"node$(form_key_id)\"}"
 end
 
+function type_to_form(::Type{Vector{T}}, form_key_id_ref::Base.RefValue{Int64}) where {T}
+    element_type = T
+    form_key = _generate_form_key!(form_key_id_ref)
+
+    content_form = type_to_form(element_type, form_key_id_ref)
+    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"int64\", " *
+           "\"content\": " * content_form * ", " *
+           "\"form_key\": \"" * form_key * "\"}"
+end
+
 # Function for handling iterable types
-function type_to_form(::Type{T}, form_key_id::Int64) where {T <: AbstractVector}
+function type_to_form(::Type{T}, form_key_id::Int64=0) where {T <: AbstractVector}
     value_type = eltype(T)
     form_key = "node$(form_key_id)"
     form_key_id += 1
@@ -109,13 +166,35 @@ function type_to_form(::Type{T}, form_key_id::Int64) where {T <: AbstractVector}
 
     content = type_to_form(value_type, form_key_id)
 
-    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"" * type_to_numpy_like(T) * "\", " *
+    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"" * 
+           type_to_numpy_like(T) * "\", " *
+           "\"content\": " * content * ", " * parameters *
+           "\"form_key\": \"" * form_key * "\"}"
+end
+
+function type_to_form(::Type{T}, form_key_id_ref::Base.RefValue{Int64}) where {T <: AbstractVector}
+    value_type = eltype(T)
+    form_key = _generate_form_key!(form_key_id_ref)
+
+    parameters = ""
+    if value_type == Char
+        parameters = " \"parameters\": { \"__array__\": \"string\" }, "
+    end
+
+    content = type_to_form(value_type, form_key_id_ref)
+
+    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"" * 
+           type_to_numpy_like(T) * "\", " *
            "\"content\": " * content * ", " * parameters *
            "\"form_key\": \"" * form_key * "\"}"
 end
 
 # Fallback function for unsupported types
-function type_to_form(::Type{T}, form_key_id::Int64) where {T}
+function type_to_form(::Type{T}, ::Int64) where {T}
+    error("Type '$T' is not supported yet.")
+end
+
+function type_to_form(::Type{T}, ::Base.RefValue{Int64}) where {T}
     error("Type '$T' is not supported yet.")
 end
 
@@ -124,25 +203,30 @@ function type_to_numpy_like(::Type{T}) where {T}
     return "int64"  # Placeholder implementation
 end
 
-# Print forms of all tree brunches
+# A RecordArray form of all tree brunches
 function tree_branches_type(tree, form_key_id::Int64=0)
-    println("""{"class": "RecordArray", "fields": [""")
-    for name in propertynames(tree)
-        println(""""$name", """)
-    end
-    println("""], "contents": [""")
+    form = """{"class": "RecordArray", "fields": ["""
+    form_fields = ""
+    form_contents = ""
+
+    id = form_key_id
+    id_ref = Ref(id)
 
     for name in propertynames(tree)
+        form_fields *= """$name, """
         branch = getproperty(tree, name)
         branch_type = eltype(branch)
-
-        if branch_type <: SubArray
-            form_type = branch_type.parameters[3]
-            println(type_to_form(form_type, 0), ", ")
-        else
-            println(type_to_form(branch_type, 0), ", ")
-        end
+        form_contents *= type_to_form(branch_type, id_ref) * ", "
     end
-    println(" ]")
+
+    # Removing the trailing comma and space
+    form_fields = replace(rstrip(form_fields), r",\s*$" => "")
+    form_contents = replace(rstrip(form_contents), r",\s*$" => "")
+    
+    form *= form_fields * """], "contents": [""" * form_contents 
+    form *= """], "parameters": {}, "form_key": \"""" * 
+        _generate_form_key!(id_ref) * "\"}"
+
+    return form
 end
 
