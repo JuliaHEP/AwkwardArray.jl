@@ -313,7 +313,13 @@ end
         layout = AwkwardArray.ListOffsetArray([1, 2, 5], content_layout)
 
         @test layout[:a] == [[2], [3, 4, 5]]
-        @test_throws ErrorException getindex(layout, :invalid)
+
+        if VERSION >= v"1.12.0-DEV"
+            @test_throws FieldError getindex(layout, :invalid)
+        else
+            @test_throws ErrorException getindex(layout, :invalid)
+        end
+
         @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 
@@ -490,7 +496,12 @@ end
         layout = AwkwardArray.ListArray([1, 2, 5], [2, 5, 5], content_layout)
 
         @test layout[:a] == [[2], [3, 4, 5], []]
-        @test_throws ErrorException getindex(layout, :invalid)
+        if VERSION >= v"1.12.0-DEV"
+            @test_throws FieldError getindex(layout, :invalid)
+        else
+            @test_throws ErrorException getindex(layout, :invalid)
+        end
+
         @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 end
@@ -709,7 +720,12 @@ end
         layout = AwkwardArray.RegularArray(content_layout, 2)
 
         @test layout[:a] == [[1, 2], [3, 4]]
-        @test_throws ErrorException getindex(layout, :invalid)
+        if VERSION >= v"1.12.0-DEV"
+            @test_throws FieldError getindex(layout, :invalid)
+        else
+            @test_throws ErrorException getindex(layout, :invalid)
+        end
+
         @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 end
@@ -3721,3 +3737,4 @@ end # @testset "AwkwardArray.jl"
 end # @testset "Tables.jl"
 
 include("./runpytests.jl")
+include("./test_106_form_from_type.jl")
