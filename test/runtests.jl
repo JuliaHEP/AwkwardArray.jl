@@ -319,7 +319,7 @@ end
         else
             @test_throws ErrorException getindex(layout, :invalid)
         end
-        
+
         @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 
@@ -496,7 +496,12 @@ end
         layout = AwkwardArray.ListArray([1, 2, 5], [2, 5, 5], content_layout)
 
         @test layout[:a] == [[2], [3, 4, 5], []]
-        @test_throws ErrorException getindex(layout, :invalid)
+        if VERSION >= v"1.12.0-DEV"
+            @test_throws FieldError getindex(layout, :invalid)
+        else
+            @test_throws ErrorException getindex(layout, :invalid)
+        end
+
         @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 end
