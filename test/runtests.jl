@@ -3,6 +3,7 @@ using JSON
 using Test
 using Tables
 
+
 ### PrimitiveArray #######################################################
 @testset "PrimitiveArray" begin
 
@@ -312,7 +313,7 @@ end
         layout = AwkwardArray.ListOffsetArray([1, 2, 5], content_layout)
 
         @test layout[:a] == [[2], [3, 4, 5]]
-        @test_throws ErrorException getindex(layout, :invalid)
+        @test_throws FieldError getindex(layout, :invalid)
         @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 
