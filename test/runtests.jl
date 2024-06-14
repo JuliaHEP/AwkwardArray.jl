@@ -318,7 +318,8 @@ end
             @test_throws FieldError getindex(layout, :invalid)
         else
             @test_throws ErrorException getindex(layout, :invalid)
-            
+        end
+        
         @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 
