@@ -313,7 +313,12 @@ end
         layout = AwkwardArray.ListOffsetArray([1, 2, 5], content_layout)
 
         @test layout[:a] == [[2], [3, 4, 5]]
-        @test_throws FieldError getindex(layout, :invalid)
+
+        if VERSION >= v"1.12.0-DEV"
+            @test_throws FieldError getindex(layout, :invalid)
+        else
+            @test_throws ErrorException getindex(layout, :invalid)
+            
         @test_throws AssertionError getindex(layout[:a], :invalid)
     end
 
