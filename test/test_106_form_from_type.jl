@@ -88,6 +88,6 @@ end
     end
         
     tree = TestTree([1, 2, 3], [4, 5, 6])
-    expected_form = """{"class": "RecordArray", "fields": [field1, field2], "contents": [{"class": "NumpyArray", "primitive": "int64", "form_key": "node0"}, {"class": "NumpyArray", "primitive": "int64", "form_key": "node1"}], "parameters": {}, "form_key": "node2"}"""
+    expected_form = """{"class": "RecordArray", "fields": [field1, field2], "contents": [{"class": "NumpyArray", "primitive": "int64", "form_key": "node1"}, {"class": "NumpyArray", "primitive": "int64", "form_key": "node2"}], "parameters": {}, "form_key": "node0"}"""
     @test AwkwardArray.tree_branches_type(tree) == expected_form
 end
