@@ -138,7 +138,7 @@ end
 function type_to_form(::Type{Vector{T}}, form_key_id::Int64=0) where {T}
     element_type = T
     content_form = type_to_form(element_type, form_key_id + 1)
-    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"int64\", " *
+    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"i64\", " *
            "\"content\": " * content_form * ", " *
            "\"form_key\": \"node$(form_key_id)\"}"
 end
@@ -148,7 +148,7 @@ function type_to_form(::Type{Vector{T}}, form_key_id_ref::Base.RefValue{Int64}) 
     form_key = _generate_form_key!(form_key_id_ref)
 
     content_form = type_to_form(element_type, form_key_id_ref)
-    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"int64\", " *
+    return "{\"class\": \"ListOffsetArray\", \"offsets\": \"i64\", " *
            "\"content\": " * content_form * ", " *
            "\"form_key\": \"" * form_key * "\"}"
 end
