@@ -200,20 +200,21 @@ end
 
 # Helper function for type_to_numpy_like (placeholder implementation)
 function type_to_numpy_like(::Type{T}) where {T}
-    return "int64"  # Placeholder implementation
+    return "i64"  # Placeholder implementation
 end
 
 # A RecordArray form of all tree brunches
 function tree_branches_type(tree, form_key_id::Int64=0)
-    form = """{"class": "RecordArray", "fields": ["""
-    form_fields = ""
-    form_contents = ""
-
     id = form_key_id
     id_ref = Ref(id)
 
+    form = """{"class": "RecordArray", "fields": ["""
+    form_key = _generate_form_key!(id_ref)
+
+    form_fields = ""
+    form_contents = ""
     for name in propertynames(tree)
-        form_fields *= """$name, """
+        form_fields = form_fields * """\"$name\", """
         branch = getproperty(tree, name)
         branch_type = eltype(branch)
         form_contents *= type_to_form(branch_type, id_ref) * ", "
@@ -225,7 +226,7 @@ function tree_branches_type(tree, form_key_id::Int64=0)
     
     form *= form_fields * """], "contents": [""" * form_contents 
     form *= """], "parameters": {}, "form_key": \"""" * 
-        _generate_form_key!(id_ref) * "\"}"
+        form_key * "\"}"
 
     return form
 end
