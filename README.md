@@ -1,4 +1,4 @@
-![](https://github.com/JuliaHEP/AwkwardArray.jl/blob/main/docs/img/logo-500px.png)
+![](docs/src/assets/logo-500px.png)
 
 **for Julia!**
 
