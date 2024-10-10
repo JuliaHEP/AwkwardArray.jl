@@ -6,8 +6,13 @@ version = "0.1.5"
 [deps]
 Conda = "8f4d0f93-b110-5947-807f-2305c1781a2d"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
+
+[weakdeps]
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+
+[extensions]
+AwkwardPythonCallExt = "PythonCall"
 
 [compat]
 Conda = "1.10.0"
@@ -20,4 +25,4 @@ julia = "1.9"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Test", "PythonCall"]
