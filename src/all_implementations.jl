@@ -5483,7 +5483,7 @@ function from_buffers(
         end
         form_mask = form["mask"]
 
-        excess_length = Int64(ceil(length / 8.0))
+        excess_length = div(length, 8, RoundUp)
 
         mask_buffer = _get_buffer(form_key, "mask", buffer_key, containers)
         raw_mask = _get_index(form_mask, excess_length, mask_buffer)
@@ -5511,11 +5511,8 @@ function from_buffers(
         end
 
         mask = falses(length)
-        unsafe_copyto!(
-            reinterpret(Ptr{UInt8}, pointer(mask.chunks)),
-            pointer(raw_mask),
-            excess_length,
-        )
+        mask_chunks_bytes = reinterpret(UInt8, mask.chunks)
+        copyto!(mask_chunks_bytes, firstindex(mask_chunks_bytes), raw_mask, firstindex(raw_mask), excess_length)
 
         if !lsb_order
             mask.len = excess_length * 8
