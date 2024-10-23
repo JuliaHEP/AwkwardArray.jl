@@ -2093,11 +2093,16 @@ slot(
         layout::Record{FIELDS,CONTENTS},
         f::Symbol,
     ) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}}
+    
+    Base.getindex(
+           layout::AwkwardArray.Record,
+           f::Symbol,
+       ) = getfield(layout, :array).contents[f][getfield(layout, :at)]
 """
 Base.getindex(
-    layout::Record{FIELDS,CONTENTS},
-    f::Symbol,
-) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}} = layout.array.contents[f][layout.at]
+           layout::AwkwardArray.Record,
+           f::Symbol,
+       ) = getfield(layout, :array).contents[f][getfield(layout, :at)]
 
 """
     Base.:(==)(
