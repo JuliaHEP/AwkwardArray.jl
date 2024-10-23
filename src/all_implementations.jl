@@ -1931,11 +1931,11 @@ RecordArray(
     behavior::Symbol = :default,
 ) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}} = RecordArray(
     contents,
-    minimum(if length(contents) == 0
+    if isempty(contents)
         0
     else
-        [length(x) for x in contents]
-    end),
+        minimum(length, contents)
+    end,
     parameters = parameters,
     behavior = behavior,
 )
