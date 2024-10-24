@@ -2090,14 +2090,16 @@ slot(
 
 """
     Base.getindex(
-        layout::Record{FIELDS,CONTENTS},
-        f::Symbol,
-    ) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}}
+           layout::AwkwardArray.Record,
+           f::Symbol,
+       )
 """
 Base.getindex(
-    layout::Record{FIELDS,CONTENTS},
-    f::Symbol,
-) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}} = layout.array.contents[f][layout.at]
+           layout::AwkwardArray.Record,
+           f::Symbol,
+       ) = getfield(layout, :array).contents[f][getfield(layout, :at)]
+
+Base.getproperty(layout::Record, f::Symbol) = layout[f]
 
 """
     Base.:(==)(
@@ -2388,15 +2390,16 @@ end
 
 """
     Base.getindex(
-        layout::SlotRecord{CONTENTS},
+        layout::SlotRecord,
         f::Int64,
-    ) where {CONTENTS<:Base.Tuple{Vararg{Content}}}
+    )
 """
 Base.getindex(
-    layout::SlotRecord{CONTENTS},
+    layout::SlotRecord,
     f::Int64,
-) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = 
-    layout.array.contents[f][layout.at]
+) = getfield(layout, :array).contents[f][getfield(layout, :at)]
+
+Base.getproperty(layout::SlotRecord, f::Symbol) = layout[f]
 
 """
     Base.:(==)(
@@ -2445,7 +2448,7 @@ function Base.:(==)(
     CONTENTS1<:Base.Tuple{Vararg{Content,N}},
     CONTENTS2<:Base.Tuple{Vararg{Content,N}},
 }
-    for i in eachindex(layout1.array.contents)   # same number of indexes by type constraint
+    for i in eachindex(getfield(layout1, :array).contents)   # same number of indexes by type constraint
         if layout1[i] != layout2[i]              # compare tuple items
             return false
         end
@@ -4002,8 +4005,8 @@ Base.getindex(layout::UnionArray, f::Symbol) =
 function Base.push!(special::Specialization, input)
     tmp = length(special.tagged)
     push!(special.tagged, input)
-    push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    push!(special.array.index, tmp)
+    push!(getfield(special, :array).tags, special.tag - firstindex(getfield(special, :array).contents))
+    push!(getfield(special, :array).index, tmp)
     special
 end
 
@@ -4023,8 +4026,8 @@ end
 function end_list!(special::Specialization)
     tmp = length(special.tagged)
     end_list!(special.tagged)
-    push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    push!(special.array.index, tmp)
+    push!(getfield(special, :array).tags, special.tag - firstindex(getfield(special, :array).contents))
+    push!(getfield(special, :array).index, tmp)
     special
 end
 
@@ -4034,8 +4037,8 @@ end
 function end_record!(special::Specialization)
     tmp = length(special.tagged)
     end_record!(special.tagged)
-    push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    push!(special.array.index, tmp)
+    push!(getfield(special, :array).tags, special.tag - firstindex(getfield(special, :array).contents))
+    push!(getfield(special, :array).index, tmp)
     special
 end
 
@@ -4045,8 +4048,8 @@ end
 function end_tuple!(special::Specialization)
     tmp = length(special.tagged)
     end_tuple!(special.tagged)
-    push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    push!(special.array.index, tmp)
+    push!(getfield(special, :array).tags, special.tag - firstindex(getfield(special, :array).contents))
+    push!(getfield(special, :array).index, tmp)
     special
 end
 
@@ -4060,8 +4063,8 @@ function push_null!(
 ) where {ARRAY<:UnionArray,TAGGED<:OptionType}
     tmp = length(special.tagged)
     push_null!(special.tagged)
-    push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    push!(special.array.index, tmp)
+    push!(getfield(special, :array).tags, special.tag - firstindex(getfield(special, :array).contents))
+    push!(getfield(special, :array).index, tmp)
     special
 end
 
@@ -4071,8 +4074,8 @@ end
 function push_dummy!(special::Specialization)
     tmp = length(special.tagged)
     push_dummy!(special.tagged)
-    push!(special.array.tags, special.tag - firstindex(special.array.contents))
-    push!(special.array.index, tmp)
+    push!(getfield(special, :array).tags, special.tag - firstindex(getfield(special, :array).contents))
+    push!(getfield(special, :array).index, tmp)
     special
 end
 
@@ -4236,7 +4239,7 @@ to_vector(
     view::Bool = false,
     na::Union{Missing,Nothing} = missing,
 ) where {FIELDS,CONTENTS<:Base.Tuple{Vararg{Content}}} = NamedTuple{FIELDS}(
-    to_vector_or_scalar(record.array.contents[f][record.at], view = view, na = na) for
+    to_vector_or_scalar(getfield(record, :array).contents[f][record.at], view = view, na = na) for
     f in FIELDS
 )
 
@@ -4253,7 +4256,7 @@ to_vector(
     na::Union{Missing,Nothing} = missing,
 ) where {CONTENTS<:Base.Tuple{Vararg{Content}}} = Base.Tuple(
     to_vector_or_scalar(content[record.at], view = view, na = na) for
-    content in tuple.array.contents
+    content in getfield(tuple, :array).contents
 )
 
 """
@@ -4731,7 +4734,7 @@ function _horizontal(data::Any, limit_cols::Int)
         limit_cols -= 5   # anticipate the ", ..."
 
         which = 0
-        fields = keys(data.array.contents)
+        fields = keys(getfield(data, :array).contents)
         for field in fields
             key = Base.string(field)
 
@@ -4798,7 +4801,7 @@ function _horizontal(data::Any, limit_cols::Int)
         limit_cols -= 5   # anticipate the ", ..."
 
         which = 0
-        fields = eachindex(data.array.contents)
+        fields = eachindex(getfield(data, :array).contents)
         for field in fields
             if which == 0
                 for_comma = 0
@@ -4916,7 +4919,7 @@ function _vertical(data::Union{Content,Record,Tuple}, limit_rows::Int, limit_col
         front = Vector{String}([])  # 1-indexed
 
         which = 0
-        fields = keys(data.array.contents)
+        fields = keys(getfield(data, :array).contents)
         for field in fields
             key = Base.string(field)
             if occursin(r"^[A-Za-z_][A-Za-z_0-9]*$", key)
@@ -4957,7 +4960,7 @@ function _vertical(data::Union{Content,Record,Tuple}, limit_rows::Int, limit_col
         front = Vector{String}([])  # 1-indexed
 
         which = 0
-        fields = eachindex(data.array.contents)
+        fields = eachindex(getfield(data, :array).contents)
         for field in fields
             (_, strs) = _horizontal(data[field], limit_cols - 2)
             push!(front, join(strs, ""))
