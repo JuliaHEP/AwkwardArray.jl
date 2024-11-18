@@ -26,6 +26,9 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/JuliaHEP/AwkwardArray.jl",
-    push_preview=true
+    repo = "github.com/JuliaHEP/AwkwardArray.jl",
+    branch = "gh-pages",
+    push_preview=true,
+    deploy_config = Documenter.GitHubActions(),
 )
+
