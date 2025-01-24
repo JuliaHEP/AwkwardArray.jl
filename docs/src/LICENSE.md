@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2023 Jim Pivarski <pivarski@princeton.edu>, Jerry Ling <jerry.ling@cern.ch>, and contributors
+Copyright (c) 2023 Jim Pivarski <jpivarski@gmail.com>, Jerry Ling <jerry.ling@cern.ch>, and contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
