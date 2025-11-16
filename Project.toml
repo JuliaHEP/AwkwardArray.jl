@@ -1,7 +1,7 @@
 name = "AwkwardArray"
 uuid = "7d259134-7f60-4bf1-aa00-7452e11bde56"
-authors = ["Jim Pivarski <pivarski@princeton.edu>", "Jerry Ling <jerry.ling@cern.ch>", "and contributors"]
 version = "0.1.6"
+authors = ["Jim Pivarski <pivarski@princeton.edu>", "Jerry Ling <jerry.ling@cern.ch>", "and contributors"]
 
 [deps]
 Conda = "8f4d0f93-b110-5947-807f-2305c1781a2d"
@@ -13,13 +13,13 @@ Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 
 [extensions]
-AwkwardPythonCallExt = "PythonCall"
 AwkwardAdaptExt = "Adapt"
+AwkwardPythonCallExt = "PythonCall"
 
 [compat]
 Adapt = "4.3.0"
 Conda = "1.10.0"
-JSON = "0.21.4"
+JSON = "0.21.4, 1"
 PythonCall = "0.9"
 Tables = "1.11.1"
 julia = "1.9"
